@@ -110,7 +110,8 @@ class LoginController
             return $baseUrl . '/index.php';
         }
 
-        return $baseUrl . '/index.php?route=' . rawurlencode($route);
+        $encodedRoute = implode('/', array_map('rawurlencode', explode('/', $route)));
+        return $baseUrl . '/index.php?route=' . $encodedRoute;
     }
 
     private function handleRememberUsername($rememberUsername, $username)

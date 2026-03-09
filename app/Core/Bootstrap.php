@@ -8,6 +8,12 @@ namespace App\Core;
 use App\Modules\Auth\Controllers\LoginController;
 use App\Modules\Auth\Repositories\UserRepository;
 use App\Modules\Auth\Services\AuthService;
+use App\Modules\Catalogos\Controllers\CatalogoController;
+use App\Modules\Catalogos\Repositories\CatalogoRepository;
+use App\Modules\Dashboard\Controllers\DashboardController;
+use App\Modules\Dashboard\Repositories\DashboardRepository;
+use App\Modules\Movimientos\Controllers\MovimientoController;
+use App\Modules\Movimientos\Repositories\MovimientoRepository;
 use Throwable;
 
 class Bootstrap
@@ -16,6 +22,7 @@ class Bootstrap
     private $logger;
     private $viewRenderer;
     private $authService;
+    private $databaseConnection;
 
     public function run()
     {
@@ -25,8 +32,8 @@ class Bootstrap
 
         SessionManager::start($this->config['app']);
 
-        $databaseConnection = DatabaseConnection::getConnection($this->config['database'], $this->logger);
-        $userRepository = new UserRepository($databaseConnection, $this->logger);
+        $this->databaseConnection = DatabaseConnection::getConnection($this->config['database'], $this->logger);
+        $userRepository = new UserRepository($this->databaseConnection, $this->logger);
         $this->authService = new AuthService($userRepository, $this->logger);
         $this->viewRenderer = new ViewRenderer($this->config['paths']['views_root']);
 
@@ -76,6 +83,24 @@ class Bootstrap
         $routePath = $this->resolveRoutePath();
 
         $loginController = new LoginController($this->authService, $this->viewRenderer, $this->config['app']);
+        $dashboardController = new DashboardController(
+            new DashboardRepository($this->databaseConnection, $this->logger),
+            $this->viewRenderer,
+            $this->config['app'],
+            $this->authService
+        );
+        $movimientoController = new MovimientoController(
+            new MovimientoRepository($this->databaseConnection, $this->logger),
+            $this->viewRenderer,
+            $this->config['app'],
+            $this->authService
+        );
+        $catalogoController = new CatalogoController(
+            new CatalogoRepository($this->databaseConnection, $this->logger),
+            $this->viewRenderer,
+            $this->config['app'],
+            $this->authService
+        );
 
         try {
             if ($routePath === '/' || $routePath === '') {
@@ -106,7 +131,70 @@ class Bootstrap
                     Response::redirect($this->buildUrl('/login'));
                 }
 
-                $this->renderDashboard();
+                $dashboardController->show();
+                return;
+            }
+
+            if ($routePath === '/movimientos' && $method === 'GET') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $movimientoController->index();
+                return;
+            }
+
+            if ($routePath === '/movimientos/nuevo' && $method === 'GET') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $movimientoController->createForm();
+                return;
+            }
+
+            if ($routePath === '/movimientos' && $method === 'POST') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $movimientoController->store();
+                return;
+            }
+
+            if ($routePath === '/clasificaciones' && $method === 'GET') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $catalogoController->clasificacionesIndex();
+                return;
+            }
+
+            if ($routePath === '/clasificaciones' && $method === 'POST') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $catalogoController->clasificacionesStore();
+                return;
+            }
+
+            if ($routePath === '/medios-pago' && $method === 'GET') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $catalogoController->mediosIndex();
+                return;
+            }
+
+            if ($routePath === '/medios-pago' && $method === 'POST') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $catalogoController->mediosStore();
                 return;
             }
 
@@ -121,17 +209,6 @@ class Bootstrap
             http_response_code(500);
             echo 'Ocurrio un error interno. Revisa el log de aplicacion.';
         }
-    }
-
-    private function renderDashboard()
-    {
-        $this->viewRenderer->render('dashboard/index', array(
-            'pageTitle' => 'Dashboard inicial',
-            'baseUrl' => rtrim($this->config['app']['base_url'], '/'),
-            'assetVersion' => $this->config['app']['asset_version'],
-            'enablePwa' => $this->config['app']['enable_pwa'],
-            'currentUser' => $this->authService->getAuthenticatedUser(),
-        ));
     }
 
     private function renderNotFound()
@@ -178,7 +255,8 @@ class Bootstrap
             return $baseUrl . '/index.php';
         }
 
-        return $baseUrl . '/index.php?route=' . rawurlencode($route);
+        $encodedRoute = implode('/', array_map('rawurlencode', explode('/', $route)));
+        return $baseUrl . '/index.php?route=' . $encodedRoute;
     }
 
     private function normalizeBaseUrl()
@@ -267,6 +345,14 @@ class Bootstrap
             $directory = substr($directory, 0, -10);
         } elseif (substr($directory, -7) === '/logout') {
             $directory = substr($directory, 0, -7);
+        } elseif (substr($directory, -12) === '/movimientos') {
+            $directory = substr($directory, 0, -12);
+        } elseif (substr($directory, -18) === '/movimientos/nuevo') {
+            $directory = substr($directory, 0, -18);
+        } elseif (substr($directory, -16) === '/clasificaciones') {
+            $directory = substr($directory, 0, -16);
+        } elseif (substr($directory, -12) === '/medios-pago') {
+            $directory = substr($directory, 0, -12);
         }
 
         $directory = rtrim($directory, '/');

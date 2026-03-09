@@ -25,3 +25,12 @@
 ### Decision: Recordar solo usuario y no contrasena
 - Motivo: evitar almacenamiento inseguro de credenciales en cliente.
 - Impacto: mejora experiencia de acceso manteniendo criterio de seguridad.
+
+### Decision: Select2 en formularios con alto volumen de opciones
+- Motivo: acelerar seleccion de clasificaciones, medios y presupuestos con busqueda inmediata.
+- Impacto: mejora productividad diaria sin imponer rediseño de base de datos.
+- Nota: se mantiene degradacion funcional si la libreria externa no carga.
+
+### Decision: Busqueda por prefijo en catalogos
+- Motivo: permitir uso de indices B-Tree y evitar busquedas lentas por `%texto%`.
+- Impacto: mejor rendimiento en clasificaciones y medios de pago.

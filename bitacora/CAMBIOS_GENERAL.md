@@ -53,5 +53,20 @@
 - Se elimina el texto tecnico de migracion MD5 en la pantalla de login para evitar ruido al usuario final.
 - Se implementa opcion `Recordar usuario en este dispositivo` con cookie segura (sin guardar contrasena).
 - Se agrega compatibilidad de cookies para PHP 7.2 a 8.2 mediante `CookieManager`.
-- Se rediseÃ±a el login con interfaz mas profesional y responsive (desktop/movil).
+- Se rediseña el login con interfaz mas profesional y responsive (desktop/movil).
 - Se mejora validacion frontend del formulario con mensajes en pantalla y boton para ver/ocultar contrasena.
+
+## 2026-03-09 - Navegacion profesional y modulos operativos iniciales
+- Se reemplaza el dashboard tecnico por un panel visual orientado a operacion (KPIs, accesos rapidos y movimientos recientes).
+- Se implementa menu responsive con buscador global, accesos de usuario y navegacion por modulos.
+- Se crean modulos funcionales iniciales:
+  - `Movimientos`: listado y registro de gastos/costos/compras con validacion frontend/backend.
+  - `Clasificaciones`: alta y busqueda.
+  - `Medios de pago`: alta y busqueda.
+- Se agregan rutas directas sin dependencia de `mod_rewrite` para:
+  - `/movimientos`
+  - `/movimientos/nuevo`
+  - `/clasificaciones`
+  - `/medios-pago`
+- Se integra Select2 para selects con busqueda en formularios de alta concurrencia de opciones.
+- Se agrega migracion `20260309_0004_ui_navigation_and_catalog_indexes.sql` con rollback para rendimiento de dashboard/catalogos/menu.

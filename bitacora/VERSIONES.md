@@ -1,5 +1,14 @@
 # Versiones
 
+## v0.2.0 - 2026-03-09
+- Dashboard renovado sin texto tecnico de implementacion.
+- Menu responsive profesional con buscador rapido y menu de usuario.
+- Modulo de movimientos habilitado (listado + formulario de alta con validacion frontend/backend).
+- Modulo de clasificaciones habilitado (alta + busqueda + listado).
+- Modulo de medios de pago habilitado (alta + busqueda + listado).
+- Integracion de Select2 para busqueda en selects de alto volumen.
+- Migracion SQL `20260309_0004` para indices de rendimiento en consultas del nuevo flujo UI.
+
 ## v0.1.2 - 2026-03-09
 - Rediseno de login con experiencia profesional y responsive.
 - Opcion de recordar usuario agregada de forma segura y compatible con PHP 7.2-8.2.
