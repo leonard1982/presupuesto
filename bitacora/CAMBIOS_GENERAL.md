@@ -42,3 +42,9 @@
 - La aplicacion ahora construye URLs con host y puerto reales del request.
 - Se mantiene compatibilidad para desarrollo con puerto variable (ejemplo 9192) y produccion 80/443.
 - Se agregan entradas directas `login/`, `dashboard/` y `logout/` para evitar dependencia total de `mod_rewrite`.
+
+## 2026-03-09 - Correccion de base URL en rutas directas
+- Se corrige deteccion de `base_url` para accesos directos como `/login/` sin agregar subruta incorrecta.
+- La deteccion ahora prioriza `DOCUMENT_ROOT` + `PROJECT_ROOT` para obtener ruta real del proyecto.
+- Se conserva fallback por `SCRIPT_NAME` para escenarios donde `DOCUMENT_ROOT` no es confiable.
+- Se valida compatibilidad de rutas en Windows y Linux, incluyendo puertos dinamicos.

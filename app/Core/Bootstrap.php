@@ -207,18 +207,87 @@ class Bootstrap
 
         $scheme = $httpsEnabled ? 'https' : 'http';
         $host = isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] !== '' ? (string) $_SERVER['HTTP_HOST'] : 'localhost';
-        $scriptName = isset($_SERVER['SCRIPT_NAME']) ? (string) $_SERVER['SCRIPT_NAME'] : '';
+        $basePath = $this->detectProjectBasePathFromFilesystem();
 
+        if ($basePath === '') {
+            $basePath = $this->detectProjectBasePathFromScriptName();
+        }
+
+        return $scheme . '://' . $host . $basePath;
+    }
+
+    private function detectProjectBasePathFromFilesystem()
+    {
+        $documentRoot = isset($_SERVER['DOCUMENT_ROOT']) ? (string) $_SERVER['DOCUMENT_ROOT'] : '';
+        $projectRoot = (string) PROJECT_ROOT;
+
+        $normalizedDocumentRoot = $this->normalizePath($documentRoot);
+        $normalizedProjectRoot = $this->normalizePath($projectRoot);
+
+        if ($normalizedDocumentRoot === '' || $normalizedProjectRoot === '') {
+            return '';
+        }
+
+        $isWindows = DIRECTORY_SEPARATOR === '\\';
+        $matchesPrefix = $isWindows
+            ? stripos($normalizedProjectRoot, $normalizedDocumentRoot) === 0
+            : strpos($normalizedProjectRoot, $normalizedDocumentRoot) === 0;
+
+        if (!$matchesPrefix) {
+            return '';
+        }
+
+        $relativePath = substr($normalizedProjectRoot, strlen($normalizedDocumentRoot));
+        $relativePath = str_replace('\\', '/', (string) $relativePath);
+        $relativePath = trim($relativePath, '/');
+
+        if ($relativePath === '') {
+            return '';
+        }
+
+        return '/' . $relativePath;
+    }
+
+    private function detectProjectBasePathFromScriptName()
+    {
+        $scriptName = isset($_SERVER['SCRIPT_NAME']) ? (string) $_SERVER['SCRIPT_NAME'] : '';
         $directory = str_replace('\\', '/', dirname($scriptName));
+
         if ($directory === '/' || $directory === '.' || $directory === '\\') {
-            $directory = '';
+            return '';
         }
 
         if (substr($directory, -7) === '/public') {
             $directory = substr($directory, 0, -7);
         }
 
+        if (substr($directory, -6) === '/login') {
+            $directory = substr($directory, 0, -6);
+        } elseif (substr($directory, -10) === '/dashboard') {
+            $directory = substr($directory, 0, -10);
+        } elseif (substr($directory, -7) === '/logout') {
+            $directory = substr($directory, 0, -7);
+        }
+
         $directory = rtrim($directory, '/');
-        return $scheme . '://' . $host . $directory;
+        if ($directory === '') {
+            return '';
+        }
+
+        return $directory;
+    }
+
+    private function normalizePath($path)
+    {
+        if (!is_string($path) || trim($path) === '') {
+            return '';
+        }
+
+        $realPath = realpath($path);
+        $normalized = $realPath !== false ? $realPath : $path;
+        $normalized = str_replace('\\', '/', (string) $normalized);
+        $normalized = rtrim($normalized, '/');
+
+        return $normalized;
     }
 }
