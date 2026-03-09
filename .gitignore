@@ -1,0 +1,11 @@
+/storage/logs/app/*
+!/storage/logs/app/.gitkeep
+/storage/logs/api/*
+!/storage/logs/api/.gitkeep
+/storage/cache/*
+!/storage/cache/.gitkeep
+/storage/uploads/soportes/*
+!/storage/uploads/soportes/.gitkeep
+/storage/uploads/temp/*
+!/storage/uploads/temp/.gitkeep
+/.env

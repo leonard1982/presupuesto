@@ -1,0 +1,20 @@
+# Proyecto PRESUPUESTO - Enrutamiento y proteccion base
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Bloquear acceso directo a directorios sensibles
+    RewriteRule ^(app|storage|sql|bitacora|docs)(/|$) - [F,L,NC]
+
+    # Exponer assets y archivos publicos desde /public sin ruta rigida
+    RewriteRule ^assets/(.*)$ public/assets/$1 [L,NC]
+    RewriteRule ^(manifest\.webmanifest|sw\.js)$ public/$1 [L,NC]
+
+    # Front Controller
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ public/index.php [L,QSA]
+</IfModule>
+
+DirectoryIndex public/index.php

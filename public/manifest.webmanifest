@@ -1,0 +1,10 @@
+{
+  "name": "Presupuesto Web",
+  "short_name": "Presupuesto",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f6fb",
+  "theme_color": "#1f2937",
+  "description": "Sistema web de presupuestos y movimientos.",
+  "icons": []
+}
