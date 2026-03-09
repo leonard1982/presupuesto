@@ -21,3 +21,7 @@
 ### Decision: Compatibilidad dual de base de datos
 - Motivo: mantener operacion legacy y evolucionar en paralelo sin rehacer todo.
 - Impacto: permite migracion por fases y soporte simultaneo MariaDB 10.1 / motores nuevos.
+
+### Decision: Recordar solo usuario y no contrasena
+- Motivo: evitar almacenamiento inseguro de credenciales en cliente.
+- Impacto: mejora experiencia de acceso manteniendo criterio de seguridad.

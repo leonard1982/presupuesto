@@ -10,23 +10,61 @@ if (!function_exists('view_escape_html')) {
     }
 }
 ?>
-<section class="card auth-card">
-    <h2>Ingreso al sistema</h2>
-    <p class="muted">Compatible con hash moderno y contrasena legacy MD5 (migracion gradual).</p>
+<section class="auth-shell">
+    <aside class="auth-visual card">
+        <p class="eyebrow">Gestion diaria sin friccion</p>
+        <h2>Presupuestos, movimientos y soportes en un solo flujo</h2>
+        <p class="muted">
+            Registra ingresos, gastos y costos con rapidez, consulta indicadores clave y centraliza evidencias para auditoria.
+        </p>
+        <ul class="feature-list">
+            <li>Panel de control para decisiones diarias</li>
+            <li>Movimientos clasificados y trazables</li>
+            <li>Base lista para API, automatizaciones e IA</li>
+        </ul>
+    </aside>
 
-    <?php if (!empty($errorMessage)) : ?>
-        <div class="alert alert-error"><?php echo view_escape_html($errorMessage); ?></div>
-    <?php endif; ?>
+    <section class="card auth-card">
+        <h2>Ingreso al sistema</h2>
+        <p class="muted">Accede con tu cuenta para continuar.</p>
 
-    <form id="login-form" method="post" action="<?php echo view_escape_html($baseUrl); ?>/index.php?route=login" novalidate>
-        <input type="hidden" name="<?php echo view_escape_html($csrfTokenName); ?>" value="<?php echo view_escape_html($csrfToken); ?>">
+        <?php if (!empty($errorMessage)) : ?>
+            <div class="alert alert-error"><?php echo view_escape_html($errorMessage); ?></div>
+        <?php endif; ?>
+        <div id="login-client-error" class="alert alert-error hidden" role="alert"></div>
 
-        <label for="username">Usuario</label>
-        <input id="username" name="username" type="text" maxlength="190" autocomplete="username" required>
+        <form id="login-form" method="post" action="<?php echo view_escape_html($baseUrl); ?>/index.php?route=login" novalidate>
+            <input type="hidden" name="<?php echo view_escape_html($csrfTokenName); ?>" value="<?php echo view_escape_html($csrfToken); ?>">
 
-        <label for="password">Contrasena</label>
-        <input id="password" name="password" type="password" minlength="4" autocomplete="current-password" required>
+            <label for="username">Usuario</label>
+            <input
+                id="username"
+                name="username"
+                type="text"
+                maxlength="190"
+                autocomplete="username"
+                value="<?php echo view_escape_html(isset($rememberedUsername) ? (string) $rememberedUsername : ''); ?>"
+                required
+            >
 
-        <button type="submit" class="btn btn-primary">Ingresar</button>
-    </form>
+            <label for="password">Contrasena</label>
+            <div class="password-row">
+                <input id="password" name="password" type="password" minlength="4" autocomplete="current-password" required>
+                <button class="btn btn-ghost" type="button" id="toggle-password" aria-label="Mostrar u ocultar contrasena">Ver</button>
+            </div>
+
+            <label class="check-row" for="remember_username">
+                <input
+                    id="remember_username"
+                    name="remember_username"
+                    type="checkbox"
+                    value="1"
+                    <?php echo !empty($rememberUsernameChecked) ? 'checked' : ''; ?>
+                >
+                <span>Recordar usuario en este dispositivo</span>
+            </label>
+
+            <button type="submit" class="btn btn-primary">Ingresar</button>
+        </form>
+    </section>
 </section>

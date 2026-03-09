@@ -14,6 +14,7 @@ $title = isset($pageTitle) ? (string) $pageTitle : 'PRESUPUESTO';
 $baseUrlSafe = isset($baseUrl) ? rtrim((string) $baseUrl, '/') : '';
 $assetVersionSafe = isset($assetVersion) ? (string) $assetVersion : '0.1.0';
 $enablePwaSafe = !empty($enablePwa) ? 'true' : 'false';
+$pageBodyClassSafe = isset($pageBodyClass) ? trim((string) $pageBodyClass) : '';
 ?>
 <!doctype html>
 <html lang="es">
@@ -25,11 +26,11 @@ $enablePwaSafe = !empty($enablePwa) ? 'true' : 'false';
     <meta name="theme-color" content="#1f2937">
     <link rel="stylesheet" href="<?php echo escape_html($baseUrlSafe); ?>/public/assets/css/app.css?v=<?php echo escape_html($assetVersionSafe); ?>">
 </head>
-<body data-base-url="<?php echo escape_html($baseUrlSafe); ?>" data-enable-pwa="<?php echo escape_html($enablePwaSafe); ?>" data-asset-version="<?php echo escape_html($assetVersionSafe); ?>">
+<body class="<?php echo escape_html($pageBodyClassSafe); ?>" data-base-url="<?php echo escape_html($baseUrlSafe); ?>" data-enable-pwa="<?php echo escape_html($enablePwaSafe); ?>" data-asset-version="<?php echo escape_html($assetVersionSafe); ?>">
 <header class="app-header">
     <div class="brand-block">
         <h1>PRESUPUESTO</h1>
-        <p>Base tecnica modular y escalable</p>
+        <p>Control financiero operativo y presupuestal</p>
     </div>
     <?php if (!empty($currentUser)) : ?>
         <div class="user-block">
@@ -38,6 +39,8 @@ $enablePwaSafe = !empty($enablePwa) ? 'true' : 'false';
                 <button type="submit" class="btn btn-secondary">Cerrar sesion</button>
             </form>
         </div>
+    <?php elseif ($pageBodyClassSafe === 'login-body') : ?>
+        <div class="header-badge">Acceso seguro</div>
     <?php endif; ?>
 </header>
 <main class="app-main">

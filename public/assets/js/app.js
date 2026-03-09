@@ -2,16 +2,35 @@
 (function () {
     var loginForm = document.getElementById('login-form');
     if (loginForm) {
-        loginForm.addEventListener('submit', function (event) {
-            var username = document.getElementById('username');
-            var password = document.getElementById('password');
+        var clientError = document.getElementById('login-client-error');
+        var username = document.getElementById('username');
+        var password = document.getElementById('password');
+        var togglePassword = document.getElementById('toggle-password');
 
+        if (togglePassword && password) {
+            togglePassword.addEventListener('click', function () {
+                var showPassword = password.getAttribute('type') === 'password';
+                password.setAttribute('type', showPassword ? 'text' : 'password');
+                togglePassword.textContent = showPassword ? 'Ocultar' : 'Ver';
+            });
+        }
+
+        loginForm.addEventListener('submit', function (event) {
             var usernameValid = username && username.value.trim().length > 0;
             var passwordValid = password && password.value.length >= 4;
 
             if (!usernameValid || !passwordValid) {
                 event.preventDefault();
-                alert('Valida usuario y contrasena antes de continuar.');
+                if (clientError) {
+                    clientError.textContent = 'Valida usuario y contrasena antes de continuar.';
+                    clientError.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (clientError) {
+                clientError.textContent = '';
+                clientError.classList.add('hidden');
             }
         });
     }

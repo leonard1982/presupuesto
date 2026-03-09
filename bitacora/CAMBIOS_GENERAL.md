@@ -48,3 +48,10 @@
 - La deteccion ahora prioriza `DOCUMENT_ROOT` + `PROJECT_ROOT` para obtener ruta real del proyecto.
 - Se conserva fallback por `SCRIPT_NAME` para escenarios donde `DOCUMENT_ROOT` no es confiable.
 - Se valida compatibilidad de rutas en Windows y Linux, incluyendo puertos dinamicos.
+
+## 2026-03-09 - Mejora UX login y recordar usuario
+- Se elimina el texto tecnico de migracion MD5 en la pantalla de login para evitar ruido al usuario final.
+- Se implementa opcion `Recordar usuario en este dispositivo` con cookie segura (sin guardar contrasena).
+- Se agrega compatibilidad de cookies para PHP 7.2 a 8.2 mediante `CookieManager`.
+- Se rediseña el login con interfaz mas profesional y responsive (desktop/movil).
+- Se mejora validacion frontend del formulario con mensajes en pantalla y boton para ver/ocultar contrasena.
