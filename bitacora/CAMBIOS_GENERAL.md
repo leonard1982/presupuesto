@@ -41,3 +41,4 @@
 - Se establece deteccion dinamica de `base_url` cuando `APP_BASE_URL=AUTO`.
 - La aplicacion ahora construye URLs con host y puerto reales del request.
 - Se mantiene compatibilidad para desarrollo con puerto variable (ejemplo 9192) y produccion 80/443.
+- Se agregan entradas directas `login/`, `dashboard/` y `logout/` para evitar dependencia total de `mod_rewrite`.
