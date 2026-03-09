@@ -136,13 +136,13 @@ class LoginController
     private function resolveCookiePath()
     {
         $baseUrl = isset($this->appConfig['base_url']) ? (string) $this->appConfig['base_url'] : '';
-        $path = (string) parse_url($baseUrl, PHP_URL_PATH);
+        $parsedPath = parse_url($baseUrl, PHP_URL_PATH);
 
-        if ($path === '' || $path === false) {
+        if (!is_string($parsedPath) || $parsedPath === '') {
             return '/';
         }
 
-        return rtrim($path, '/') . '/';
+        return rtrim($parsedPath, '/') . '/';
     }
 
     private function isHttpsRequest()
