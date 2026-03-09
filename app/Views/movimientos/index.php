@@ -19,10 +19,13 @@ if (!function_exists('mov_money')) {
 ?>
 <section class="page-header card">
     <div>
+        <span class="title-chip"><i class="bi bi-receipt-cutoff"></i> Registro operativo</span>
         <h2>Movimientos</h2>
         <p class="muted">Gestiona gastos, costos y compras en un flujo rapido.</p>
     </div>
-    <a class="btn btn-primary btn-inline" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/nuevo">Nuevo movimiento</a>
+    <a class="btn btn-primary btn-inline" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/nuevo">
+        <i class="bi bi-plus-circle"></i> Nuevo movimiento
+    </a>
 </section>
 
 <?php if (!empty($successMessage)) : ?>
@@ -34,7 +37,7 @@ if (!function_exists('mov_money')) {
 
 <section class="card table-card">
     <div class="table-wrapper">
-        <table class="table-professional">
+        <table class="table-professional js-data-table" data-page-length="10">
             <thead>
             <tr>
                 <th>Fecha</th>

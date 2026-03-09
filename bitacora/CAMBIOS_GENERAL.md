@@ -1,4 +1,4 @@
-# Cambios Generales
+﻿# Cambios Generales
 
 ## 2026-03-09 - Fase 2 base tecnica inicial
 - Se crea estructura de carpetas profesional y modular.
@@ -53,7 +53,7 @@
 - Se elimina el texto tecnico de migracion MD5 en la pantalla de login para evitar ruido al usuario final.
 - Se implementa opcion `Recordar usuario en este dispositivo` con cookie segura (sin guardar contrasena).
 - Se agrega compatibilidad de cookies para PHP 7.2 a 8.2 mediante `CookieManager`.
-- Se redise�a el login con interfaz mas profesional y responsive (desktop/movil).
+- Se rediseña el login con interfaz profesional y responsive (desktop/movil).
 - Se mejora validacion frontend del formulario con mensajes en pantalla y boton para ver/ocultar contrasena.
 
 ## 2026-03-09 - Navegacion profesional y modulos operativos iniciales
@@ -70,3 +70,10 @@
   - `/medios-pago`
 - Se integra Select2 para selects con busqueda en formularios de alta concurrencia de opciones.
 - Se agrega migracion `20260309_0004_ui_navigation_and_catalog_indexes.sql` con rollback para rendimiento de dashboard/catalogos/menu.
+
+## 2026-03-09 - Sidebar lateral, iconografia y analitica visual
+- Se reemplaza el menu horizontal por un sidebar izquierdo colapsable para escritorio y desplegable para movil.
+- Se agrega iconografia consistente en titulo del software, menu lateral, acciones de usuario y botones principales.
+- Se mejora presentacion de formularios y encabezados de modulo con estilo visual unificado.
+- Se integra Chart.js para dashboard con graficos de tendencia mensual y distribucion por clasificacion.
+- Se integra DataTables responsive para tablas con filtro, ordenamiento, paginacion y control de cantidad de filas por pagina.

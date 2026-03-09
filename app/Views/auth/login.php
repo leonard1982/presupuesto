@@ -25,6 +25,7 @@ if (!function_exists('view_escape_html')) {
     </aside>
 
     <section class="card auth-card">
+        <span class="title-chip"><i class="bi bi-box-arrow-in-right"></i> Acceso</span>
         <h2>Ingreso al sistema</h2>
         <p class="muted">Accede con tu cuenta para continuar.</p>
 
@@ -64,7 +65,7 @@ if (!function_exists('view_escape_html')) {
                 <span>Recordar usuario en este dispositivo</span>
             </label>
 
-            <button type="submit" class="btn btn-primary">Ingresar</button>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-door-open"></i> Ingresar</button>
         </form>
     </section>
 </section>

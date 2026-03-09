@@ -12,6 +12,7 @@ if (!function_exists('medio_escape')) {
 ?>
 <section class="page-header card">
     <div>
+        <span class="title-chip"><i class="bi bi-credit-card-2-front"></i> Catalogo de pago</span>
         <h2>Medios de pago</h2>
         <p class="muted">Configura opciones para registrar pagos, transferencias y compras.</p>
     </div>
@@ -26,25 +27,25 @@ if (!function_exists('medio_escape')) {
 
 <section class="grid-cards">
     <article class="card">
-        <h3>Nuevo medio</h3>
+        <h3><i class="bi bi-plus-square"></i> Nuevo medio</h3>
         <form method="post" action="<?php echo medio_escape($baseUrl); ?>/index.php?route=medios-pago" class="compact-form" novalidate>
             <input type="hidden" name="<?php echo medio_escape($csrfTokenName); ?>" value="<?php echo medio_escape($csrfToken); ?>">
 
             <label for="medio">Nombre</label>
             <input id="medio" name="medio" type="text" maxlength="80" required>
 
-            <button class="btn btn-primary btn-inline" type="submit">Guardar</button>
+            <button class="btn btn-primary btn-inline" type="submit"><i class="bi bi-check2-circle"></i> Guardar</button>
         </form>
     </article>
 
     <article class="card">
-        <h3>Buscar medios</h3>
+        <h3><i class="bi bi-search"></i> Buscar medios</h3>
         <form method="get" action="<?php echo medio_escape($baseUrl); ?>/index.php" class="compact-form">
             <input type="hidden" name="route" value="medios-pago">
             <label for="q">Filtro</label>
             <div class="search-row">
                 <input id="q" name="q" type="text" value="<?php echo medio_escape($search); ?>" placeholder="Ejemplo: Tarjeta credito">
-                <button class="btn btn-secondary btn-inline" type="submit">Buscar</button>
+                <button class="btn btn-secondary btn-inline" type="submit"><i class="bi bi-funnel"></i> Buscar</button>
             </div>
         </form>
     </article>
@@ -52,7 +53,7 @@ if (!function_exists('medio_escape')) {
 
 <section class="card table-card">
     <div class="table-wrapper">
-        <table class="table-professional">
+        <table class="table-professional js-data-table" data-page-length="10">
             <thead>
             <tr>
                 <th>ID</th>

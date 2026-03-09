@@ -30,10 +30,13 @@ $fechaActual = date('Y-m-d\TH:i');
 ?>
 <section class="page-header card">
     <div>
+        <span class="title-chip"><i class="bi bi-plus-circle"></i> Captura rapida</span>
         <h2>Nuevo movimiento</h2>
         <p class="muted">Registra gastos, costos o compras con clasificacion y medio de pago.</p>
     </div>
-    <a class="btn btn-secondary btn-inline" href="<?php echo mov_form_escape($baseUrl); ?>/index.php?route=movimientos">Volver al listado</a>
+    <a class="btn btn-secondary btn-inline" href="<?php echo mov_form_escape($baseUrl); ?>/index.php?route=movimientos">
+        <i class="bi bi-arrow-left-circle"></i> Volver al listado
+    </a>
 </section>
 
 <?php if (!empty($errorMessage)) : ?>
@@ -132,8 +135,8 @@ $fechaActual = date('Y-m-d\TH:i');
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary btn-inline">Guardar movimiento</button>
-            <a class="btn btn-secondary btn-inline" href="<?php echo mov_form_escape($baseUrl); ?>/index.php?route=movimientos">Cancelar</a>
+            <button type="submit" class="btn btn-primary btn-inline"><i class="bi bi-check2-circle"></i> Guardar movimiento</button>
+            <a class="btn btn-secondary btn-inline" href="<?php echo mov_form_escape($baseUrl); ?>/index.php?route=movimientos"><i class="bi bi-x-circle"></i> Cancelar</a>
         </div>
     </form>
 </section>

@@ -1,4 +1,11 @@
-# Versiones
+﻿# Versiones
+
+## v0.3.0 - 2026-03-09
+- Sidebar izquierdo colapsable en escritorio y menu lateral desplegable en movil.
+- Iconografia profesional en titulos, botones y navegacion.
+- Dashboard con graficos de tendencia mensual y distribucion por clasificacion.
+- Tablas con DataTables responsive (filtros, ordenamiento y paginacion).
+- Mejora visual de formularios con enfoque profesional para uso diario.
 
 ## v0.2.0 - 2026-03-09
 - Dashboard renovado sin texto tecnico de implementacion.

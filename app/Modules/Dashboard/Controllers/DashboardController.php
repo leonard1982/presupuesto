@@ -38,6 +38,7 @@ class DashboardController
         $monthlyTotals = $this->dashboardRepository->getMonthlyTotals($periodStartDateTime, $periodEndDateTime);
         $recentMovements = $this->dashboardRepository->getRecentMovements(10);
         $topClasificaciones = $this->dashboardRepository->getTopClasificaciones($periodStartDate, $periodEndExclusive, 6);
+        $monthlyTrend = $this->dashboardRepository->getMonthlyTrend(6);
 
         $balance = (float) $monthlyTotals['ingresos'] - ((float) $monthlyTotals['gastos'] + (float) $monthlyTotals['costos']);
 
@@ -50,9 +51,38 @@ class DashboardController
             'activeMenu' => 'dashboard',
             'monthlyTotals' => $monthlyTotals,
             'balance' => $balance,
-            'periodLabel' => date('F Y'),
+            'periodLabel' => $this->formatPeriodLabel($periodStartDate),
             'recentMovements' => $recentMovements,
             'topClasificaciones' => $topClasificaciones,
+            'monthlyTrend' => $monthlyTrend,
         ));
+    }
+
+    private function formatPeriodLabel($periodStartDate)
+    {
+        $timestamp = strtotime((string) $periodStartDate);
+        if ($timestamp === false) {
+            return '';
+        }
+
+        $months = array(
+            1 => 'Enero',
+            2 => 'Febrero',
+            3 => 'Marzo',
+            4 => 'Abril',
+            5 => 'Mayo',
+            6 => 'Junio',
+            7 => 'Julio',
+            8 => 'Agosto',
+            9 => 'Septiembre',
+            10 => 'Octubre',
+            11 => 'Noviembre',
+            12 => 'Diciembre',
+        );
+
+        $monthNumber = (int) date('n', $timestamp);
+        $monthLabel = isset($months[$monthNumber]) ? $months[$monthNumber] : date('F', $timestamp);
+
+        return $monthLabel . ' ' . date('Y', $timestamp);
     }
 }

@@ -1,4 +1,4 @@
-# Decisiones Tecnicas
+﻿# Decisiones Tecnicas
 
 ## 2026-03-09
 
@@ -28,9 +28,17 @@
 
 ### Decision: Select2 en formularios con alto volumen de opciones
 - Motivo: acelerar seleccion de clasificaciones, medios y presupuestos con busqueda inmediata.
-- Impacto: mejora productividad diaria sin imponer redise�o de base de datos.
+- Impacto: mejora productividad diaria sin imponer rediseño de base de datos.
 - Nota: se mantiene degradacion funcional si la libreria externa no carga.
 
-### Decision: Busqueda por prefijo en catalogos
-- Motivo: permitir uso de indices B-Tree y evitar busquedas lentas por `%texto%`.
-- Impacto: mejor rendimiento en clasificaciones y medios de pago.
+### Decision: DataTables en listados operativos
+- Motivo: agregar filtros, ordenamiento y paginacion sin rehacer backend en esta fase.
+- Impacto: valor rapido para uso diario con experiencia profesional responsive.
+
+### Decision: Chart.js para dashboard inicial
+- Motivo: mostrar tendencia y distribucion con visualizacion clara para decisiones rapidas.
+- Impacto: dashboard util desde fase base y escalable a KPIs mas avanzados.
+
+### Decision: Sidebar lateral colapsable
+- Motivo: reducir ruido visual y priorizar espacio de trabajo en pantallas pequenas y medianas.
+- Impacto: navegacion mas profesional y mejor productividad en escritorio/movil.
