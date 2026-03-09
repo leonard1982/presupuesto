@@ -17,4 +17,4 @@ Options -Indexes
     RewriteRule ^ public/index.php [L,QSA]
 </IfModule>
 
-DirectoryIndex public/index.php
+DirectoryIndex index.php public/index.php

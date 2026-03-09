@@ -7,6 +7,10 @@
 ## Variables de entorno
 1. Copiar `.env.example` a `.env`.
 2. Ajustar `APP_BASE_URL`, `DB_*`, `APP_ENV`, `APP_DEBUG`.
+3. Estrategia dual recomendada:
+   - `DB_NAME=presupuestos` (operacion actual)
+   - `DB_NAME_LEGACY=presupuestos_legacy` (consulta historica)
+   - `DB_NAME_NEW=presupuestos_nuevo` (evolucion del nuevo modelo)
 
 ## Apache
 - Mantener `mod_rewrite` activo.
