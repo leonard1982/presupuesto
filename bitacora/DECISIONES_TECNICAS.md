@@ -17,3 +17,7 @@
 ### Decision: Front controller y carpetas sensibles protegidas
 - Motivo: reducir superficie de ataque y acceso accidental a archivos internos.
 - Impacto: fortalece seguridad base del sistema.
+
+### Decision: Compatibilidad dual de base de datos
+- Motivo: mantener operacion legacy y evolucionar en paralelo sin rehacer todo.
+- Impacto: permite migracion por fases y soporte simultaneo MariaDB 10.1 / motores nuevos.

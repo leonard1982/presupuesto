@@ -27,3 +27,11 @@
   - `legacy_ingresos`
   - `legacy_presupuesto`
 - Se versiona SQL reproducible en `sql/migrations/20260309_0002_dual_database_setup.sql` y rollback asociado.
+
+## 2026-03-09 - Compatibilidad cruzada MariaDB 10.1 y MySQL nuevos
+- Se agrega migracion `20260309_0003_new_database_legacy_compatible_base.sql`.
+- Se replica en `presupuestos_nuevo` estructura base legacy requerida para compatibilidad de consultas antiguas.
+- Se crea tabla `compatibilidad_instancia` para trazabilidad de version de motor y charset.
+- Se crea tabla `movimiento_unificado` como base evolutiva sin romper el modelo anterior.
+- Se crea `catalogo_medios_pago` consolidado para normalizacion incremental.
+- Se agrega documentacion tecnica en `docs/COMPATIBILIDAD_MARIADB_MYSQL.md`.
