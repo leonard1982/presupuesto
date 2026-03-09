@@ -22,7 +22,7 @@
     var assetVersion = body.getAttribute('data-asset-version') || '0.1.0';
 
     if (enablePwa && 'serviceWorker' in navigator) {
-        navigator.serviceWorker.register(baseUrl + '/sw.js?v=' + encodeURIComponent(assetVersion)).catch(function () {
+        navigator.serviceWorker.register(baseUrl + '/public/sw.js?v=' + encodeURIComponent(assetVersion)).catch(function () {
             // Registro de SW opcional.
         });
     }

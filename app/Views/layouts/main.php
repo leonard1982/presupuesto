@@ -21,9 +21,9 @@ $enablePwaSafe = !empty($enablePwa) ? 'true' : 'false';
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?php echo escape_html($title); ?></title>
-    <link rel="manifest" href="<?php echo escape_html($baseUrlSafe); ?>/manifest.webmanifest?v=<?php echo escape_html($assetVersionSafe); ?>">
+    <link rel="manifest" href="<?php echo escape_html($baseUrlSafe); ?>/public/manifest.webmanifest?v=<?php echo escape_html($assetVersionSafe); ?>">
     <meta name="theme-color" content="#1f2937">
-    <link rel="stylesheet" href="<?php echo escape_html($baseUrlSafe); ?>/assets/css/app.css?v=<?php echo escape_html($assetVersionSafe); ?>">
+    <link rel="stylesheet" href="<?php echo escape_html($baseUrlSafe); ?>/public/assets/css/app.css?v=<?php echo escape_html($assetVersionSafe); ?>">
 </head>
 <body data-base-url="<?php echo escape_html($baseUrlSafe); ?>" data-enable-pwa="<?php echo escape_html($enablePwaSafe); ?>" data-asset-version="<?php echo escape_html($assetVersionSafe); ?>">
 <header class="app-header">
@@ -34,7 +34,7 @@ $enablePwaSafe = !empty($enablePwa) ? 'true' : 'false';
     <?php if (!empty($currentUser)) : ?>
         <div class="user-block">
             <span><?php echo escape_html($currentUser['name'] !== '' ? $currentUser['name'] : $currentUser['login']); ?></span>
-            <form method="post" action="<?php echo escape_html($baseUrlSafe); ?>/logout">
+            <form method="post" action="<?php echo escape_html($baseUrlSafe); ?>/index.php?route=logout">
                 <button type="submit" class="btn btn-secondary">Cerrar sesion</button>
             </form>
         </div>
@@ -43,6 +43,6 @@ $enablePwaSafe = !empty($enablePwa) ? 'true' : 'false';
 <main class="app-main">
     <?php echo $content; ?>
 </main>
-<script src="<?php echo escape_html($baseUrlSafe); ?>/assets/js/app.js?v=<?php echo escape_html($assetVersionSafe); ?>"></script>
+<script src="<?php echo escape_html($baseUrlSafe); ?>/public/assets/js/app.js?v=<?php echo escape_html($assetVersionSafe); ?>"></script>
 </body>
 </html>

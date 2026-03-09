@@ -93,6 +93,12 @@ class LoginController
     private function buildUrl($path)
     {
         $baseUrl = rtrim($this->appConfig['base_url'], '/');
-        return $baseUrl . '/' . ltrim($path, '/');
+        $route = trim((string) $path, '/');
+
+        if ($route === '') {
+            return $baseUrl . '/index.php';
+        }
+
+        return $baseUrl . '/index.php?route=' . rawurlencode($route);
     }
 }

@@ -8,7 +8,7 @@ use App\Core\Environment;
 return array(
     'environment' => Environment::get('APP_ENV', 'production'),
     'debug' => Environment::getBoolean('APP_DEBUG', false),
-    'base_url' => rtrim(Environment::get('APP_BASE_URL', '/'), '/'),
+    'base_url' => trim(Environment::get('APP_BASE_URL', 'AUTO')),
     'timezone' => Environment::get('APP_TIMEZONE', 'America/Bogota'),
     'enable_pwa' => Environment::getBoolean('APP_ENABLE_PWA', false),
     'asset_version' => Environment::get('APP_ASSET_VERSION', '0.1.0'),

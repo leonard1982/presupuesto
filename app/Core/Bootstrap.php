@@ -50,6 +50,8 @@ class Bootstrap
             'database' => $databaseConfig,
         );
 
+        $this->normalizeBaseUrl();
+
         $this->logger = new Logger($pathsConfig);
     }
 
@@ -140,6 +142,10 @@ class Bootstrap
 
     private function resolveRoutePath()
     {
+        if (isset($_GET['route']) && is_string($_GET['route']) && trim($_GET['route']) !== '') {
+            return '/' . trim($_GET['route'], '/');
+        }
+
         $requestUri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '/';
         $path = (string) parse_url($requestUri, PHP_URL_PATH);
 
@@ -153,12 +159,66 @@ class Bootstrap
             $path = rtrim($path, '/');
         }
 
+        if (strpos($path, '/index.php/') === 0) {
+            $path = substr($path, strlen('/index.php'));
+            if ($path === '') {
+                $path = '/';
+            }
+        }
+
         return $path;
     }
 
     private function buildUrl($path)
     {
         $baseUrl = rtrim($this->config['app']['base_url'], '/');
-        return $baseUrl . '/' . ltrim($path, '/');
+        $route = trim((string) $path, '/');
+
+        if ($route === '') {
+            return $baseUrl . '/index.php';
+        }
+
+        return $baseUrl . '/index.php?route=' . rawurlencode($route);
+    }
+
+    private function normalizeBaseUrl()
+    {
+        $configuredBaseUrl = trim((string) $this->config['app']['base_url']);
+
+        if ($configuredBaseUrl === '' || strtoupper($configuredBaseUrl) === 'AUTO') {
+            $this->config['app']['base_url'] = $this->detectBaseUrlFromRequest();
+            return;
+        }
+
+        $this->config['app']['base_url'] = rtrim($configuredBaseUrl, '/');
+    }
+
+    private function detectBaseUrlFromRequest()
+    {
+        $httpsEnabled = false;
+
+        if (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') {
+            $httpsEnabled = true;
+        } elseif (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443) {
+            $httpsEnabled = true;
+        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower((string) $_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https') {
+            $httpsEnabled = true;
+        }
+
+        $scheme = $httpsEnabled ? 'https' : 'http';
+        $host = isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] !== '' ? (string) $_SERVER['HTTP_HOST'] : 'localhost';
+        $scriptName = isset($_SERVER['SCRIPT_NAME']) ? (string) $_SERVER['SCRIPT_NAME'] : '';
+
+        $directory = str_replace('\\', '/', dirname($scriptName));
+        if ($directory === '/' || $directory === '.' || $directory === '\\') {
+            $directory = '';
+        }
+
+        if (substr($directory, -7) === '/public') {
+            $directory = substr($directory, 0, -7);
+        }
+
+        $directory = rtrim($directory, '/');
+        return $scheme . '://' . $host . $directory;
     }
 }

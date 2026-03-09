@@ -7,6 +7,8 @@
 ## Variables de entorno
 1. Copiar `.env.example` a `.env`.
 2. Ajustar `APP_BASE_URL`, `DB_*`, `APP_ENV`, `APP_DEBUG`.
+   - Recomendado: `APP_BASE_URL=AUTO` para deteccion dinamica de host/puerto.
+   - Si se define manual, debe incluir puerto cuando aplique.
 3. Estrategia dual recomendada:
    - `DB_NAME=presupuestos` (operacion actual)
    - `DB_NAME_LEGACY=presupuestos_legacy` (consulta historica)

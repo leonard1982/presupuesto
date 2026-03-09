@@ -35,3 +35,9 @@
 - Se crea tabla `movimiento_unificado` como base evolutiva sin romper el modelo anterior.
 - Se crea `catalogo_medios_pago` consolidado para normalizacion incremental.
 - Se agrega documentacion tecnica en `docs/COMPATIBILIDAD_MARIADB_MYSQL.md`.
+
+## 2026-03-09 - Ajuste dinamico de URL base y puertos
+- Se revierte cambio no solicitado de escucha en puerto 80 de Apache local.
+- Se establece deteccion dinamica de `base_url` cuando `APP_BASE_URL=AUTO`.
+- La aplicacion ahora construye URLs con host y puerto reales del request.
+- Se mantiene compatibilidad para desarrollo con puerto variable (ejemplo 9192) y produccion 80/443.
