@@ -161,7 +161,7 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
         </div>
         <div class="form-field">
             <label for="movement-filter-clasificacion">Clasificacion</label>
-            <select id="movement-filter-clasificacion">
+            <select id="movement-filter-clasificacion" class="js-searchable-select" data-placeholder="Todas las clasificaciones">
                 <option value="">Todas</option>
                 <?php foreach ($clasificacionOptions as $clasificacionOption) : ?>
                     <option value="<?php echo mov_escape($clasificacionOption); ?>"><?php echo mov_escape($clasificacionOption); ?></option>
@@ -178,7 +178,7 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
         </div>
         <div class="form-field">
             <label for="movement-filter-tipo">Tipo o medio</label>
-            <select id="movement-filter-tipo">
+            <select id="movement-filter-tipo" class="js-searchable-select" data-placeholder="Todos los tipos o medios">
                 <option value="">Todos</option>
                 <?php foreach ($tipoOptions as $tipoOption) : ?>
                     <option value="<?php echo mov_escape($tipoOption); ?>"><?php echo mov_escape($tipoOption); ?></option>

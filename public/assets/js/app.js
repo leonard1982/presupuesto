@@ -822,11 +822,20 @@
     if (window.jQuery && window.jQuery.fn) {
         if (typeof window.jQuery.fn.select2 === 'function') {
             window.jQuery('.js-searchable-select').each(function () {
-                var placeholder = window.jQuery(this).data('placeholder') || 'Buscar...';
+                var selectElement = window.jQuery(this);
+                if (selectElement.hasClass('select2-hidden-accessible')) {
+                    return;
+                }
+
+                var placeholder = selectElement.data('placeholder') || 'Buscar...';
+                var optionCount = selectElement.find('option').length;
+                var showSearch = optionCount >= 8;
+
                 window.jQuery(this).select2({
                     width: '100%',
                     placeholder: placeholder,
-                    allowClear: true
+                    allowClear: true,
+                    minimumResultsForSearch: showSearch ? 0 : Infinity
                 });
             });
         }

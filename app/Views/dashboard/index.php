@@ -178,14 +178,14 @@ $reportSubjectValue = isset($reportForm['asunto_informe']) ? (string) $reportFor
     </article>
 </section>
 
-<section class="card table-card">
+<section class="card table-card dashboard-recent-section">
     <div class="table-header">
         <h2><i class="bi bi-clock-history"></i> Movimientos recientes</h2>
         <a class="link-action" href="<?php echo dashboard_escape($baseUrl); ?>/index.php?route=movimientos">
             <i class="bi bi-arrow-right-circle"></i> Ver todos
         </a>
     </div>
-    <div class="table-wrapper">
+    <div class="table-wrapper dashboard-recent-table-wrapper">
         <table class="table-professional js-data-table js-indexed-table" data-page-length="10" data-export-name="dashboard_movimientos_recientes">
             <thead>
             <tr>
@@ -218,6 +218,26 @@ $reportSubjectValue = isset($reportForm['asunto_informe']) ? (string) $reportFor
             <?php endif; ?>
             </tbody>
         </table>
+    </div>
+    <div class="dashboard-recent-mobile-list">
+        <?php if (empty($recentMovements)) : ?>
+            <div class="dashboard-recent-mobile-empty muted">Sin movimientos recientes.</div>
+        <?php else : ?>
+            <?php foreach ($recentMovements as $movement) : ?>
+                <article class="dashboard-recent-mobile-item">
+                    <div class="dashboard-recent-mobile-head">
+                        <span class="dashboard-recent-mobile-date"><i class="bi bi-calendar-event"></i> <?php echo dashboard_escape($movement['fecha']); ?></span>
+                        <strong class="dashboard-recent-mobile-value"><?php echo dashboard_money($movement['valor']); ?></strong>
+                    </div>
+                    <div class="dashboard-recent-mobile-meta">
+                        <span class="dashboard-recent-mobile-tag"><?php echo dashboard_escape($movement['clasificacion'] !== null ? $movement['clasificacion'] : 'Sin clasificacion'); ?></span>
+                        <span class="dashboard-recent-mobile-tag"><?php echo dashboard_escape($movement['gasto_costo']); ?></span>
+                    </div>
+                    <p class="dashboard-recent-mobile-detail"><?php echo dashboard_escape($movement['detalle']); ?></p>
+                    <p class="dashboard-recent-mobile-user muted"><i class="bi bi-person-circle"></i> <?php echo dashboard_escape($movement['usuario']); ?></p>
+                </article>
+            <?php endforeach; ?>
+        <?php endif; ?>
     </div>
 </section>
 

@@ -242,3 +242,24 @@
 ## 2026-03-09 - Fondo dark mode mas profundo
 - Se oscurece el fondo global en modo oscuro para reducir tono gris y mejorar contraste visual.
 - Se aplica nuevo gradiente en `body.theme-dark` con base mas oscura y atmosfera uniforme.
+
+## 2026-03-09 - Select2 de busqueda en selects con varios items
+- Se habilita Select2 en filtros de movimientos para:
+  - clasificacion
+  - tipo o medio
+- Se mejora inicializacion global de Select2:
+  - evita doble inicializacion del mismo campo
+  - muestra buscador solo cuando el select tiene varios items (umbral >= 8 opciones)
+  - conserva placeholders y `allowClear`.
+
+## 2026-03-09 - Dashboard movil: movimientos recientes legibles
+- Se redisenia la seccion `Movimientos recientes` del dashboard para movil con tarjetas compactas.
+- Cada tarjeta muestra:
+  - fecha
+  - valor
+  - clasificacion
+  - categoria
+  - detalle
+  - usuario
+- En escritorio se mantiene la tabla DataTables actual.
+- En movil se oculta la tabla y se muestra el nuevo listado adaptado sin desbordes.

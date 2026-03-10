@@ -780,6 +780,82 @@ textarea {
     word-break: break-word;
 }
 
+.dashboard-recent-mobile-list {
+    display: none;
+}
+
+.dashboard-recent-mobile-item {
+    border: 1px solid #d8e4f1;
+    border-radius: 12px;
+    background: #fbfdff;
+    padding: 0.72rem;
+    margin-bottom: 0.65rem;
+}
+
+.dashboard-recent-mobile-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+}
+
+.dashboard-recent-mobile-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.34rem;
+    color: #25496f;
+    font-weight: 700;
+    font-size: 0.84rem;
+}
+
+.dashboard-recent-mobile-value {
+    color: #0f4c81;
+    font-size: 0.94rem;
+}
+
+.dashboard-recent-mobile-meta {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.38rem;
+}
+
+.dashboard-recent-mobile-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid #c6d8ec;
+    background: #edf5ff;
+    color: #104774;
+    font-weight: 700;
+    font-size: 0.76rem;
+}
+
+.dashboard-recent-mobile-detail {
+    margin: 0.55rem 0 0.38rem;
+    color: #1f344d;
+    font-weight: 600;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.dashboard-recent-mobile-user {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.84rem;
+}
+
+.dashboard-recent-mobile-empty {
+    border: 1px dashed #d8e4f1;
+    border-radius: 12px;
+    padding: 0.9rem;
+    text-align: center;
+}
+
 .form-card {
     padding: 1.2rem;
 }
@@ -1690,6 +1766,33 @@ body.theme-dark .movement-detail-item strong {
     color: #e6f0fc;
 }
 
+body.theme-dark .dashboard-recent-mobile-item {
+    background: #102032;
+    border-color: #355070;
+}
+
+body.theme-dark .dashboard-recent-mobile-date {
+    color: #d7e7fa;
+}
+
+body.theme-dark .dashboard-recent-mobile-value {
+    color: #9eceff;
+}
+
+body.theme-dark .dashboard-recent-mobile-tag {
+    background: #1a324b;
+    border-color: #375473;
+    color: #d8ebff;
+}
+
+body.theme-dark .dashboard-recent-mobile-detail {
+    color: #dce9f8;
+}
+
+body.theme-dark .dashboard-recent-mobile-empty {
+    border-color: #355070;
+}
+
 body.theme-dark .text-danger {
     color: #ff9e9e !important;
 }
@@ -2071,6 +2174,14 @@ body.theme-dark .dataTables_wrapper .dt-tools .dt-button.dt-export-button:hover 
     }
 
     .mobile-movement-list {
+        display: block;
+    }
+
+    .dashboard-recent-table-wrapper {
+        display: none;
+    }
+
+    .dashboard-recent-mobile-list {
         display: block;
     }
 

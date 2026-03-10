@@ -1,5 +1,13 @@
 ﻿# Versiones
 
+## v0.6.11 - 2026-03-09
+- Dashboard movil: seccion de movimientos recientes mejorada con tarjetas legibles y sin desbordes.
+- En movil se oculta tabla y se muestra listado adaptado; en escritorio se conserva DataTables.
+
+## v0.6.10 - 2026-03-09
+- Select2 habilitado en filtros de movimientos con muchos items (clasificacion y tipo/medio).
+- Inicializacion Select2 optimizada: evita doble carga y activa buscador solo cuando hay varias opciones.
+
 ## v0.6.9 - 2026-03-09
 - Tema oscuro: fondo global ajustado a un tono mas oscuro para mejor contraste visual.
 
@@ -123,6 +131,8 @@
 - `MAJOR`: cambios incompatibles.
 - `MINOR`: funcionalidades nuevas compatibles.
 - `PATCH`: correcciones y ajustes sin romper API funcional.
+
+
 
 
 
