@@ -161,6 +161,13 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
 <?php endif; ?>
 
 <section class="card movement-filters-card movement-filters-sticky">
+    <div class="movement-filters-header">
+        <h3><i class="bi bi-funnel"></i> Filtros de movimientos</h3>
+        <button type="button" id="movement-filters-toggle" class="btn btn-ghost btn-inline btn-mini" aria-expanded="true">
+            <i class="bi bi-funnel"></i> Ocultar filtros
+        </button>
+    </div>
+    <div id="movement-filters-body">
     <div class="movement-filters-grid">
         <div class="form-field">
             <label for="movement-filter-date">Fecha</label>
@@ -219,6 +226,7 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
         </button>
         <span id="movement-filter-result-info" class="muted"></span>
     </div>
+    </div>
 </section>
 
 <section class="movement-workspace">
@@ -228,7 +236,6 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
                 <thead>
                 <tr>
                     <th class="no-export">#</th>
-                    <th>ID</th>
                     <th>Fecha</th>
                     <th>Clasificacion</th>
                     <th>Detalle</th>
@@ -243,7 +250,7 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
                 <tbody>
                 <?php if (empty($movimientos)) : ?>
                     <tr>
-                        <td colspan="11" class="muted">No hay movimientos registrados.</td>
+                        <td colspan="10" class="muted">No hay movimientos registrados.</td>
                     </tr>
                 <?php else : ?>
                     <?php foreach ($movimientos as $movement) : ?>
@@ -273,7 +280,6 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
                         ?>
                         <tr class="js-movement-row-summary" data-movement-json="<?php echo mov_escape($movementDetailPayloadJson); ?>">
                             <td></td>
-                            <td><?php echo $movementId; ?></td>
                             <td><?php echo mov_escape($movement['fecha']); ?></td>
                             <td><?php echo mov_escape($movement['clasificacion'] !== null ? $movement['clasificacion'] : 'Sin clasificacion'); ?></td>
                             <td><?php echo mov_escape($movement['detalle']); ?></td>
@@ -372,7 +378,6 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
                         data-filter-tipo="<?php echo mov_escape(mov_filter_key($movementDetailPayload['tipo'])); ?>">
                         <div class="mobile-movement-head">
                             <span class="mobile-movement-date"><i class="bi bi-calendar-event"></i> <?php echo mov_escape($movementDetailPayload['fecha']); ?></span>
-                            <span class="mobile-movement-id">#<?php echo $movementId; ?></span>
                         </div>
                         <div class="mobile-movement-summary">
                             <strong><?php echo mov_escape($movementDetailPayload['clasificacion']); ?></strong>
@@ -412,7 +417,9 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
     <aside class="card movement-summary-card" id="movement-summary-card">
         <div class="movement-summary-head">
             <h3><i class="bi bi-card-checklist"></i> Resumen rapido</h3>
-            <span class="muted">Selecciona un movimiento</span>
+            <button type="button" id="movement-summary-toggle" class="btn btn-ghost btn-inline btn-mini" aria-expanded="true">
+                <i class="bi bi-layout-sidebar-inset"></i> Ocultar panel
+            </button>
         </div>
         <div id="movement-summary-body" class="movement-summary-body">
             <p class="muted">Haz clic en un registro del listado para ver detalle completo y accesos directos.</p>

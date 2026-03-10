@@ -784,9 +784,14 @@
     var movementFilterResetButton = document.getElementById('movement-filter-reset');
     var movementQuickDateButtons = document.querySelectorAll('.js-movement-quick-date');
     var movementFilterResultInfo = document.getElementById('movement-filter-result-info');
+    var movementFiltersCard = document.querySelector('.movement-filters-card');
+    var movementFiltersBody = document.getElementById('movement-filters-body');
+    var movementFiltersToggleButton = document.getElementById('movement-filters-toggle');
     var movementTableElement = document.querySelector('.js-movimientos-table');
     var movementTableDataTable = null;
     var movementTableFilterAttached = false;
+    var movementSummaryCard = document.getElementById('movement-summary-card');
+    var movementSummaryToggleButton = document.getElementById('movement-summary-toggle');
     var movementSummaryBody = document.getElementById('movement-summary-body');
     var movementDateFilterMode = 'exact';
     var movementDateRangeStart = '';
@@ -996,6 +1001,42 @@
         return rowDateSafe === filterState.date;
     }
 
+    function setMovementFiltersCollapsed(collapsed, persistState) {
+        if (!movementFiltersCard || !movementFiltersBody) {
+            return;
+        }
+
+        movementFiltersCard.classList.toggle('filters-collapsed', !!collapsed);
+        if (movementFiltersToggleButton) {
+            movementFiltersToggleButton.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            movementFiltersToggleButton.innerHTML = collapsed
+                ? '<i class="bi bi-funnel"></i> Mostrar filtros'
+                : '<i class="bi bi-funnel"></i> Ocultar filtros';
+        }
+
+        if (persistState) {
+            setUserPreference('movimientos_filters_collapsed', collapsed ? 1 : 0);
+        }
+    }
+
+    function setMovementSummaryCollapsed(collapsed, persistState) {
+        if (!movementSummaryCard || !movementSummaryBody) {
+            return;
+        }
+
+        movementSummaryCard.classList.toggle('summary-collapsed', !!collapsed);
+        if (movementSummaryToggleButton) {
+            movementSummaryToggleButton.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            movementSummaryToggleButton.innerHTML = collapsed
+                ? '<i class="bi bi-layout-sidebar"></i> Mostrar panel'
+                : '<i class="bi bi-layout-sidebar-inset"></i> Ocultar panel';
+        }
+
+        if (persistState) {
+            setUserPreference('movimientos_summary_collapsed', collapsed ? 1 : 0);
+        }
+    }
+
     function getMovementFilterState() {
         var quickRange = '';
         if (movementDateFilterMode === 'all') {
@@ -1081,10 +1122,10 @@
             }
 
             var filters = getMovementFilterState();
-            var rowDate = extractDatePart(data[2]);
-            var rowClasificacion = normalizeFilterText(data[3]);
-            var rowCategoria = normalizeFilterText(data[5]);
-            var rowTipo = normalizeFilterText(data[6]);
+            var rowDate = extractDatePart(data[1]);
+            var rowClasificacion = normalizeFilterText(data[2]);
+            var rowCategoria = normalizeFilterText(data[4]);
+            var rowTipo = normalizeFilterText(data[5]);
 
             if (!movementDateMatchesFilter(rowDate, filters)) {
                 return false;
@@ -1136,7 +1177,6 @@
         var ticketUrl = movementData.urls && movementData.urls.ticket ? escapeHtml(movementData.urls.ticket) : '';
 
         var summaryHtml = '<div class="movement-summary-grid">';
-        summaryHtml += '<div><span>ID</span><strong>#' + escapeHtml(movementData.id || '') + '</strong></div>';
         summaryHtml += '<div><span>Fecha</span><strong>' + escapeHtml(movementData.fecha || '') + '</strong></div>';
         summaryHtml += '<div><span>Clasificacion</span><strong>' + escapeHtml(movementData.clasificacion || '') + '</strong></div>';
         summaryHtml += '<div><span>Categoria</span><strong>' + escapeHtml(movementData.categoria || '') + '</strong></div>';
@@ -1217,6 +1257,21 @@
     function initializeMovementFilters() {
         if (!movementFilterDateInput && !movementFilterClasificacionInput && !movementFilterCategoriaInput && !movementFilterTipoInput) {
             return;
+        }
+
+        if (movementFiltersToggleButton) {
+            movementFiltersToggleButton.addEventListener('click', function () {
+                var willCollapse = !movementFiltersCard.classList.contains('filters-collapsed');
+                setMovementFiltersCollapsed(willCollapse, true);
+            });
+        }
+
+        var storedFiltersCollapsed = getUserPreference('movimientos_filters_collapsed', null);
+        var defaultFiltersCollapsed = window.innerWidth <= 760;
+        if (storedFiltersCollapsed === null || typeof storedFiltersCollapsed === 'undefined') {
+            setMovementFiltersCollapsed(defaultFiltersCollapsed, false);
+        } else {
+            setMovementFiltersCollapsed(parseInt(storedFiltersCollapsed, 10) === 1, false);
         }
 
         var storedFilterState = loadMovementFilterPreferences();
@@ -1527,6 +1582,18 @@
 
     initializeMovementFilters();
 
+    if (movementSummaryToggleButton) {
+        movementSummaryToggleButton.addEventListener('click', function () {
+            var willCollapse = !movementSummaryCard.classList.contains('summary-collapsed');
+            setMovementSummaryCollapsed(willCollapse, true);
+        });
+    }
+
+    if (movementSummaryCard) {
+        var storedSummaryCollapsed = getUserPreference('movimientos_summary_collapsed', 0);
+        setMovementSummaryCollapsed(parseInt(storedSummaryCollapsed, 10) === 1, false);
+    }
+
     if (movementTableElement) {
         movementTableElement.addEventListener('click', function (event) {
             var target = event.target;
@@ -1705,9 +1772,8 @@
             return;
         }
 
-        var movementId = movementData.id ? String(movementData.id) : '';
         if (movementMobileModalTitle) {
-            movementMobileModalTitle.innerHTML = '<i class="bi bi-card-text"></i> Detalle del movimiento' + (movementId !== '' ? ' #' + escapeHtml(movementId) : '');
+            movementMobileModalTitle.innerHTML = '<i class="bi bi-card-text"></i> Detalle del movimiento';
         }
 
         var detailRows = [

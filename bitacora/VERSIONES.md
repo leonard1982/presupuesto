@@ -1,5 +1,10 @@
 # Versiones
 
+## v0.7.1 - 2026-03-09
+- Movimientos: filtros ocultables con estado inicial oculto en movil.
+- Movimientos: panel lateral de resumen con boton ocultar/mostrar en escritorio.
+- Movimientos: columna ID retirada del listado y tarjetas moviles.
+- Ajuste tecnico: indices de columnas en filtro DataTables actualizados tras retirar ID.
 ## v0.7.0 - 2026-03-09
 - Movimientos: barra de filtros sticky con rangos rapidos Hoy/Semana/Mes/Todo y persistencia por usuario.
 - Movimientos escritorio: panel lateral de resumen rapido por seleccion de fila.

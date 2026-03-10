@@ -615,6 +615,27 @@ textarea {
     margin-bottom: 1rem;
 }
 
+.movement-filters-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.62rem;
+}
+
+.movement-filters-header h3 {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.34rem;
+    font-size: 0.98rem;
+}
+
+.movement-filters-card.filters-collapsed #movement-filters-body {
+    display: none;
+}
+
 .movement-filters-sticky {
     position: sticky;
     top: 72px;
@@ -684,6 +705,10 @@ textarea {
     margin-top: 1rem;
     position: sticky;
     top: 236px;
+}
+
+.movement-summary-card.summary-collapsed #movement-summary-body {
+    display: none;
 }
 
 .movement-summary-head {
@@ -2057,6 +2082,10 @@ body.theme-dark .movement-filters-sticky {
     box-shadow: 0 6px 22px rgba(0, 0, 0, 0.22);
 }
 
+body.theme-dark .movement-filters-header h3 {
+    color: #dcecff;
+}
+
 body.theme-dark .movement-quick-date-buttons .btn.active {
     background: #6db5ff;
     color: #05203d;
@@ -2185,12 +2214,6 @@ body.theme-dark .mobile-movement-card {
 
 body.theme-dark .mobile-movement-date {
     color: #d7e7fa;
-}
-
-body.theme-dark .mobile-movement-id {
-    background: #1a324b;
-    border-color: #375473;
-    color: #d8ebff;
 }
 
 body.theme-dark .mobile-movement-summary span {
@@ -2610,6 +2633,11 @@ body.theme-dark .dataTables_wrapper .dt-tools .dt-button.dt-export-button:hover 
     .movement-filters-actions-right {
         margin-left: 0;
         justify-content: flex-start;
+    }
+
+    .movement-filters-header .btn {
+        width: 100%;
+        justify-content: center;
     }
 
     .shortcut-chip {

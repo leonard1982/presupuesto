@@ -1,5 +1,13 @@
 # Cambios Generales
 
+## 2026-03-09 - Filtros moviles ocultos por defecto y panel lateral ocultable
+- Movimientos: se agrega boton para mostrar/ocultar filtros y se permite plegar el bloque completo.
+- En movil, los filtros quedan ocultos por defecto al entrar al modulo para priorizar la lista.
+- Se conserva la preferencia del usuario para el estado de filtros (visible/oculto) en visitas siguientes.
+- En escritorio, el panel lateral de resumen ahora tiene boton para ocultar/mostrar.
+- Se conserva la preferencia del usuario para el panel lateral (visible/oculto).
+- Se elimina la columna ID de la lista de movimientos (tabla y tarjetas moviles).
+- Se ajusta el filtrado de DataTables a la nueva estructura de columnas sin ID.
 ## 2026-03-09 - Productividad integral PC y movil en movimientos
 - Se implementa barra de filtros sticky en movimientos con acceso rapido visible durante scroll.
 - Se agregan filtros rapidos por fecha: Hoy, Semana, Mes y Todo.
