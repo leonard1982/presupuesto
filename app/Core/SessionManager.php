@@ -22,13 +22,7 @@ class SessionManager
         $sessionLifetime = (int) $appConfig['session_lifetime_seconds'];
 
         session_name($sessionName);
-        session_set_cookie_params(array(
-            'lifetime' => $sessionLifetime,
-            'path' => '/',
-            'secure' => $isHttps,
-            'httponly' => true,
-            'samesite' => 'Lax',
-        ));
+        self::configureSessionCookieParams($sessionLifetime, $isHttps);
 
         session_start();
 
@@ -86,5 +80,26 @@ class SessionManager
         }
 
         return false;
+    }
+
+    private static function configureSessionCookieParams($sessionLifetime, $isHttps)
+    {
+        $lifetime = (int) $sessionLifetime;
+        $secure = (bool) $isHttps;
+        $httpOnly = true;
+
+        if (PHP_VERSION_ID >= 70300) {
+            session_set_cookie_params(array(
+                'lifetime' => $lifetime,
+                'path' => '/',
+                'secure' => $secure,
+                'httponly' => $httpOnly,
+                'samesite' => 'Lax',
+            ));
+            return;
+        }
+
+        // Compatibilidad PHP 7.2: samesite se declara en el path.
+        session_set_cookie_params($lifetime, '/; samesite=Lax', '', $secure, $httpOnly);
     }
 }
