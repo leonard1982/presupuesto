@@ -1,4 +1,33 @@
-﻿## 2026-03-10 - Correos IMAP robusto e informes A4 corporativos
+﻿## 2026-03-10 - Loader global bloqueante para consultas y navegacion
+- Se agrega overlay global de carga con mensaje Espere por favor... y animacion de espera.
+- El loader bloquea interaccion y scroll mientras se procesa cambio de pagina o consulta.
+- Se activa automaticamente en enlaces y formularios de navegacion/consulta.
+- Se agregan exclusiones seguras para descargas, enlaces de ancla, target _blank y acciones locales sin recarga.
+
+## 2026-03-10 - Bandeja correo: tabla compacta y sugerencia solo en modal
+- Se compacta el ancho de la columna numerica (#) en la bandeja de correos.
+- Se elimina panel lateral de sugerencia en la vista; ahora la sugerencia aparece unicamente en popup al pulsar Analizar.
+- Se agrega validacion de relevancia economica para no sugerir correos no financieros.
+- Si el correo no es relevante, el modal muestra mensaje y no despliega formulario de guardado.
+
+## 2026-03-10 - Correos: codificacion UTF-8 y sugerencia en modal por UID
+- Se corrige visualizacion de acentos en correos IMAP mediante normalizacion de codificacion por charset y conversion a UTF-8.
+- Se elimina texto corrupto tipo traves / REALIZO en extractos y formulario de sugerencia.
+- El boton Analizar ahora abre la sugerencia en modal (analizar=1) en lugar de panel fijo.
+- Se evita mezcla de sugerencias entre correos: el merge de formulario en flash solo aplica cuando coincide el uid del correo.
+
+## 2026-03-10 - Bandeja correo: apertura de extracto estable en todos los registros
+- Se reemplaza transporte de extracto por JSON embebido a atributos separados con cuerpo en Base64.
+- Se evita fallo de apertura en registros con caracteres/codificacion no compatibles en JSON.
+- Se agrega fallback al snippet cuando un correo no trae cuerpo legible.
+
+## 2026-03-10 - Bandeja correo: extracto por icono y contenido limpio
+- La columna Extracto en bandeja de correos deja de mostrar texto o HTML crudo en la tabla.
+- Se reemplaza por icono de visualizacion con modal para ver el contenido del correo en formato legible.
+- Se agrega limpieza adicional del cuerpo IMAP para correos con contenido HTML y quoted-printable.
+- Se elimina ruido de secuencias como =3D, etiquetas HTML y entidades para mostrar texto util al usuario.
+
+## 2026-03-10 - Correos IMAP robusto e informes A4 corporativos
 - Se corrige configuracion de bandeja IMAP para no depender del puerto SMTP (MAIL_PORT).
 - Se ajusta fallback de MAIL_INBOX_PORT a 993 en configuracion central.
 - Se implementan intentos automaticos de conexion IMAP por combinaciones:
@@ -380,5 +409,11 @@
   - Clasificaciones
   - Medios de pago
 - Se define ancho fijo corto para que ocupe solo el espacio del numero y no consuma area de contenido.
+
+
+
+
+
+
 
 

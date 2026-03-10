@@ -233,6 +233,13 @@ $currentUserLogin = $isAuthenticated && isset($currentUser['login']) ? (string) 
     </div>
 </div>
 
+<div id="global-loading-overlay" class="global-loading-overlay hidden" aria-hidden="true" role="status" aria-live="polite">
+    <div class="global-loading-card">
+        <div class="global-loading-spinner" aria-hidden="true"></div>
+        <p id="global-loading-message">Espere por favor...</p>
+    </div>
+</div>
+
 <?php if ($isAuthenticated) : ?>
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>

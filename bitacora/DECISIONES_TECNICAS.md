@@ -1,5 +1,47 @@
 ﻿## 2026-03-10
 
+### Decision: loader global bloqueante de navegacion
+- Motivo: en consultas o cambios de vista que tardan, el usuario no tenia feedback de proceso y podia repetir acciones.
+- Impacto: experiencia mas clara y controlada, con bloqueo temporal y mensaje de espera hasta finalizar la carga.
+
+## 2026-03-10
+
+### Decision: sugerencia de correos solo en modal emergente
+- Motivo: liberar espacio de tabla y evitar panel lateral permanente que reduce productividad.
+- Impacto: el usuario analiza en contexto y recibe popup con datos del correo seleccionado.
+
+### Decision: bloquear sugerencia en correos no economicos
+- Motivo: evitar recomendaciones irrelevantes en mensajes de seguridad, clave o comunicacion general.
+- Impacto: si no hay indicios financieros suficientes, se informa al usuario y no se propone formulario.
+
+## 2026-03-10
+
+### Decision: normalizar codificacion IMAP a UTF-8 por parte MIME
+- Motivo: varios correos llegan en ISO-8859-1/Windows-1252 y en UI mostraban caracteres rotos.
+- Impacto: extractos y sugerencias conservan acentos y texto legible en frontend y soporte.
+
+### Decision: sugerencia de correo en modal con control por UID
+- Motivo: mejorar UX y evitar percepcion de cruce de datos entre correos.
+- Impacto: cada analisis abre modal del correo seleccionado y los datos en flash solo se reusan si coincide el UID.
+
+## 2026-03-10
+
+### Decision: extracto de correos transportado en Base64
+- Motivo: algunos registros no abrían por caracteres invalidos en JSON dentro de atributos HTML.
+- Impacto: apertura estable del modal de extracto para todos los correos listados.
+
+## 2026-03-10
+
+### Decision: extracto de correos mediante icono + modal
+- Motivo: evitar saturacion visual y eliminar HTML crudo en el listado de bandeja.
+- Impacto: la tabla queda compacta y el usuario abre el contenido completo solo cuando lo necesita.
+
+### Decision: saneamiento reforzado de cuerpo IMAP
+- Motivo: algunos correos llegan como quoted-printable/HTML y no son legibles directamente.
+- Impacto: se decodifica y limpia contenido antes de mostrarlo, mejorando lectura y sugerencia posterior.
+
+## 2026-03-10
+
 ### Decision: Fallback automatico IMAP multipuerto
 - Motivo: en varios entornos el correo SMTP y la bandeja IMAP usan puertos distintos, lo que rompe la lectura de correos si se comparte una sola configuracion.
 - Impacto: el sistema intenta conexion IMAP en combinaciones seguras (configurada, 993/SSL, 143/TLS y 143/notls) y deja trazabilidad en log.
@@ -133,6 +175,11 @@
 ### Decision: Asesor KPI hibrido (reglas + OpenAI opcional)
 - Motivo: asegurar recomendaciones incluso si la API externa falla o no esta disponible.
 - Impacto: continuidad operativa con fallback local y mejora progresiva cuando OpenAI responde.
+
+
+
+
+
 
 
 

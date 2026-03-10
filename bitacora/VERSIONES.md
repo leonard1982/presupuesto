@@ -1,5 +1,28 @@
 ﻿# Versiones
 
+## v0.9.7 - 2026-03-10
+- UI global: overlay de carga bloqueante con animacion y mensaje Espere por favor....
+- Activacion automatica en formularios y enlaces de navegacion/consulta.
+- Se evita activacion en acciones locales (anclas, descargas, target _blank, acciones JS).
+
+## v0.9.6 - 2026-03-10
+- Bandeja correo: columna # compacta para ganar espacio horizontal.
+- Correos: sugerencia removida del panel lateral y movida a popup modal al pulsar Analizar.
+- Correos: filtro de relevancia economica para no sugerir mensajes no financieros.
+
+## v0.9.5 - 2026-03-10
+- Correos IMAP: correccion de codificacion (UTF-8) para acentos y caracteres especiales.
+- Correos: sugerencia movida a modal al pulsar Analizar.
+- Correos: control por UID para evitar mezcla de sugerencias entre mensajes.
+
+## v0.9.4 - 2026-03-10
+- Bandeja correo: correccion de modal de extracto para registros con codificaciones problematicas.
+- Bandeja correo: cuerpo de extracto enviado en Base64 para evitar fallos de parseo.
+
+## v0.9.3 - 2026-03-10
+- Bandeja de correos: columna Extracto ahora usa icono con modal de contenido formateado.
+- Bandeja de correos: se corrige visualizacion de contenido quoted-printable/HTML en texto legible.
+
 ## v0.9.2 - 2026-03-10
 - Correos: lectura IMAP robusta con fallback multipuerto (configurado, 993/SSL, 143/TLS y 143/notls).
 - Correos: MAIL_INBOX_PORT deja de heredar MAIL_PORT para evitar conflicto SMTP vs IMAP.
@@ -178,5 +201,10 @@
 - `MAJOR`: cambios incompatibles.
 - `MINOR`: funcionalidades nuevas compatibles.
 - `PATCH`: correcciones y ajustes sin romper API funcional.
+
+
+
+
+
 
 

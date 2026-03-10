@@ -264,13 +264,21 @@ class InboxReaderService
 
         if ($plainPart !== null) {
             $raw = imap_fetchbody($stream, (int) $messageNumber, $plainPart['part_number'], FT_PEEK);
-            $decoded = $this->decodePartBody((string) $raw, (int) $plainPart['encoding']);
+            $decoded = $this->decodePartBody(
+                (string) $raw,
+                (int) $plainPart['encoding'],
+                isset($plainPart['charset']) ? (string) $plainPart['charset'] : ''
+            );
             return $this->sanitizeBodyText($decoded);
         }
 
         if ($htmlPart !== null) {
             $raw = imap_fetchbody($stream, (int) $messageNumber, $htmlPart['part_number'], FT_PEEK);
-            $decoded = $this->decodePartBody((string) $raw, (int) $htmlPart['encoding']);
+            $decoded = $this->decodePartBody(
+                (string) $raw,
+                (int) $htmlPart['encoding'],
+                isset($htmlPart['charset']) ? (string) $htmlPart['charset'] : ''
+            );
             return $this->sanitizeBodyText(strip_tags($decoded));
         }
 
@@ -293,6 +301,7 @@ class InboxReaderService
                 'type' => isset($part->type) ? (int) $part->type : 0,
                 'subtype' => isset($part->subtype) ? strtoupper((string) $part->subtype) : '',
                 'encoding' => isset($part->encoding) ? (int) $part->encoding : 0,
+                'charset' => $this->extractPartCharset($part),
             );
 
             if (isset($part->parts) && is_array($part->parts)) {
@@ -322,7 +331,36 @@ class InboxReaderService
         return null;
     }
 
-    private function decodePartBody($rawBody, $encoding)
+    private function extractPartCharset($part)
+    {
+        if (!is_object($part)) {
+            return '';
+        }
+
+        $sources = array('parameters', 'dparameters');
+        foreach ($sources as $sourceName) {
+            if (!isset($part->{$sourceName}) || !is_array($part->{$sourceName})) {
+                continue;
+            }
+
+            foreach ($part->{$sourceName} as $parameter) {
+                if (!is_object($parameter)) {
+                    continue;
+                }
+
+                $attribute = isset($parameter->attribute) ? strtolower(trim((string) $parameter->attribute)) : '';
+                if ($attribute !== 'charset') {
+                    continue;
+                }
+
+                return isset($parameter->value) ? trim((string) $parameter->value) : '';
+            }
+        }
+
+        return '';
+    }
+
+    private function decodePartBody($rawBody, $encoding, $charsetHint)
     {
         $value = (string) $rawBody;
         $encodingInt = (int) $encoding;
@@ -333,15 +371,116 @@ class InboxReaderService
         }
 
         if ($encodingInt === 4) {
-            return quoted_printable_decode($value);
+            $value = quoted_printable_decode($value);
         }
 
-        return $value;
+        return $this->normalizeEncodingToUtf8($value, (string) $charsetHint);
+    }
+
+    private function normalizeEncodingToUtf8($value, $charsetHint)
+    {
+        $text = (string) $value;
+        if ($text === '') {
+            return '';
+        }
+
+        if (function_exists('mb_check_encoding') && mb_check_encoding($text, 'UTF-8')) {
+            return $text;
+        }
+
+        $hint = strtoupper(str_replace('_', '-', trim((string) $charsetHint)));
+        $encodings = array();
+
+        if ($hint !== '' && $hint !== 'DEFAULT') {
+            if ($hint === 'US-ASCII') {
+                $hint = 'ASCII';
+            } elseif ($hint === 'ISO8859-1') {
+                $hint = 'ISO-8859-1';
+            } elseif ($hint === 'CP1252') {
+                $hint = 'WINDOWS-1252';
+            }
+            $encodings[] = $hint;
+        }
+
+        $encodings[] = 'WINDOWS-1252';
+        $encodings[] = 'ISO-8859-1';
+        $encodings[] = 'UTF-8';
+        $encodings = array_values(array_unique($encodings));
+
+        if (function_exists('mb_convert_encoding')) {
+            foreach ($encodings as $encoding) {
+                $converted = @mb_convert_encoding($text, 'UTF-8', $encoding);
+                if (!is_string($converted) || $converted === '') {
+                    continue;
+                }
+                if (!function_exists('mb_check_encoding') || mb_check_encoding($converted, 'UTF-8')) {
+                    return $converted;
+                }
+            }
+        }
+
+        if (function_exists('iconv')) {
+            foreach ($encodings as $encoding) {
+                $converted = @iconv($encoding, 'UTF-8//IGNORE', $text);
+                if (is_string($converted) && $converted !== '') {
+                    return $converted;
+                }
+            }
+        }
+
+        return $text;
     }
 
     private function sanitizeBodyText($value)
     {
         $text = (string) $value;
+        $text = $this->decodeLikelyBase64Payload($text);
+
+        // Correos con quoted-printable pueden traer HTML y secuencias como =3D.
+        if (strpos($text, '=3D') !== false || preg_match('/=\r?\n/', $text)) {
+            $decodedQuoted = quoted_printable_decode($text);
+            if (is_string($decodedQuoted) && $decodedQuoted !== '') {
+                $text = $decodedQuoted;
+            }
+        }
+
+        $text = str_replace(array("\r\n", "\r"), "\n", $text);
+        $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]+/', ' ', $text);
+        if (!is_string($text)) {
+            $text = '';
+        }
+
+        $looksLikeHtml = stripos($text, '<html') !== false
+            || stripos($text, '<body') !== false
+            || stripos($text, '<div') !== false
+            || stripos($text, '<p') !== false
+            || preg_match('/<[^>]+>/', $text);
+
+        if ($looksLikeHtml) {
+            if (function_exists('html_entity_decode')) {
+                $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+            $text = preg_replace('/<style\b[^>]*>.*?<\/style>/is', ' ', $text);
+            $text = preg_replace('/<script\b[^>]*>.*?<\/script>/is', ' ', $text);
+            $text = preg_replace('/<!--.*?-->/s', ' ', $text);
+            if (!is_string($text)) {
+                $text = '';
+            }
+            $text = preg_replace('/<\s*br\s*\/?\s*>/i', "\n", $text);
+            $text = preg_replace('/<\s*\/p\s*>/i', "\n", $text);
+            $text = preg_replace('/<\s*\/div\s*>/i', "\n", $text);
+            if (!is_string($text)) {
+                $text = '';
+            }
+            $text = strip_tags($text);
+        }
+
+        if (function_exists('html_entity_decode')) {
+            $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+
+        $text = $this->normalizeEncodingToUtf8($text, '');
+        $text = $this->removeCssNoise($text);
         $text = str_replace(array("\r\n", "\r"), "\n", $text);
         $text = preg_replace('/[ \t]+/', ' ', $text);
         if (!is_string($text)) {
@@ -354,6 +493,102 @@ class InboxReaderService
         }
 
         return trim($text);
+    }
+
+    private function decodeLikelyBase64Payload($value)
+    {
+        $text = trim((string) $value);
+        if ($text === '' || strlen($text) < 120) {
+            return (string) $value;
+        }
+
+        $compact = preg_replace('/\s+/', '', $text);
+        if (!is_string($compact) || $compact === '') {
+            return (string) $value;
+        }
+
+        if (strlen($compact) < 120 || (strlen($compact) % 4) !== 0) {
+            return (string) $value;
+        }
+
+        if (!preg_match('/^[A-Za-z0-9+\/=]+$/', $compact)) {
+            return (string) $value;
+        }
+
+        $decoded = base64_decode($compact, true);
+        if (!is_string($decoded) || $decoded === '') {
+            return (string) $value;
+        }
+
+        $decodedTrimmed = trim($decoded);
+        if ($decodedTrimmed === '') {
+            return (string) $value;
+        }
+
+        if (preg_match('/<html|<body|<!doctype|<div|<p|<table/i', $decodedTrimmed)) {
+            return $decodedTrimmed;
+        }
+
+        if (preg_match('/[A-Za-z0-9].{40,}/s', $decodedTrimmed) && strpos($decodedTrimmed, '=3D') === false) {
+            return $decodedTrimmed;
+        }
+
+        return (string) $value;
+    }
+
+    private function removeCssNoise($value)
+    {
+        $text = (string) $value;
+        if ($text === '') {
+            return '';
+        }
+
+        $lines = preg_split('/\r?\n/', $text);
+        if (!is_array($lines) || empty($lines)) {
+            return trim($text);
+        }
+
+        $filtered = array();
+        foreach ($lines as $line) {
+            $current = trim((string) $line);
+            if ($current === '') {
+                continue;
+            }
+
+            $lower = strtolower($current);
+            if (strpos($lower, 'readmsgbody') !== false
+                || strpos($lower, 'externalclass') !== false
+                || strpos($lower, '#outlook') !== false
+                || strpos($lower, 'mso-') !== false
+            ) {
+                continue;
+            }
+
+            if (preg_match('/^@media\b/i', $current)) {
+                continue;
+            }
+
+            if (preg_match('/^[\.\#a-z0-9\-\_\[\]\(\)\,\s:>]+\{[^\}]*\}\s*$/i', $current)) {
+                continue;
+            }
+
+            if (strpos($current, '{') !== false
+                && strpos($current, '}') !== false
+                && strpos($current, ':') !== false
+                && strpos($current, ';') !== false
+                && strlen($current) > 18
+            ) {
+                continue;
+            }
+
+            $filtered[] = $current;
+        }
+
+        if (empty($filtered)) {
+            return trim($text);
+        }
+
+        return implode("\n", $filtered);
     }
 
     private function buildSnippet($bodyPlain)
@@ -385,6 +620,8 @@ class InboxReaderService
                 $decodedText = '';
                 foreach ($parts as $part) {
                     $chunk = isset($part->text) ? (string) $part->text : '';
+                    $chunkCharset = isset($part->charset) ? (string) $part->charset : '';
+                    $chunk = $this->normalizeEncodingToUtf8($chunk, $chunkCharset);
                     $decodedText .= $chunk;
                 }
                 if ($decodedText !== '') {

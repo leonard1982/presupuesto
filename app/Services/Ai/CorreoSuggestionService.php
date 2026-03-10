@@ -21,6 +21,10 @@ class CorreoSuggestionService
     public function suggest(array $correo, array $clasificaciones, array $mediosPago)
     {
         $baseSuggestion = $this->buildRuleBasedSuggestion($correo, $clasificaciones, $mediosPago);
+        if (!isset($baseSuggestion['is_relevant']) || !$baseSuggestion['is_relevant']) {
+            return $baseSuggestion;
+        }
+
         $openAiSuggestion = $this->requestOpenAiSuggestion($correo, $clasificaciones, $mediosPago, $baseSuggestion);
 
         if (is_array($openAiSuggestion)) {
@@ -95,6 +99,26 @@ class CorreoSuggestionService
             $fecha = date('Y-m-d H:i:s');
         }
 
+        $relevance = $this->evaluateEconomicRelevance($normalizedText, $valor);
+        if (!$relevance['is_relevant']) {
+            return array(
+                'fecha' => $fecha,
+                'id_clasificacion' => 0,
+                'detalle' => $detalle,
+                'valor' => 0.0,
+                'id_presupuesto' => 0,
+                'gasto_costo' => 'Gasto',
+                'tipo' => '',
+                'por_pagar_cobrar' => 'NINGUNO',
+                'valor_neto' => 0.0,
+                'saldo' => 0.0,
+                'confidence' => 0.0,
+                'source' => 'Validacion de relevancia',
+                'is_relevant' => false,
+                'irrelevant_reason' => $relevance['reason'],
+            );
+        }
+
         return array(
             'fecha' => $fecha,
             'id_clasificacion' => $clasificacionId,
@@ -108,6 +132,8 @@ class CorreoSuggestionService
             'saldo' => 0.0,
             'confidence' => $confidence,
             'source' => 'Reglas internas',
+            'is_relevant' => true,
+            'irrelevant_reason' => '',
         );
     }
 
@@ -262,7 +288,92 @@ class CorreoSuggestionService
         }
 
         $final['source'] = 'OpenAI + reglas internas';
+        $final['is_relevant'] = true;
+        $final['irrelevant_reason'] = '';
         return $final;
+    }
+
+    private function evaluateEconomicRelevance($normalizedText, $amountValue)
+    {
+        $text = trim((string) $normalizedText);
+        $amount = (float) $amountValue;
+
+        if ($text === '') {
+            return array(
+                'is_relevant' => false,
+                'reason' => 'El correo no tiene contenido suficiente para sugerir un movimiento economico.',
+            );
+        }
+
+        $strongKeywords = array(
+            'compraste', 'compra aprobada', 'compra rechazada', 'pago realizado', 'pago recibido', 'pago exitoso',
+            'pago aprobado', 'transferencia', 'transferiste', 'transferencia recibida', 'consignacion',
+            'abono', 'debito', 'credito', 'retiro', 'recaudo', 'transaccion', 'factura', 'pse',
+            'movimiento en cuenta',
+        );
+        $mediumKeywords = array(
+            'tarjeta', 'cuenta', 'banco', 'saldo', 'ingreso', 'egreso', 'cuota',
+            'nequi', 'daviplata', 'bancolombia',
+        );
+        $noiseKeywords = array(
+            'cambiar clave', 'cambio de clave', 'recordar clave', 'recuperar clave', 'contrasena', 'contraseña',
+            'codigo de verificacion', 'codigo de seguridad', 'otp', 'verifica tu cuenta',
+            'bienvenido al sistema', 'inicio de sesion', 'iniciar sesion', 'actualiza tu clave',
+        );
+
+        $strongHits = 0;
+        foreach ($strongKeywords as $keyword) {
+            if (strpos($text, $keyword) !== false) {
+                $strongHits += 1;
+            }
+        }
+
+        $mediumHits = 0;
+        foreach ($mediumKeywords as $keyword) {
+            if (strpos($text, $keyword) !== false) {
+                $mediumHits += 1;
+            }
+        }
+
+        $hasNoiseKeyword = false;
+        foreach ($noiseKeywords as $keyword) {
+            if (strpos($text, $keyword) !== false) {
+                $hasNoiseKeyword = true;
+                break;
+            }
+        }
+
+        $hasCurrencyToken = strpos($text, '$') !== false
+            || strpos($text, 'cop') !== false
+            || strpos($text, 'usd') !== false
+            || strpos($text, 'eur') !== false;
+        $hasAmountEvidence = preg_match('/\$\s*[0-9]/', $text)
+            || preg_match('/\b(?:cop|usd|eur)\b/i', $text)
+            || preg_match('/[0-9]{1,3}(?:[\.,][0-9]{3})+(?:[\.,][0-9]{1,2})?/', $text);
+
+        if ($hasNoiseKeyword && !$hasAmountEvidence) {
+            return array(
+                'is_relevant' => false,
+                'reason' => 'Este correo no parece un movimiento economico de compra, pago, transferencia o recaudo. No se genera sugerencia automatica.',
+            );
+        }
+
+        if ($amount > 0 && $hasAmountEvidence && ($strongHits > 0 || $mediumHits > 0)) {
+            return array('is_relevant' => true, 'reason' => '');
+        }
+
+        if ($amount > 0 && ($hasCurrencyToken || $hasAmountEvidence) && $strongHits > 0) {
+            return array('is_relevant' => true, 'reason' => '');
+        }
+
+        if ($strongHits > 0 && !$hasNoiseKeyword) {
+            return array('is_relevant' => true, 'reason' => '');
+        }
+
+        return array(
+            'is_relevant' => false,
+            'reason' => 'Este correo no parece un movimiento economico de compra, pago, transferencia o recaudo. No se genera sugerencia automatica.',
+        );
     }
 
     private function findClasificacionIdByText($clasificacionText, array $clasificaciones)

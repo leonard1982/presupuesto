@@ -37,6 +37,37 @@
             .replace(/'/g, '&#039;');
     }
 
+    function decodeBase64Utf8(base64Text) {
+        var value = String(base64Text || '').trim();
+        if (value === '') {
+            return '';
+        }
+
+        try {
+            var binaryText = window.atob(value);
+            if (typeof window.TextDecoder === 'function') {
+                var length = binaryText.length;
+                var bytes = new Uint8Array(length);
+                for (var index = 0; index < length; index += 1) {
+                    bytes[index] = binaryText.charCodeAt(index);
+                }
+                return new window.TextDecoder('utf-8').decode(bytes);
+            }
+
+            var escaped = '';
+            for (var byteIndex = 0; byteIndex < binaryText.length; byteIndex += 1) {
+                escaped += '%' + ('00' + binaryText.charCodeAt(byteIndex).toString(16)).slice(-2);
+            }
+            return decodeURIComponent(escaped);
+        } catch (error) {
+            try {
+                return window.atob(value);
+            } catch (fallbackError) {
+                return '';
+            }
+        }
+    }
+
     function normalizeCurrencyDigits(rawValue) {
         var text = String(rawValue || '').trim();
         var isNegative = text.indexOf('-') === 0;
@@ -1697,6 +1728,12 @@
     var movementMobileModal = document.getElementById('movement-mobile-modal');
     var movementMobileModalTitle = document.getElementById('movement-mobile-modal-title');
     var movementMobileModalBody = document.getElementById('movement-mobile-modal-body');
+    var emailExtractModal = document.getElementById('email-extract-modal');
+    var emailExtractModalMeta = document.getElementById('email-extract-modal-meta');
+    var emailExtractModalBody = document.getElementById('email-extract-modal-body');
+    var emailSuggestionModal = document.getElementById('email-suggestion-modal');
+    var globalLoadingOverlay = document.getElementById('global-loading-overlay');
+    var globalLoadingMessage = document.getElementById('global-loading-message');
     var installButtons = document.querySelectorAll('.js-app-install-button');
     var pwaInstallModal = document.getElementById('pwa-install-modal');
     var pwaInstallModalText = document.getElementById('pwa-install-modal-text');
@@ -1791,6 +1828,148 @@
 
         movementSaveModal.classList.add('hidden');
         movementSaveModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function closeEmailExtractModal() {
+        if (!emailExtractModal) {
+            return;
+        }
+
+        emailExtractModal.classList.add('hidden');
+        emailExtractModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function openEmailSuggestionModal() {
+        if (!emailSuggestionModal) {
+            return;
+        }
+
+        emailSuggestionModal.classList.remove('hidden');
+        emailSuggestionModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeEmailSuggestionModal() {
+        if (!emailSuggestionModal) {
+            return;
+        }
+
+        emailSuggestionModal.classList.add('hidden');
+        emailSuggestionModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function showGlobalLoading(messageText) {
+        if (!globalLoadingOverlay) {
+            return;
+        }
+
+        var message = String(messageText || '').trim();
+        if (globalLoadingMessage) {
+            globalLoadingMessage.textContent = message !== '' ? message : 'Espere por favor...';
+        }
+
+        globalLoadingOverlay.classList.remove('hidden');
+        globalLoadingOverlay.setAttribute('aria-hidden', 'false');
+        if (body) {
+            body.classList.add('global-loading-active');
+        }
+    }
+
+    function hideGlobalLoading() {
+        if (!globalLoadingOverlay) {
+            return;
+        }
+
+        globalLoadingOverlay.classList.add('hidden');
+        globalLoadingOverlay.setAttribute('aria-hidden', 'true');
+        if (body) {
+            body.classList.remove('global-loading-active');
+        }
+    }
+
+    function shouldTriggerLoadingForLink(linkElement) {
+        if (!linkElement) {
+            return false;
+        }
+
+        if (linkElement.classList.contains('js-no-global-loading') || linkElement.hasAttribute('data-no-global-loading')) {
+            return false;
+        }
+
+        if (linkElement.hasAttribute('download')) {
+            return false;
+        }
+
+        var targetValue = String(linkElement.getAttribute('target') || '').toLowerCase();
+        if (targetValue === '_blank') {
+            return false;
+        }
+
+        var href = String(linkElement.getAttribute('href') || '').trim();
+        if (href === '' || href === '#') {
+            return false;
+        }
+
+        var hrefLower = href.toLowerCase();
+        if (hrefLower.indexOf('javascript:') === 0 || hrefLower.indexOf('mailto:') === 0 || hrefLower.indexOf('tel:') === 0) {
+            return false;
+        }
+
+        if (href.charAt(0) === '#') {
+            return false;
+        }
+
+        if (linkElement.classList.contains('dt-button') || linkElement.closest('.dt-tools')) {
+            return false;
+        }
+
+        return true;
+    }
+
+    function shouldTriggerLoadingForForm(formElement) {
+        if (!formElement) {
+            return false;
+        }
+
+        if (formElement.classList.contains('js-no-global-loading') || formElement.hasAttribute('data-no-global-loading')) {
+            return false;
+        }
+
+        var targetValue = String(formElement.getAttribute('target') || '').toLowerCase();
+        if (targetValue === '_blank') {
+            return false;
+        }
+
+        if (formElement.classList.contains('js-confirm-delete') && formElement.getAttribute('data-confirm-approved') !== '1') {
+            return false;
+        }
+
+        return true;
+    }
+
+    function openEmailExtractModal(buttonElement) {
+        if (!emailExtractModal || !emailExtractModalMeta || !emailExtractModalBody || !buttonElement) {
+            return;
+        }
+
+        var fromText = String(buttonElement.getAttribute('data-email-from') || '').trim();
+        var subjectText = String(buttonElement.getAttribute('data-email-subject') || '').trim();
+        var dateText = String(buttonElement.getAttribute('data-email-date') || '').trim();
+        var bodyBase64 = String(buttonElement.getAttribute('data-email-body-base64') || '').trim();
+        var bodyText = decodeBase64Utf8(bodyBase64).trim();
+
+        if (bodyText === '') {
+            bodyText = 'No hay contenido visible para mostrar.';
+        }
+
+        var metaHtml = '';
+        metaHtml += '<p><strong>Remitente:</strong> ' + escapeHtml(fromText !== '' ? fromText : '(Sin remitente)') + '</p>';
+        metaHtml += '<p><strong>Asunto:</strong> ' + escapeHtml(subjectText !== '' ? subjectText : '(Sin asunto)') + '</p>';
+        metaHtml += '<p><strong>Fecha:</strong> ' + escapeHtml(dateText !== '' ? dateText : '-') + '</p>';
+
+        emailExtractModalMeta.innerHTML = metaHtml;
+        emailExtractModalBody.textContent = bodyText;
+        emailExtractModal.classList.remove('hidden');
+        emailExtractModal.setAttribute('aria-hidden', 'false');
     }
 
     function closeConfirmActionModal() {
@@ -1931,6 +2110,34 @@
             return;
         }
 
+        var openEmailExtractButton = event.target.closest('.js-open-email-extract-modal');
+        if (openEmailExtractButton) {
+            event.preventDefault();
+            openEmailExtractModal(openEmailExtractButton);
+            return;
+        }
+
+        var closeEmailExtractButton = event.target.closest('.js-close-email-extract-modal');
+        if (closeEmailExtractButton) {
+            event.preventDefault();
+            closeEmailExtractModal();
+            return;
+        }
+
+        var openEmailSuggestionButton = event.target.closest('.js-open-email-suggestion-modal');
+        if (openEmailSuggestionButton) {
+            event.preventDefault();
+            openEmailSuggestionModal();
+            return;
+        }
+
+        var closeEmailSuggestionButton = event.target.closest('.js-close-email-suggestion-modal');
+        if (closeEmailSuggestionButton) {
+            event.preventDefault();
+            closeEmailSuggestionModal();
+            return;
+        }
+
         if (confirmActionModalAccept && event.target.closest('#confirm-action-modal-accept')) {
             event.preventDefault();
             if (pendingConfirmForm) {
@@ -2008,6 +2215,16 @@
             return;
         }
 
+        if (emailExtractModal && event.target === emailExtractModal) {
+            closeEmailExtractModal();
+            return;
+        }
+
+        if (emailSuggestionModal && event.target === emailSuggestionModal) {
+            closeEmailSuggestionModal();
+            return;
+        }
+
         if (confirmActionModal && event.target === confirmActionModal) {
             pendingConfirmForm = null;
             closeConfirmActionModal();
@@ -2019,13 +2236,48 @@
         }
     });
 
+    document.addEventListener('click', function (event) {
+        if (!event.target || typeof event.target.closest !== 'function') {
+            return;
+        }
+
+        if (event.defaultPrevented) {
+            return;
+        }
+
+        var navigationLink = event.target.closest('a[href]');
+        if (!navigationLink || !shouldTriggerLoadingForLink(navigationLink)) {
+            return;
+        }
+
+        var message = navigationLink.getAttribute('data-loading-message');
+        showGlobalLoading(message);
+    });
+
+    document.addEventListener('submit', function (event) {
+        if (event.defaultPrevented) {
+            return;
+        }
+
+        var submittedForm = event.target;
+        if (!submittedForm || !shouldTriggerLoadingForForm(submittedForm)) {
+            return;
+        }
+
+        var message = submittedForm.getAttribute('data-loading-message');
+        showGlobalLoading(message);
+    });
+
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
             closeMovementSaveModal();
             closeMovementMobileModal();
+            closeEmailExtractModal();
+            closeEmailSuggestionModal();
             pendingConfirmForm = null;
             closeConfirmActionModal();
             closePwaInstallModal();
+            hideGlobalLoading();
             var openSupportDropdowns = document.querySelectorAll('.supports-inline-dropdown[open]');
             for (var dropdownIndex = 0; dropdownIndex < openSupportDropdowns.length; dropdownIndex += 1) {
                 openSupportDropdowns[dropdownIndex].removeAttribute('open');
@@ -2098,6 +2350,10 @@
             });
         }
     }
+
+    window.addEventListener('pageshow', function () {
+        hideGlobalLoading();
+    });
 
     if (window.Chart) {
         var chartDataNode = document.getElementById('dashboard-chart-data');

@@ -48,10 +48,12 @@ class CorreoController
         $csrfToken = CsrfTokenManager::generateToken($csrfTokenName);
 
         $selectedUid = isset($_GET['uid']) ? (int) $_GET['uid'] : 0;
+        $openSuggestionParam = isset($_GET['analizar']) ? trim((string) $_GET['analizar']) : '';
         $searchText = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
         $flashSuccess = $this->pullFlash('correos_success');
         $flashError = $this->pullFlash('correos_error');
         $flashForm = $this->pullFlash('correos_form');
+        $shouldOpenSuggestionModal = ($openSuggestionParam === '1' && $selectedUid > 0);
 
         $inboxResult = $this->inboxReaderService->fetchRecentMessages();
         $emails = isset($inboxResult['messages']) && is_array($inboxResult['messages']) ? $inboxResult['messages'] : array();
@@ -71,7 +73,17 @@ class CorreoController
         }
 
         if (is_array($flashForm) && !empty($flashForm)) {
-            $suggestedData = array_merge($suggestedData, $flashForm);
+            $flashFormUid = isset($flashForm['__uid']) ? (int) $flashForm['__uid'] : 0;
+            unset($flashForm['__uid']);
+
+            if ($selectedUid > 0 && $flashFormUid > 0 && $flashFormUid === $selectedUid) {
+                $suggestedData = array_merge($suggestedData, $flashForm);
+                $shouldOpenSuggestionModal = true;
+            }
+        }
+
+        if (is_string($flashError) && trim($flashError) !== '' && $selectedUid > 0) {
+            $shouldOpenSuggestionModal = true;
         }
 
         $inboxMessage = '';
@@ -101,6 +113,7 @@ class CorreoController
             'successMessage' => is_string($flashSuccess) ? $flashSuccess : '',
             'errorMessage' => is_string($flashError) ? $flashError : '',
             'inboxMessage' => $inboxMessage,
+            'shouldOpenSuggestionModal' => $shouldOpenSuggestionModal,
         ));
     }
 
@@ -117,9 +130,10 @@ class CorreoController
         $formData = $this->collectMovementFormData($_POST);
         $validation = $this->validateMovementFormData($formData);
         if (!$validation['valid']) {
+            $formData['__uid'] = $uid;
             $this->setFlash('correos_error', $validation['message']);
             $this->setFlash('correos_form', $formData);
-            Response::redirect($this->buildUrl('/correos') . '&uid=' . $uid);
+            Response::redirect($this->buildUrl('/correos') . '&uid=' . $uid . '&analizar=1');
         }
 
         $authenticatedUser = $this->authService->getAuthenticatedUser();
@@ -128,9 +142,10 @@ class CorreoController
 
         $movementId = $this->movimientoRepository->createMovimiento($movementToPersist);
         if ($movementId === false) {
+            $formData['__uid'] = $uid;
             $this->setFlash('correos_error', 'No fue posible guardar el movimiento desde correo.');
             $this->setFlash('correos_form', $formData);
-            Response::redirect($this->buildUrl('/correos') . '&uid=' . $uid);
+            Response::redirect($this->buildUrl('/correos') . '&uid=' . $uid . '&analizar=1');
         }
 
         $correoData = array(
@@ -145,9 +160,10 @@ class CorreoController
         $supportResult = $this->createSnapshotSupportForEmail((int) $movementId, $correoData, $formData);
         if (!$supportResult['ok']) {
             $this->movimientoRepository->deleteMovimiento((int) $movementId);
+            $formData['__uid'] = $uid;
             $this->setFlash('correos_error', $supportResult['message']);
             $this->setFlash('correos_form', $formData);
-            Response::redirect($this->buildUrl('/correos') . '&uid=' . $uid);
+            Response::redirect($this->buildUrl('/correos') . '&uid=' . $uid . '&analizar=1');
         }
 
         $supportId = $this->movimientoRepository->createSupportRecord((int) $movementId, $supportResult['stored_name'], $userLogin);
@@ -155,7 +171,7 @@ class CorreoController
             $this->safeDeleteFile($supportResult['absolute_path']);
             $this->movimientoRepository->deleteMovimiento((int) $movementId);
             $this->setFlash('correos_error', 'No fue posible registrar soporte del correo.');
-            Response::redirect($this->buildUrl('/correos') . '&uid=' . $uid);
+            Response::redirect($this->buildUrl('/correos') . '&uid=' . $uid . '&analizar=1');
         }
 
         $this->correoRepository->registerCorreoImportacion(array(
