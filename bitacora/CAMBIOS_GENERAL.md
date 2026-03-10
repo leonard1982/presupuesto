@@ -134,3 +134,16 @@
 - Se normaliza captura de montos en backend para admitir entradas con separadores visuales.
 - Si `valor_neto` llega vacio al guardar, se asigna automaticamente el mismo valor de `valor`.
 - Si `valor_neto` viene diligenciado, se conserva y guarda el valor digitado.
+
+## 2026-03-09 - Notificacion visual de guardado y selector de archivos mejorado
+- Se reemplaza aviso simple de guardado por modal de confirmacion visual con acciones rapidas.
+- El modal de confirmacion puede cerrarse por boton, clic fuera o tecla ESC.
+- Se redisenia selector de soportes con boton `Elegir archivos`, contador y listado de archivos seleccionados.
+
+## 2026-03-09 - Envio de informes por correo y consejo KPI con IA
+- Se habilita formulario en dashboard para enviar informe mensual por correo con estilo operativo profesional.
+- Se implementa servicio SMTP propio (`SmtpMailer`) compatible con credenciales por `.env`.
+- Se implementa compositor de informe (`DashboardReportComposer`) con resumen, top clasificaciones y movimientos recientes.
+- Se agrega opcion de `Generar consejo IA` en dashboard con panel de recomendaciones KPI.
+- El asesor KPI funciona en modo hibrido: reglas internas + OpenAI opcional si hay API key.
+- Se agregan validaciones frontend/backend para los formularios de correo y consejo KPI.

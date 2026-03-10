@@ -20,4 +20,18 @@ return array(
     'files_max_upload_mb' => Environment::getInteger('FILES_MAX_UPLOAD_MB', 10),
     'files_allowed_extensions' => Environment::getCsv('FILES_ALLOWED_EXTENSIONS', array('jpg', 'jpeg', 'png', 'webp', 'pdf')),
     'files_allowed_mime' => Environment::getCsv('FILES_ALLOWED_MIME', array('image/jpeg', 'image/png', 'image/webp', 'application/pdf')),
+    'mail' => array(
+        'host' => trim(Environment::get('MAIL_HOST', '')),
+        'port' => Environment::getInteger('MAIL_PORT', 25),
+        'username' => trim(Environment::get('MAIL_USER', '')),
+        'password' => Environment::get('MAIL_PASS', ''),
+        'from' => trim(Environment::get('MAIL_FROM', '')),
+        'encryption' => strtolower(trim(Environment::get('MAIL_ENCRYPTION', 'none'))),
+        'timeout_seconds' => Environment::getInteger('MAIL_TIMEOUT_SECONDS', 20),
+    ),
+    'ai' => array(
+        'openai_key' => trim(Environment::get('OPENAI_API_KEY_PRESUPUESTO_PERSONAL', '')),
+        'openai_model' => trim(Environment::get('OPENAI_KPI_MODEL', 'gpt-4o-mini')),
+        'openai_timeout_seconds' => Environment::getInteger('OPENAI_TIMEOUT_SECONDS', 20),
+    ),
 );

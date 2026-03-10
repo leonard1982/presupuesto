@@ -534,6 +534,23 @@ textarea {
     margin-top: 0.55rem;
 }
 
+.ai-advice-panel {
+    margin-top: 0.8rem;
+    border: 1px solid #d5e2f0;
+    border-radius: 12px;
+    background: #f8fbff;
+    padding: 0.8rem;
+}
+
+.ai-advice-panel h3 {
+    margin: 0 0 0.55rem;
+    font-size: 1rem;
+    color: #123f69;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
 .chart-grid {
     display: grid;
     grid-template-columns: 1.4fr 1fr;
@@ -634,6 +651,62 @@ textarea {
     margin: 0 0 0.6rem;
 }
 
+.file-picker-shell {
+    position: relative;
+    border: 1px dashed #c5d7ea;
+    border-radius: 12px;
+    background: #f9fcff;
+    padding: 0.72rem;
+}
+
+.file-picker-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+.file-picker-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+}
+
+.file-picker-button {
+    min-height: 40px;
+}
+
+.file-picker-count {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #2f5277;
+}
+
+.file-picker-list {
+    list-style: none;
+    margin: 0.65rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.38rem;
+}
+
+.file-picker-list li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid #d8e4f1;
+    border-radius: 9px;
+    background: #ffffff;
+    padding: 0.42rem 0.52rem;
+    color: #1d3e5f;
+    font-size: 0.86rem;
+}
+
 .table-actions-stack {
     display: flex;
     flex-direction: column;
@@ -706,6 +779,35 @@ textarea {
     border: 1px solid #d7e2ef;
     border-radius: 14px;
     box-shadow: 0 18px 44px rgba(4, 23, 44, 0.28);
+}
+
+.notification-overlay {
+    z-index: 130;
+}
+
+.notification-card {
+    width: min(540px, 100%);
+}
+
+.notification-header h3 {
+    color: #0f5f37;
+}
+
+.notification-header h3 i {
+    color: #0f8f52;
+}
+
+.notification-body p {
+    margin: 0;
+    color: #1a3552;
+    font-weight: 600;
+}
+
+.notification-actions {
+    margin-top: 0.8rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
 .modal-header {
@@ -1277,6 +1379,30 @@ body.theme-dark .supports-panel {
     border-color: #314965;
 }
 
+body.theme-dark .ai-advice-panel {
+    background: #112336;
+    border-color: #33506f;
+}
+
+body.theme-dark .ai-advice-panel h3 {
+    color: #d8e9fb;
+}
+
+body.theme-dark .file-picker-shell {
+    background: #102032;
+    border-color: #34506f;
+}
+
+body.theme-dark .file-picker-count {
+    color: #d8e8fa;
+}
+
+body.theme-dark .file-picker-list li {
+    background: #142a40;
+    border-color: #355070;
+    color: #e2eefc;
+}
+
 body.theme-dark .link-action {
     color: #9eceff;
 }
@@ -1412,6 +1538,18 @@ body.theme-dark .supports-modal-item {
 
 body.theme-dark .supports-modal-name {
     color: #e6f0fc;
+}
+
+body.theme-dark .notification-header h3 {
+    color: #95f1bf;
+}
+
+body.theme-dark .notification-header h3 i {
+    color: #7be5aa;
+}
+
+body.theme-dark .notification-body p {
+    color: #e2eefc;
 }
 
 body.theme-dark .dataTables_wrapper .dt-tools .dt-button.dt-export-button {

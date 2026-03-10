@@ -87,7 +87,8 @@ class Bootstrap
             new DashboardRepository($this->databaseConnection, $this->logger),
             $this->viewRenderer,
             $this->config['app'],
-            $this->authService
+            $this->authService,
+            $this->logger
         );
         $movimientoController = new MovimientoController(
             new MovimientoRepository($this->databaseConnection, $this->logger),
@@ -132,6 +133,24 @@ class Bootstrap
                 }
 
                 $dashboardController->show();
+                return;
+            }
+
+            if ($routePath === '/dashboard/enviar-informe' && $method === 'POST') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $dashboardController->sendReportEmail();
+                return;
+            }
+
+            if ($routePath === '/dashboard/consejo-ia' && $method === 'POST') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $dashboardController->generateKpiAdvice();
                 return;
             }
 
@@ -388,6 +407,10 @@ class Bootstrap
             $directory = substr($directory, 0, -6);
         } elseif (substr($directory, -10) === '/dashboard') {
             $directory = substr($directory, 0, -10);
+        } elseif (substr($directory, -25) === '/dashboard/enviar-informe') {
+            $directory = substr($directory, 0, -25);
+        } elseif (substr($directory, -21) === '/dashboard/consejo-ia') {
+            $directory = substr($directory, 0, -21);
         } elseif (substr($directory, -7) === '/logout') {
             $directory = substr($directory, 0, -7);
         } elseif (substr($directory, -12) === '/movimientos') {

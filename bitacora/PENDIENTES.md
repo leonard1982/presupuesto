@@ -20,3 +20,7 @@
 - Implementar API v1 con autenticacion de token.
 - Implementar bandeja de importacion y revision manual.
 - Preparar endpoint de sugerencias de IA con trazabilidad de aceptacion/rechazo.
+
+## Reportes y comunicacion
+- Programar envio automatico de informes por correo (diario/semanal/mensual).
+- Agregar adjuntos XLS/PDF en correo y bitacora de entregas por destinatario.

@@ -179,7 +179,16 @@ $saldoInput = mov_form_currency_input(isset($formData['saldo']) ? $formData['sal
 
             <div class="form-field form-field-wide">
                 <label for="soportes">Soportes (imagenes o PDF)</label>
-                <input id="soportes" name="soportes[]" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.pdf" data-max-mb="<?php echo $maxUploadMb; ?>" data-allowed-extensions="<?php echo mov_form_escape($allowedExtensionsCsv); ?>">
+                <div class="file-picker-shell">
+                    <input id="soportes" class="file-picker-input" name="soportes[]" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.pdf" data-max-mb="<?php echo $maxUploadMb; ?>" data-allowed-extensions="<?php echo mov_form_escape($allowedExtensionsCsv); ?>">
+                    <div class="file-picker-toolbar">
+                        <label for="soportes" class="btn btn-secondary btn-inline file-picker-button">
+                            <i class="bi bi-cloud-arrow-up"></i> Elegir archivos
+                        </label>
+                        <span id="soportes-file-count" class="file-picker-count">Sin archivos seleccionados</span>
+                    </div>
+                    <ul id="soportes-file-list" class="file-picker-list hidden"></ul>
+                </div>
                 <p class="muted">Puedes seleccionar varios archivos. Extensiones permitidas: <?php echo mov_form_escape($allowedExtensionsCsv); ?>. Maximo por archivo: <?php echo $maxUploadMb; ?> MB.</p>
             </div>
         </div>

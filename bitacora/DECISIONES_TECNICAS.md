@@ -74,3 +74,15 @@
 ### Decision: Formateo numerico visual con normalizacion backend
 - Motivo: mejorar velocidad de digitacion y evitar errores al ingresar montos grandes en movimientos.
 - Impacto: los campos monetarios muestran separadores de miles al escribir, y backend guarda montos limpios; `valor_neto` se autocompleta con `valor` cuando llega vacio.
+
+### Decision: Confirmacion de guardado con modal UI
+- Motivo: entregar feedback claro y profesional despues de registrar movimientos.
+- Impacto: reduce dudas del usuario al guardar y permite continuar con acciones rapidas sin perder contexto.
+
+### Decision: Servicio SMTP interno sin dependencia de librerias pesadas
+- Motivo: mantener compatibilidad PHP 7.2-8.2 en entorno actual sin requerir Composer en esta fase.
+- Impacto: envio de informes funcional desde dashboard, con configuracion centralizada en `.env`.
+
+### Decision: Asesor KPI hibrido (reglas + OpenAI opcional)
+- Motivo: asegurar recomendaciones incluso si la API externa falla o no esta disponible.
+- Impacto: continuidad operativa con fallback local y mejora progresiva cuando OpenAI responde.

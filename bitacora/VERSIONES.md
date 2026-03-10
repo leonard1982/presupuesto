@@ -1,5 +1,14 @@
 ﻿# Versiones
 
+## v0.6.0 - 2026-03-09
+- Envio de informe mensual por correo desde dashboard con servicio SMTP integrado.
+- Nuevo asesor KPI con IA (reglas internas y soporte OpenAI opcional).
+- Dashboard mejorado con formularios operativos para envio y recomendaciones.
+
+## v0.5.4 - 2026-03-09
+- Modal visual de confirmacion al guardar movimiento, con cierre por boton, fondo y ESC.
+- Selector de archivos de soportes mejorado con boton, contador y listado de archivos elegidos.
+
 ## v0.5.3 - 2026-03-09
 - Formato numerico en tiempo real para valor, valor neto y saldo en formulario de movimientos.
 - Regla de guardado: si valor_neto llega vacio, toma automaticamente el valor principal.
@@ -69,6 +78,8 @@
 - `MAJOR`: cambios incompatibles.
 - `MINOR`: funcionalidades nuevas compatibles.
 - `PATCH`: correcciones y ajustes sin romper API funcional.
+
+
 
 
 

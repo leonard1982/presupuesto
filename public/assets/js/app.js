@@ -154,7 +154,39 @@
     if (movementForm) {
         var movementErrorId = 'movimiento-client-error';
         var supportsInput = document.getElementById('soportes');
+        var supportsFileCount = document.getElementById('soportes-file-count');
+        var supportsFileList = document.getElementById('soportes-file-list');
         var moneyInputs = movementForm.querySelectorAll('.js-money-input');
+
+        function renderSupportsSelection() {
+            if (!supportsInput || !supportsFileCount || !supportsFileList) {
+                return;
+            }
+
+            if (!supportsInput.files || supportsInput.files.length === 0) {
+                supportsFileCount.textContent = 'Sin archivos seleccionados';
+                supportsFileList.innerHTML = '';
+                supportsFileList.classList.add('hidden');
+                return;
+            }
+
+            supportsFileCount.textContent = supportsInput.files.length === 1
+                ? '1 archivo seleccionado'
+                : (String(supportsInput.files.length) + ' archivos seleccionados');
+
+            var listHtml = '';
+            for (var supportListIndex = 0; supportListIndex < supportsInput.files.length; supportListIndex += 1) {
+                listHtml += '<li><i class="bi bi-file-earmark"></i> ' + escapeHtml(supportsInput.files[supportListIndex].name || '') + '</li>';
+            }
+
+            supportsFileList.innerHTML = listHtml;
+            supportsFileList.classList.remove('hidden');
+        }
+
+        if (supportsInput) {
+            supportsInput.addEventListener('change', renderSupportsSelection);
+            renderSupportsSelection();
+        }
 
         if (moneyInputs && moneyInputs.length > 0) {
             for (var moneyIndex = 0; moneyIndex < moneyInputs.length; moneyIndex += 1) {
@@ -224,6 +256,43 @@
             }
 
             hideInlineError(movementErrorId);
+        });
+    }
+
+    var dashboardReportForm = document.getElementById('dashboard-report-form');
+    if (dashboardReportForm) {
+        dashboardReportForm.addEventListener('submit', function (event) {
+            var emailField = document.getElementById('correo_destino');
+            var submitButton = dashboardReportForm.querySelector('button[type="submit"]');
+            var emailValue = emailField ? String(emailField.value || '').trim() : '';
+            var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+            if (emailValue === '' || !emailPattern.test(emailValue)) {
+                event.preventDefault();
+                if (emailField) {
+                    emailField.focus();
+                }
+                showInlineError('dashboard-client-error', 'Ingresa un correo destino valido para enviar el informe.');
+                return;
+            }
+
+            hideInlineError('dashboard-client-error');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="bi bi-hourglass-split"></i> Enviando...';
+            }
+        });
+    }
+
+    var dashboardAiForm = document.getElementById('dashboard-ai-form');
+    if (dashboardAiForm) {
+        dashboardAiForm.addEventListener('submit', function () {
+            var submitButton = dashboardAiForm.querySelector('button[type="submit"]');
+            hideInlineError('dashboard-client-error');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="bi bi-cpu"></i> Analizando...';
+            }
         });
     }
 
@@ -441,6 +510,7 @@
     var supportsModal = document.getElementById('supports-modal');
     var supportsModalBody = document.getElementById('supports-modal-body');
     var supportsModalTitle = document.getElementById('supports-modal-title');
+    var movementSaveModal = document.getElementById('movement-save-modal');
 
     function closeSupportsModal() {
         if (!supportsModal) {
@@ -497,8 +567,29 @@
         supportsModal.setAttribute('aria-hidden', 'false');
     }
 
+    function closeMovementSaveModal() {
+        if (!movementSaveModal) {
+            return;
+        }
+
+        movementSaveModal.classList.add('hidden');
+        movementSaveModal.setAttribute('aria-hidden', 'true');
+    }
+
     document.addEventListener('click', function (event) {
         if (!event.target || typeof event.target.closest !== 'function') {
+            return;
+        }
+
+        if (movementSaveModal && event.target === movementSaveModal) {
+            closeMovementSaveModal();
+            return;
+        }
+
+        var closeNoticeButton = event.target.closest('.js-close-notification-modal');
+        if (closeNoticeButton) {
+            event.preventDefault();
+            closeMovementSaveModal();
             return;
         }
 
@@ -524,6 +615,7 @@
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
             closeSupportsModal();
+            closeMovementSaveModal();
         }
     });
 

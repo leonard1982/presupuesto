@@ -34,7 +34,18 @@ $chartPayload = array(
         'totals' => $topTotals,
     ),
 );
+
+$reportEmailValue = isset($reportForm['correo_destino']) ? (string) $reportForm['correo_destino'] : '';
+$reportSubjectValue = isset($reportForm['asunto_informe']) ? (string) $reportForm['asunto_informe'] : '';
 ?>
+
+<?php if (!empty($dashboardSuccessMessage)) : ?>
+    <div class="alert alert-success"><?php echo dashboard_escape($dashboardSuccessMessage); ?></div>
+<?php endif; ?>
+<?php if (!empty($dashboardErrorMessage)) : ?>
+    <div class="alert alert-error"><?php echo dashboard_escape($dashboardErrorMessage); ?></div>
+<?php endif; ?>
+<div id="dashboard-client-error" class="alert alert-error hidden"></div>
 
 <section class="dashboard-kpis">
     <article class="card kpi-card">
@@ -94,6 +105,60 @@ $chartPayload = array(
                     </li>
                 <?php endforeach; ?>
             </ul>
+        <?php endif; ?>
+    </article>
+</section>
+
+<section class="grid-cards">
+    <article class="card">
+        <span class="title-chip"><i class="bi bi-envelope-paper"></i> Informe por correo</span>
+        <h2>Enviar informe mensual</h2>
+        <p class="muted">Envio inmediato del resumen del periodo con KPIs y movimientos recientes.</p>
+        <form id="dashboard-report-form" method="post" action="<?php echo dashboard_escape($baseUrl); ?>/index.php?route=dashboard/enviar-informe" class="compact-form" novalidate>
+            <input type="hidden" name="<?php echo dashboard_escape($csrfTokenName); ?>" value="<?php echo dashboard_escape($csrfToken); ?>">
+            <label for="correo_destino">Correo destino</label>
+            <input id="correo_destino" name="correo_destino" type="email" maxlength="160" required placeholder="ejemplo@dominio.com" value="<?php echo dashboard_escape($reportEmailValue); ?>">
+            <label for="asunto_informe">Asunto (opcional)</label>
+            <input id="asunto_informe" name="asunto_informe" type="text" maxlength="180" placeholder="Informe financiero del periodo" value="<?php echo dashboard_escape($reportSubjectValue); ?>">
+            <button class="btn btn-primary btn-inline" type="submit">
+                <i class="bi bi-send-check"></i> Enviar informe
+            </button>
+        </form>
+    </article>
+
+    <article class="card" id="kpi-ia">
+        <span class="title-chip"><i class="bi bi-cpu"></i> Asesor KPI IA</span>
+        <h2>Consejo inteligente del periodo</h2>
+        <p class="muted">Genera recomendaciones accionables con base en tus indicadores actuales.</p>
+        <form id="dashboard-ai-form" method="post" action="<?php echo dashboard_escape($baseUrl); ?>/index.php?route=dashboard/consejo-ia" class="compact-form">
+            <input type="hidden" name="<?php echo dashboard_escape($csrfTokenName); ?>" value="<?php echo dashboard_escape($csrfToken); ?>">
+            <button class="btn btn-secondary btn-inline" type="submit">
+                <i class="bi bi-stars"></i> Generar consejo IA
+            </button>
+        </form>
+
+        <?php if (!empty($kpiAdvice) && is_array($kpiAdvice) && !empty($kpiAdvice['items'])) : ?>
+            <div class="ai-advice-panel">
+                <h3>
+                    <i class="bi bi-lightbulb"></i>
+                    <?php echo dashboard_escape(isset($kpiAdvice['title']) ? $kpiAdvice['title'] : 'Consejo KPI'); ?>
+                </h3>
+                <ul class="compact-list">
+                    <?php foreach ($kpiAdvice['items'] as $tip) : ?>
+                        <li><?php echo dashboard_escape($tip); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+                <p class="muted">
+                    Fuente: <?php echo dashboard_escape(isset($kpiAdvice['source']) ? $kpiAdvice['source'] : 'Reglas internas'); ?>
+                    <?php if (!empty($kpiAdvice['generated_at'])) : ?>
+                        | Actualizado: <?php echo dashboard_escape($kpiAdvice['generated_at']); ?>
+                    <?php endif; ?>
+                </p>
+            </div>
+        <?php else : ?>
+            <div class="ai-advice-panel">
+                <p class="muted">Aun no hay consejo generado. Haz clic en "Generar consejo IA".</p>
+            </div>
         <?php endif; ?>
     </article>
 </section>

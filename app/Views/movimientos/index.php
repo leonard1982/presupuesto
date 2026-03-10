@@ -29,7 +29,27 @@ if (!function_exists('mov_money')) {
 </section>
 
 <?php if (!empty($successMessage)) : ?>
-    <div class="alert alert-success"><?php echo mov_escape($successMessage); ?></div>
+    <div id="movement-save-modal" class="modal-overlay notification-overlay" aria-hidden="false">
+        <div class="modal-card notification-card" role="dialog" aria-modal="true" aria-labelledby="movement-save-modal-title">
+            <div class="modal-header notification-header">
+                <h3 id="movement-save-modal-title"><i class="bi bi-check-circle-fill"></i> Registro guardado</h3>
+                <button type="button" class="btn btn-secondary btn-inline btn-mini btn-icon-only js-close-notification-modal" title="Cerrar" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="modal-body notification-body">
+                <p><?php echo mov_escape($successMessage); ?></p>
+                <div class="notification-actions">
+                    <button type="button" class="btn btn-primary btn-inline js-close-notification-modal">
+                        <i class="bi bi-check2-circle"></i> Entendido
+                    </button>
+                    <a class="btn btn-secondary btn-inline" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/nuevo">
+                        <i class="bi bi-plus-circle"></i> Nuevo movimiento
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 <?php endif; ?>
 <?php if (!empty($errorMessage)) : ?>
     <div class="alert alert-error"><?php echo mov_escape($errorMessage); ?></div>
