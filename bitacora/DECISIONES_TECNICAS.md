@@ -2,6 +2,20 @@
 
 ## 2026-03-10
 
+### Decision: Autoesquema idempotente al arranque
+- Motivo: asegurar continuidad cuando la base o campos requeridos aun no existen en un despliegue nuevo.
+- Impacto: el sistema crea automaticamente tablas, columnas e indices minimos sin romper compatibilidad con datos existentes.
+
+### Decision: Creacion automatica de base de datos (opcional por entorno)
+- Motivo: reducir errores de primer despliegue y dependencia de pasos manuales en desarrollo.
+- Impacto: si la base no existe y el usuario DB tiene permisos, se crea en tiempo de arranque con charset/collation definidos.
+
+### Decision: Normalizacion previa de filas DataTables
+- Motivo: evitar error Incorrect column count provocado por placeholders con colspan en tbody.
+- Impacto: se elimina la fila placeholder antes de inicializar DataTables y se mantiene paginacion/filtros sin warnings.
+
+## 2026-03-10
+
 ### Decision: Duracion de sesion ampliada y configurable por usuario
 - Motivo: el uso operativo supera jornadas de 8 horas y requiere continuidad sin cierres frecuentes.
 - Impacto: sesion base de 12 horas con opciones configurables y control de inactividad por preferencia segura.
@@ -112,5 +126,6 @@
 ### Decision: Asesor KPI hibrido (reglas + OpenAI opcional)
 - Motivo: asegurar recomendaciones incluso si la API externa falla o no esta disponible.
 - Impacto: continuidad operativa con fallback local y mejora progresiva cuando OpenAI responde.
+
 
 

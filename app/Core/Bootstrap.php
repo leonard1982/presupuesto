@@ -40,6 +40,16 @@ class Bootstrap
         SessionManager::start($this->config['app']);
 
         $this->databaseConnection = DatabaseConnection::getConnection($this->config['database'], $this->logger);
+        if (!empty($this->config['database']['auto_schema_sync'])) {
+            $schemaSynchronizer = new SchemaSynchronizer(
+                $this->databaseConnection,
+                $this->logger,
+                $this->config['paths'],
+                isset($this->config['database']['schema_sync_check_seconds']) ? (int) $this->config['database']['schema_sync_check_seconds'] : 300
+            );
+            $schemaSynchronizer->synchronize();
+        }
+
         $userRepository = new UserRepository($this->databaseConnection, $this->logger);
         $this->authService = new AuthService($userRepository, $this->logger);
         $this->viewRenderer = new ViewRenderer($this->config['paths']['views_root']);

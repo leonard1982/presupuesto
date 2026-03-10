@@ -1,5 +1,13 @@
 ﻿# Cambios Generales
 
+## 2026-03-10 - Correccion DataTables y autoesquema de base de datos
+- Se corrige warning DataTables - Incorrect column count normalizando filas de tablas antes de inicializar DataTables.
+- Se elimina automaticamente la fila placeholder con colspan en tablas vacias para evitar desajustes de columnas.
+- Se agrega creacion automatica de base de datos cuando no existe (DB_AUTO_CREATE_DATABASE=true).
+- Se implementa sincronizador de esquema (SchemaSynchronizer) que crea tablas, columnas e indices minimos requeridos si faltan.
+- La sincronizacion es idempotente y compatible con MariaDB 10.1 / MySQL modernos.
+- Se agrega cache de sincronizacion para no ejecutar validaciones pesadas en cada request (DB_AUTO_SCHEMA_CHECK_SECONDS).
+
 ## 2026-03-10 - Sesion ampliada y configurable por usuario
 - Se cambia duracion base de sesion a 12 horas (`APP_SESSION_LIFETIME_SECONDS=43200`).
 - Se habilitan limites y opciones configurables por entorno:
@@ -358,5 +366,4 @@
   - Clasificaciones
   - Medios de pago
 - Se define ancho fijo corto para que ocupe solo el espacio del numero y no consuma area de contenido.
-
 

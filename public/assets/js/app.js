@@ -1392,6 +1392,59 @@
         applyMovementFilters();
     }
 
+    function normalizeDataTableBody(tableElement) {
+        if (!tableElement || typeof tableElement.querySelectorAll !== 'function') {
+            return;
+        }
+
+        var headerCells = tableElement.querySelectorAll('thead th');
+        var expectedColumns = headerCells ? headerCells.length : 0;
+        if (expectedColumns < 1) {
+            return;
+        }
+
+        var bodyRows = tableElement.querySelectorAll('tbody tr');
+        for (var rowIndex = bodyRows.length - 1; rowIndex >= 0; rowIndex -= 1) {
+            var row = bodyRows[rowIndex];
+            if (!row || typeof row.children === 'undefined') {
+                continue;
+            }
+
+            var cells = row.querySelectorAll('td,th');
+            var currentColumns = cells ? cells.length : 0;
+
+            if (currentColumns === 1 && cells[0] && cells[0].hasAttribute('colspan')) {
+                var colspanValue = parseInt(cells[0].getAttribute('colspan'), 10);
+                if (!isNaN(colspanValue) && colspanValue >= expectedColumns) {
+                    if (row.parentNode) {
+                        row.parentNode.removeChild(row);
+                    }
+                    continue;
+                }
+            }
+
+            if (currentColumns === expectedColumns) {
+                continue;
+            }
+
+            if (currentColumns > expectedColumns) {
+                for (var removeIndex = currentColumns - 1; removeIndex >= expectedColumns; removeIndex -= 1) {
+                    if (cells[removeIndex] && cells[removeIndex].parentNode) {
+                        cells[removeIndex].parentNode.removeChild(cells[removeIndex]);
+                    }
+                }
+                continue;
+            }
+
+            for (var addIndex = currentColumns; addIndex < expectedColumns; addIndex += 1) {
+                var fillerCell = document.createElement('td');
+                fillerCell.innerHTML = '';
+                fillerCell.className = 'dt-filler-cell';
+                row.appendChild(fillerCell);
+            }
+        }
+    }
+
     if (window.jQuery && window.jQuery.fn) {
         if (typeof window.jQuery.fn.select2 === 'function') {
             window.jQuery('.js-searchable-select').each(function () {
@@ -1417,6 +1470,7 @@
             window.jQuery('.js-data-table').each(function () {
                 var tableElement = this;
                 var tableNode = window.jQuery(tableElement);
+                normalizeDataTableBody(tableElement);
                 var pageLength = parseInt(window.jQuery(this).data('page-length'), 10);
                 if (!pageLength || pageLength < 1) {
                     pageLength = 20;

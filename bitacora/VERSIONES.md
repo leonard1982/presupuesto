@@ -1,5 +1,10 @@
 ﻿# Versiones
 
+## v0.9.1 - 2026-03-10
+- Correccion de DataTables: se evita warning de conteo de columnas en tablas vacias.
+- Nueva sincronizacion automatica de esquema: crea tablas/campos/indices minimos faltantes al iniciar.
+- Conexion DB mejorada: crea base de datos automaticamente si no existe y esta habilitado por entorno.
+- Nuevas variables de entorno: DB_AUTO_CREATE_DATABASE, DB_AUTO_SCHEMA_SYNC, DB_AUTO_SCHEMA_CHECK_SECONDS.
 ## v0.9.0 - 2026-03-10
 - Sesion configurable por usuario: 8h/12h/24h/48h con base en 12 horas y control de inactividad.
 - Movimientos: nueva categoria `Ingreso` y accesos rapidos para registrar ingresos.
@@ -167,25 +172,4 @@
 - `MAJOR`: cambios incompatibles.
 - `MINOR`: funcionalidades nuevas compatibles.
 - `PATCH`: correcciones y ajustes sin romper API funcional.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
