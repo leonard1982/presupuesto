@@ -22,8 +22,13 @@ class DashboardRepository
 
     public function getMonthlyTotals($periodStart, $periodEndExclusive)
     {
+        $legacyIngresos = $this->sumIngresos($periodStart, $periodEndExclusive);
+        $movimientosIngresos = $this->sumGastosByType($periodStart, $periodEndExclusive, 'Ingreso');
+
         return array(
-            'ingresos' => $this->sumIngresos($periodStart, $periodEndExclusive),
+            'ingresos' => $legacyIngresos + $movimientosIngresos,
+            'ingresos_legacy' => $legacyIngresos,
+            'ingresos_movimientos' => $movimientosIngresos,
             'gastos' => $this->sumGastosByType($periodStart, $periodEndExclusive, 'Gasto'),
             'costos' => $this->sumGastosByType($periodStart, $periodEndExclusive, 'Costo'),
         );
@@ -120,7 +125,9 @@ class DashboardRepository
             $monthKey = date('Y-m', $monthDate);
 
             $labels[] = date('M y', $monthDate);
-            $ingresos[] = isset($ingresosMap[$monthKey]) ? (float) $ingresosMap[$monthKey] : 0.0;
+            $ingresoLegacy = isset($ingresosMap[$monthKey]) ? (float) $ingresosMap[$monthKey] : 0.0;
+            $ingresoMovimientos = isset($gastosCostosMap[$monthKey]['Ingreso']) ? (float) $gastosCostosMap[$monthKey]['Ingreso'] : 0.0;
+            $ingresos[] = $ingresoLegacy + $ingresoMovimientos;
             $gastos[] = isset($gastosCostosMap[$monthKey]['Gasto']) ? (float) $gastosCostosMap[$monthKey]['Gasto'] : 0.0;
             $costos[] = isset($gastosCostosMap[$monthKey]['Costo']) ? (float) $gastosCostosMap[$monthKey]['Costo'] : 0.0;
         }

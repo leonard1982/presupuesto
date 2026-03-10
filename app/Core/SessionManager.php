@@ -18,13 +18,20 @@ class SessionManager
         ini_set('session.cookie_httponly', '1');
 
         $isHttps = self::isHttpsRequest();
-        $sessionName = $appConfig['session_name'];
-        $sessionLifetime = (int) $appConfig['session_lifetime_seconds'];
+        $sessionName = self::resolveSessionName($appConfig);
+        $sessionLifetime = self::resolveLifetimeSeconds($appConfig);
 
         session_name($sessionName);
         self::configureSessionCookieParams($sessionLifetime, $isHttps);
 
         session_start();
+
+        if (self::isSessionExpiredByInactivity($sessionLifetime)) {
+            self::destroy();
+            self::configureSessionCookieParams($sessionLifetime, $isHttps);
+            session_name($sessionName);
+            session_start();
+        }
 
         if (!isset($_SESSION['__session_initialized_at'])) {
             $_SESSION['__session_initialized_at'] = time();
@@ -39,6 +46,9 @@ class SessionManager
             session_regenerate_id(true);
             $_SESSION['__session_last_regeneration_at'] = time();
         }
+
+        $_SESSION['__session_last_activity_at'] = time();
+        $_SESSION['__session_lifetime_seconds'] = $sessionLifetime;
     }
 
     public static function destroy()
@@ -63,6 +73,144 @@ class SessionManager
         }
 
         session_destroy();
+    }
+
+    public static function updateLifetimePreference($hours, array $appConfig)
+    {
+        $hoursInt = (int) $hours;
+        if ($hoursInt <= 0) {
+            return false;
+        }
+
+        $seconds = $hoursInt * 3600;
+        $bounds = self::resolveLifetimeBounds($appConfig);
+        if ($seconds < $bounds['min']) {
+            $seconds = $bounds['min'];
+        }
+        if ($seconds > $bounds['max']) {
+            $seconds = $bounds['max'];
+        }
+
+        $cookieName = isset($appConfig['session_lifetime_cookie_name'])
+            ? trim((string) $appConfig['session_lifetime_cookie_name'])
+            : 'presupuesto_session_lifetime';
+        if ($cookieName === '') {
+            $cookieName = 'presupuesto_session_lifetime';
+        }
+
+        $cookiePath = self::resolveCookiePath($appConfig);
+        $expiresAt = time() + (365 * 86400);
+        $isHttps = self::isHttpsRequest();
+
+        CookieManager::set($cookieName, (string) $seconds, $expiresAt, $cookiePath, $isHttps, true, 'Lax');
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            CookieManager::set(session_name(), session_id(), time() + $seconds, '/', $isHttps, true, 'Lax');
+            $_SESSION['__session_lifetime_seconds'] = $seconds;
+            $_SESSION['__session_last_activity_at'] = time();
+        }
+
+        return true;
+    }
+
+    public static function getCurrentLifetimeHours(array $appConfig)
+    {
+        $seconds = self::resolveLifetimeSeconds($appConfig);
+        if ($seconds < 3600) {
+            return 1;
+        }
+
+        return (int) round($seconds / 3600);
+    }
+
+    private static function resolveSessionName(array $appConfig)
+    {
+        $rawSessionName = isset($appConfig['session_name']) ? $appConfig['session_name'] : 'presupuesto_session';
+        $sessionName = is_string($rawSessionName) ? trim($rawSessionName) : '';
+        if ($sessionName === '') {
+            $sessionName = 'presupuesto_session';
+        }
+
+        return $sessionName;
+    }
+
+    private static function resolveLifetimeSeconds(array $appConfig)
+    {
+        $defaultSeconds = isset($appConfig['session_lifetime_seconds'])
+            ? (int) $appConfig['session_lifetime_seconds']
+            : 43200;
+        if ($defaultSeconds <= 0) {
+            $defaultSeconds = 43200;
+        }
+
+        $cookieName = isset($appConfig['session_lifetime_cookie_name'])
+            ? trim((string) $appConfig['session_lifetime_cookie_name'])
+            : 'presupuesto_session_lifetime';
+        if ($cookieName === '') {
+            $cookieName = 'presupuesto_session_lifetime';
+        }
+
+        $cookieValue = CookieManager::get($cookieName, '');
+        $cookieSeconds = is_numeric($cookieValue) ? (int) $cookieValue : 0;
+        $selectedSeconds = $cookieSeconds > 0 ? $cookieSeconds : $defaultSeconds;
+
+        $bounds = self::resolveLifetimeBounds($appConfig);
+        if ($selectedSeconds < $bounds['min']) {
+            $selectedSeconds = $bounds['min'];
+        }
+        if ($selectedSeconds > $bounds['max']) {
+            $selectedSeconds = $bounds['max'];
+        }
+
+        return $selectedSeconds;
+    }
+
+    private static function resolveLifetimeBounds(array $appConfig)
+    {
+        $minSeconds = isset($appConfig['session_lifetime_min_seconds'])
+            ? (int) $appConfig['session_lifetime_min_seconds']
+            : 28800;
+        $maxSeconds = isset($appConfig['session_lifetime_max_seconds'])
+            ? (int) $appConfig['session_lifetime_max_seconds']
+            : 172800;
+
+        if ($minSeconds <= 0) {
+            $minSeconds = 28800;
+        }
+        if ($maxSeconds < $minSeconds) {
+            $maxSeconds = $minSeconds;
+        }
+
+        return array(
+            'min' => $minSeconds,
+            'max' => $maxSeconds,
+        );
+    }
+
+    private static function isSessionExpiredByInactivity($lifetimeSeconds)
+    {
+        if (!isset($_SESSION['__session_last_activity_at'])) {
+            return false;
+        }
+
+        $lastActivity = (int) $_SESSION['__session_last_activity_at'];
+        if ($lastActivity <= 0) {
+            return false;
+        }
+
+        return (time() - $lastActivity) > (int) $lifetimeSeconds;
+    }
+
+    private static function resolveCookiePath(array $appConfig)
+    {
+        $baseUrl = isset($appConfig['base_url']) ? (string) $appConfig['base_url'] : '';
+        $parsedPath = parse_url($baseUrl, PHP_URL_PATH);
+
+        if (!is_string($parsedPath) || trim($parsedPath) === '') {
+            return '/';
+        }
+
+        return rtrim($parsedPath, '/') . '/';
     }
 
     private static function isHttpsRequest()

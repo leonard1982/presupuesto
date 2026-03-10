@@ -10,10 +10,17 @@ use App\Modules\Auth\Repositories\UserRepository;
 use App\Modules\Auth\Services\AuthService;
 use App\Modules\Catalogos\Controllers\CatalogoController;
 use App\Modules\Catalogos\Repositories\CatalogoRepository;
+use App\Modules\Configuracion\Controllers\ConfiguracionController;
+use App\Modules\Correos\Controllers\CorreoController;
+use App\Modules\Correos\Repositories\CorreoRepository;
 use App\Modules\Dashboard\Controllers\DashboardController;
 use App\Modules\Dashboard\Repositories\DashboardRepository;
+use App\Modules\Informes\Controllers\InformeController;
+use App\Modules\Informes\Repositories\InformeRepository;
 use App\Modules\Movimientos\Controllers\MovimientoController;
 use App\Modules\Movimientos\Repositories\MovimientoRepository;
+use App\Services\Ai\CorreoSuggestionService;
+use App\Services\Mail\InboxReaderService;
 use Throwable;
 
 class Bootstrap
@@ -90,14 +97,35 @@ class Bootstrap
             $this->authService,
             $this->logger
         );
+        $movimientoRepository = new MovimientoRepository($this->databaseConnection, $this->logger);
         $movimientoController = new MovimientoController(
-            new MovimientoRepository($this->databaseConnection, $this->logger),
+            $movimientoRepository,
             $this->viewRenderer,
             $this->config['app'],
             $this->authService
         );
         $catalogoController = new CatalogoController(
             new CatalogoRepository($this->databaseConnection, $this->logger),
+            $this->viewRenderer,
+            $this->config['app'],
+            $this->authService
+        );
+        $correoController = new CorreoController(
+            $this->viewRenderer,
+            $this->config['app'],
+            $this->authService,
+            $movimientoRepository,
+            new CorreoRepository($this->databaseConnection, $this->logger),
+            new InboxReaderService($this->config['app']['mail_inbox'], $this->logger),
+            new CorreoSuggestionService($this->config['app']['ai'], $this->logger)
+        );
+        $configuracionController = new ConfiguracionController(
+            $this->viewRenderer,
+            $this->config['app'],
+            $this->authService
+        );
+        $informeController = new InformeController(
+            new InformeRepository($this->databaseConnection, $this->logger),
             $this->viewRenderer,
             $this->config['app'],
             $this->authService
@@ -259,6 +287,51 @@ class Bootstrap
                 }
 
                 $catalogoController->mediosStore();
+                return;
+            }
+
+            if ($routePath === '/correos' && $method === 'GET') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $correoController->index();
+                return;
+            }
+
+            if ($routePath === '/correos/guardar' && $method === 'POST') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $correoController->storeFromEmail();
+                return;
+            }
+
+            if ($routePath === '/informes' && $method === 'GET') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $informeController->index();
+                return;
+            }
+
+            if ($routePath === '/configuracion/sesion' && $method === 'GET') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $configuracionController->sessionForm();
+                return;
+            }
+
+            if ($routePath === '/configuracion/sesion' && $method === 'POST') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $configuracionController->updateSessionConfig();
                 return;
             }
 
@@ -427,6 +500,12 @@ class Bootstrap
             $directory = substr($directory, 0, -16);
         } elseif (substr($directory, -12) === '/medios-pago') {
             $directory = substr($directory, 0, -12);
+        } elseif (substr($directory, -8) === '/correos') {
+            $directory = substr($directory, 0, -8);
+        } elseif (substr($directory, -9) === '/informes') {
+            $directory = substr($directory, 0, -9);
+        } elseif (substr($directory, -21) === '/configuracion/sesion') {
+            $directory = substr($directory, 0, -21);
         }
 
         $directory = rtrim($directory, '/');

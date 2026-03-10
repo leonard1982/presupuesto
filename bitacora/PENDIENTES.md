@@ -1,5 +1,17 @@
 ﻿# Pendientes Tecnicos
 
+## Informes y datos
+- Definir informe programado por correo con adjuntos PDF/XLS por rango configurable.
+- Incluir comparativo presupuesto vs ejecucion por cada presupuesto activo.
+- Agregar KPI de desviacion mensual contra promedio 3/6 meses.
+
+## Ingresos
+- Evaluar migracion gradual de registros legacy de `ingresos` hacia flujo unificado.
+- Revisar necesidad de campo de usuario en ingresos legacy para trazabilidad completa.
+## Bandeja de correos
+- Agregar paginacion server-side para buzones grandes y filtros por remitente/asunto/fecha.
+- Permitir elegir adjunto original del correo (ademas del snapshot) cuando el servidor IMAP lo entregue.
+- Registrar aprobacion/rechazo de sugerencia para entrenamiento futuro de clasificacion IA.
 ## Seguridad
 - Implementar limite de intentos fallidos en login.
 - Implementar cambio de contrasena con politicas.
@@ -24,3 +36,5 @@
 ## Reportes y comunicacion
 - Programar envio automatico de informes por correo (diario/semanal/mensual).
 - Agregar adjuntos XLS/PDF en correo y bitacora de entregas por destinatario.
+
+

@@ -1,5 +1,49 @@
-# Cambios Generales
+﻿# Cambios Generales
 
+## 2026-03-10 - Sesion ampliada y configurable por usuario
+- Se cambia duracion base de sesion a 12 horas (`APP_SESSION_LIFETIME_SECONDS=43200`).
+- Se habilitan limites y opciones configurables por entorno:
+  - `APP_SESSION_LIFETIME_MIN_SECONDS`
+  - `APP_SESSION_LIFETIME_MAX_SECONDS`
+  - `APP_SESSION_LIFETIME_OPTIONS_HOURS`
+- Se crea pantalla `Configuracion de sesion` para elegir duracion (8h, 12h, 24h, 48h).
+- Se implementa cookie segura de preferencia de sesion y control de inactividad en `SessionManager`.
+
+## 2026-03-10 - Registro de ingresos dentro de movimientos
+- El formulario y filtros de Movimientos ahora admiten categoria `Ingreso`, ademas de `Gasto` y `Costo`.
+- Se agrega acceso rapido `Registrar ingreso` en menu lateral, dashboard y listado de movimientos.
+- Se ajustan validaciones backend para aceptar ingresos en registro manual y registro desde correos.
+- Dashboard ahora suma ingresos legacy (`ingresos`) + ingresos nuevos registrados en `gastos_costos`.
+
+## 2026-03-10 - Modulo Informes y KPIs profesional
+- Se crea nuevo modulo `Informes y KPIs` con:
+  - filtros por fecha, categoria, clasificacion y tipo
+  - tarjetas KPI ejecutivas
+  - tendencia mensual en graficos
+  - distribucion por categoria
+  - top clasificaciones
+  - tabla de detalle exportable (Excel/PDF)
+- Se integra en menu lateral y buscador global.
+- Se agrega ruta directa `/informes` para escenarios sin `mod_rewrite`.
+
+## 2026-03-10 - Migracion SQL para ingresos e informes
+- Se agrega migracion `20260310_0007_ingresos_en_movimientos_e_indices_informes.sql`.
+- Incluye:
+  - habilitar `Ingreso` en `gastos_costos.gasto_costo`
+  - indices de rendimiento para consultas de informes en `gastos_costos` e `ingresos`
+- Se agrega rollback `20260310_0007_ingresos_en_movimientos_e_indices_informes_rollback.sql`.
+## 2026-03-10 - Bandeja de correo IA con guardado de movimientos y soporte automatico
+- Se habilita modulo `Correos` con lectura de bandeja IMAP desde el sistema.
+- Se agrega sugerencia de formulario por reglas internas con enriquecimiento OpenAI opcional.
+- Se habilita guardado directo de movimiento desde correo seleccionado.
+- Al guardar, se genera soporte PNG del correo y se registra en `ingresos_detalle`.
+- Se agrega registro de trazabilidad en tabla `correo_importaciones_log` (cuando existe).
+- Se integra el modulo al menu lateral, buscador global y menu de usuario.
+- Se agrega entrada directa `/correos` para escenarios sin `mod_rewrite`.
+
+## 2026-03-10 - Endurecimiento de sesion para PHP 7.2
+- Se refuerza `SessionManager` con validacion defensiva de `session_name` para evitar `Notice: Array to string conversion`.
+- Se agrega fallback seguro para `session_lifetime_seconds` cuando falte configuracion.
 ## 2026-03-10 - Lista PC de movimientos: columna # compacta y detalle por icono
 - En version PC, la columna de numeracion # se ajusta al ancho real del numero para optimizar espacio horizontal.
 - En version PC, la columna Detalle cambia a icono de consulta por fila.
@@ -98,7 +142,7 @@
 - Se elimina el texto tecnico de migracion MD5 en la pantalla de login para evitar ruido al usuario final.
 - Se implementa opcion `Recordar usuario en este dispositivo` con cookie segura (sin guardar contrasena).
 - Se agrega compatibilidad de cookies para PHP 7.2 a 8.2 mediante `CookieManager`.
-- Se redise�a el login con interfaz profesional y responsive (desktop/movil).
+- Se rediseña el login con interfaz profesional y responsive (desktop/movil).
 - Se mejora validacion frontend del formulario con mensajes en pantalla y boton para ver/ocultar contrasena.
 
 ## 2026-03-09 - Navegacion profesional y modulos operativos iniciales
@@ -314,3 +358,5 @@
   - Clasificaciones
   - Medios de pago
 - Se define ancho fijo corto para que ocupe solo el espacio del numero y no consuma area de contenido.
+
+

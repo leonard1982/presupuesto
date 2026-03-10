@@ -70,6 +70,10 @@ $currentUserLogin = $isAuthenticated && isset($currentUser['login']) ? (string) 
                     <i class="bi bi-plus-circle"></i>
                     <span class="nav-text">Nuevo movimiento</span>
                 </a>
+                <a href="<?php echo escape_html($baseUrlSafe); ?>/index.php?route=movimientos/nuevo&amp;categoria=Ingreso">
+                    <i class="bi bi-cash-coin"></i>
+                    <span class="nav-text">Registrar ingreso</span>
+                </a>
                 <a class="<?php echo $activeMenuSafe === 'clasificaciones' ? 'active' : ''; ?>" href="<?php echo escape_html($baseUrlSafe); ?>/index.php?route=clasificaciones">
                     <i class="bi bi-tags"></i>
                     <span class="nav-text">Clasificaciones</span>
@@ -77,6 +81,14 @@ $currentUserLogin = $isAuthenticated && isset($currentUser['login']) ? (string) 
                 <a class="<?php echo $activeMenuSafe === 'medios_pago' ? 'active' : ''; ?>" href="<?php echo escape_html($baseUrlSafe); ?>/index.php?route=medios-pago">
                     <i class="bi bi-credit-card-2-front"></i>
                     <span class="nav-text">Medios de pago</span>
+                </a>
+                <a class="<?php echo $activeMenuSafe === 'informes' ? 'active' : ''; ?>" href="<?php echo escape_html($baseUrlSafe); ?>/index.php?route=informes">
+                    <i class="bi bi-bar-chart-line"></i>
+                    <span class="nav-text">Informes y KPIs</span>
+                </a>
+                <a class="<?php echo $activeMenuSafe === 'correos' ? 'active' : ''; ?>" href="<?php echo escape_html($baseUrlSafe); ?>/index.php?route=correos">
+                    <i class="bi bi-envelope-paper"></i>
+                    <span class="nav-text">Bandeja correo</span>
                 </a>
             </nav>
         </aside>
@@ -100,8 +112,12 @@ $currentUserLogin = $isAuthenticated && isset($currentUser['login']) ? (string) 
                         <option value="Dashboard"></option>
                         <option value="Movimientos"></option>
                         <option value="Nuevo movimiento"></option>
+                        <option value="Registrar ingreso"></option>
                         <option value="Clasificaciones"></option>
                         <option value="Medios de pago"></option>
+                        <option value="Informes y KPIs"></option>
+                        <option value="Bandeja correo"></option>
+                        <option value="Configuracion de sesion"></option>
                     </datalist>
                 </div>
 
@@ -124,6 +140,18 @@ $currentUserLogin = $isAuthenticated && isset($currentUser['login']) ? (string) 
                             </a>
                             <a href="<?php echo escape_html($baseUrlSafe); ?>/index.php?route=movimientos/nuevo">
                                 <i class="bi bi-plus-circle"></i> Registrar movimiento
+                            </a>
+                            <a href="<?php echo escape_html($baseUrlSafe); ?>/index.php?route=movimientos/nuevo&amp;categoria=Ingreso">
+                                <i class="bi bi-cash-coin"></i> Registrar ingreso
+                            </a>
+                            <a href="<?php echo escape_html($baseUrlSafe); ?>/index.php?route=informes">
+                                <i class="bi bi-bar-chart-line"></i> Informes y KPIs
+                            </a>
+                            <a href="<?php echo escape_html($baseUrlSafe); ?>/index.php?route=correos">
+                                <i class="bi bi-envelope-paper"></i> Bandeja correo IA
+                            </a>
+                            <a href="<?php echo escape_html($baseUrlSafe); ?>/index.php?route=configuracion/sesion">
+                                <i class="bi bi-shield-lock"></i> Configuracion de sesion
                             </a>
                             <form method="post" action="<?php echo escape_html($baseUrlSafe); ?>/index.php?route=logout">
                                 <button type="submit" class="btn btn-secondary btn-inline">

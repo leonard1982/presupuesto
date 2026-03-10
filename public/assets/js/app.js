@@ -745,8 +745,18 @@
             'panel': '/index.php?route=dashboard',
             'movimientos': '/index.php?route=movimientos',
             'nuevo movimiento': '/index.php?route=movimientos/nuevo',
+            'registrar ingreso': '/index.php?route=movimientos/nuevo&categoria=Ingreso',
             'clasificaciones': '/index.php?route=clasificaciones',
-            'medios de pago': '/index.php?route=medios-pago'
+            'medios de pago': '/index.php?route=medios-pago',
+            'informes': '/index.php?route=informes',
+            'informes y kpis': '/index.php?route=informes',
+            'kpis': '/index.php?route=informes',
+            'configuracion de sesion': '/index.php?route=configuracion/sesion',
+            'sesion': '/index.php?route=configuracion/sesion',
+            'bandeja correo': '/index.php?route=correos',
+            'correos': '/index.php?route=correos',
+            'correo': '/index.php?route=correos',
+            'email': '/index.php?route=correos'
         };
 
         quickSearchInput.addEventListener('keydown', function (event) {
@@ -768,6 +778,14 @@
                     targetRoute = quickSearchRoutes.clasificaciones;
                 } else if (userQuery.indexOf('medio') !== -1 || userQuery.indexOf('pago') !== -1) {
                     targetRoute = quickSearchRoutes['medios de pago'];
+                } else if (userQuery.indexOf('ingreso') !== -1) {
+                    targetRoute = quickSearchRoutes['registrar ingreso'];
+                } else if (userQuery.indexOf('informe') !== -1 || userQuery.indexOf('kpi') !== -1) {
+                    targetRoute = quickSearchRoutes.informes;
+                } else if (userQuery.indexOf('sesion') !== -1 || userQuery.indexOf('config') !== -1) {
+                    targetRoute = quickSearchRoutes['configuracion de sesion'];
+                } else if (userQuery.indexOf('correo') !== -1 || userQuery.indexOf('mail') !== -1) {
+                    targetRoute = quickSearchRoutes.correos;
                 } else {
                     targetRoute = quickSearchRoutes.dashboard;
                 }
@@ -2093,6 +2111,96 @@
                                 {
                                     data: chartData.topClasificaciones.totals || [],
                                     backgroundColor: ['#0f4c81', '#1f78b4', '#33a02c', '#e31a1c', '#ff7f00', '#6a3d9a']
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        var reportChartNode = document.getElementById('informes-chart-data');
+        if (reportChartNode) {
+            var reportChartData = readSafeJson(reportChartNode.textContent || '{}');
+
+            if (reportChartData) {
+                var reportTrendCanvas = document.getElementById('chart-informes-trend');
+                if (reportTrendCanvas && reportChartData.trend) {
+                    new window.Chart(reportTrendCanvas, {
+                        type: 'line',
+                        data: {
+                            labels: reportChartData.trend.labels || [],
+                            datasets: [
+                                {
+                                    label: 'Ingresos',
+                                    data: reportChartData.trend.ingresos || [],
+                                    borderColor: '#1f77b4',
+                                    backgroundColor: 'rgba(31,119,180,0.12)',
+                                    fill: true,
+                                    tension: 0.32
+                                },
+                                {
+                                    label: 'Gastos',
+                                    data: reportChartData.trend.gastos || [],
+                                    borderColor: '#d95f02',
+                                    backgroundColor: 'rgba(217,95,2,0.10)',
+                                    fill: true,
+                                    tension: 0.32
+                                },
+                                {
+                                    label: 'Costos',
+                                    data: reportChartData.trend.costos || [],
+                                    borderColor: '#7570b3',
+                                    backgroundColor: 'rgba(117,112,179,0.10)',
+                                    fill: true,
+                                    tension: 0.32
+                                },
+                                {
+                                    label: 'Balance',
+                                    data: reportChartData.trend.balance || [],
+                                    borderColor: '#2ca25f',
+                                    backgroundColor: 'rgba(44,162,95,0.10)',
+                                    fill: true,
+                                    tension: 0.3
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                }
+
+                var reportCategoriasCanvas = document.getElementById('chart-informes-categorias');
+                if (reportCategoriasCanvas && reportChartData.categorias) {
+                    new window.Chart(reportCategoriasCanvas, {
+                        type: 'doughnut',
+                        data: {
+                            labels: reportChartData.categorias.labels || [],
+                            datasets: [
+                                {
+                                    data: reportChartData.categorias.totals || [],
+                                    backgroundColor: ['#1f77b4', '#d95f02', '#7570b3', '#2ca25f']
                                 }
                             ]
                         },

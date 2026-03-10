@@ -74,7 +74,7 @@ $saldoInput = mov_form_currency_input(isset($formData['saldo']) ? $formData['sal
     <div>
         <span class="title-chip"><i class="bi bi-plus-circle"></i> Captura rapida</span>
         <h2><?php echo $isEdit ? 'Editar movimiento' : 'Nuevo movimiento'; ?></h2>
-        <p class="muted">Registra gastos, costos o compras con clasificacion, medios y soportes.</p>
+        <p class="muted">Registra ingresos, gastos, costos o compras con clasificacion, medios y soportes.</p>
     </div>
     <a class="btn btn-secondary btn-inline" href="<?php echo mov_form_escape($baseUrl); ?>/index.php?route=movimientos">
         <i class="bi bi-arrow-left-circle"></i> Volver al listado
@@ -111,10 +111,12 @@ $saldoInput = mov_form_currency_input(isset($formData['saldo']) ? $formData['sal
             <div class="form-field">
                 <label for="gasto_costo">Categoria principal</label>
                 <select id="gasto_costo" name="gasto_costo" required>
+                    <option value="Ingreso" <?php echo $selectedGastoCosto === 'Ingreso' ? 'selected' : ''; ?>>Ingreso</option>
                     <option value="Gasto" <?php echo $selectedGastoCosto === 'Gasto' ? 'selected' : ''; ?>>Gasto</option>
                     <option value="Costo" <?php echo $selectedGastoCosto === 'Costo' ? 'selected' : ''; ?>>Costo</option>
                 </select>
                 <div class="quick-pills">
+                    <button type="button" class="quick-pill js-field-quick-select" data-target="gasto_costo" data-value="Ingreso">Ingreso</button>
                     <button type="button" class="quick-pill js-field-quick-select" data-target="gasto_costo" data-value="Gasto">Gasto</button>
                     <button type="button" class="quick-pill js-field-quick-select" data-target="gasto_costo" data-value="Costo">Costo</button>
                 </div>

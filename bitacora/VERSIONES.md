@@ -1,5 +1,16 @@
-# Versiones
+﻿# Versiones
 
+## v0.9.0 - 2026-03-10
+- Sesion configurable por usuario: 8h/12h/24h/48h con base en 12 horas y control de inactividad.
+- Movimientos: nueva categoria `Ingreso` y accesos rapidos para registrar ingresos.
+- Dashboard: ingresos consolidados (legacy + ingresos nuevos en movimientos).
+- Nuevo modulo `Informes y KPIs` con filtros ejecutivos, KPIs, graficos y exportacion.
+- Migracion SQL `20260310_0007` para habilitar ingresos en movimientos e indices de rendimiento.
+## v0.8.0 - 2026-03-10
+- Nuevo modulo Correos: lectura IMAP, sugerencia IA y guardado de movimiento con soporte automatico.
+- Integracion de menu/rutas para `correos` y entrada directa para entornos sin mod_rewrite.
+- Migracion SQL `20260310_0006` para tabla `correo_importaciones_log` con indices.
+- Endurecimiento de SessionManager para evitar Notice de conversion de array a string en PHP 7.2.
 ## v0.7.4 - 2026-03-10
 - Movimientos PC: columna # compactada al ancho del numero.
 - Movimientos PC: columna Detalle convertida a icono con popup de detalle por registro.
@@ -156,6 +167,8 @@
 - `MAJOR`: cambios incompatibles.
 - `MINOR`: funcionalidades nuevas compatibles.
 - `PATCH`: correcciones y ajustes sin romper API funcional.
+
+
 
 
 

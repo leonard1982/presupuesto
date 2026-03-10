@@ -80,6 +80,16 @@ class MovimientoController
 
         $oldInput = $this->pullFlash('movimientos_old_input');
         $errorMessage = $this->pullFlash('movimientos_error');
+        $categoriaPreset = isset($_GET['categoria']) ? trim((string) $_GET['categoria']) : '';
+
+        $formData = is_array($oldInput) ? $oldInput : array();
+        if (empty($formData) && in_array($categoriaPreset, array('Ingreso', 'Gasto', 'Costo'), true)) {
+            $formData['gasto_costo'] = $categoriaPreset;
+        }
+
+        if (empty($formData) && isset($_GET['tipo']) && trim((string) $_GET['tipo']) !== '') {
+            $formData['tipo'] = trim((string) $_GET['tipo']);
+        }
 
         $this->viewRenderer->render('movimientos/form', array(
             'pageTitle' => 'Nuevo movimiento',
@@ -91,7 +101,7 @@ class MovimientoController
             'csrfTokenName' => $tokenName,
             'csrfToken' => $csrfToken,
             'errorMessage' => $errorMessage,
-            'formData' => is_array($oldInput) ? $oldInput : array(),
+            'formData' => $formData,
             'clasificaciones' => $this->movimientoRepository->getClasificaciones(),
             'mediosPago' => $this->movimientoRepository->getMediosPago(),
             'presupuestosActivos' => $this->movimientoRepository->getPresupuestosActivos(),
@@ -463,7 +473,7 @@ class MovimientoController
             return array('valid' => false, 'message' => 'El valor debe ser mayor a cero.');
         }
 
-        if (!in_array($formData['gasto_costo'], array('Gasto', 'Costo'), true)) {
+        if (!in_array($formData['gasto_costo'], array('Ingreso', 'Gasto', 'Costo'), true)) {
             return array('valid' => false, 'message' => 'Selecciona una categoria principal valida.');
         }
 

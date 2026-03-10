@@ -126,7 +126,7 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
     <div>
         <span class="title-chip"><i class="bi bi-receipt-cutoff"></i> Registro operativo</span>
         <h2>Movimientos</h2>
-        <p class="muted">Gestiona gastos, costos y compras en un flujo rapido.</p>
+        <p class="muted">Gestiona ingresos, gastos, costos y compras en un flujo rapido.</p>
     </div>
     <a class="btn btn-primary btn-inline" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/nuevo">
         <i class="bi bi-plus-circle"></i> Nuevo movimiento
@@ -186,6 +186,7 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
             <label for="movement-filter-categoria">Categoria</label>
             <select id="movement-filter-categoria">
                 <option value="">Todas</option>
+                <option value="Ingreso">Ingreso</option>
                 <option value="Gasto">Gasto</option>
                 <option value="Costo">Costo</option>
             </select>
@@ -218,6 +219,9 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
         <div class="movement-filters-actions-right">
             <a class="btn btn-primary btn-inline btn-mini" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/nuevo&modo=rapido">
                 <i class="bi bi-lightning-charge"></i> Carga rapida
+            </a>
+            <a class="btn btn-secondary btn-inline btn-mini" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/nuevo&categoria=Ingreso">
+                <i class="bi bi-cash-coin"></i> Registrar ingreso
             </a>
             <button type="button" id="movement-summary-toggle" class="btn btn-ghost btn-inline btn-mini" aria-expanded="true">
                 <i class="bi bi-layout-sidebar-inset"></i> Ocultar panel

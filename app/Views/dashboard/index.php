@@ -82,6 +82,12 @@ $reportSubjectValue = isset($reportForm['asunto_informe']) ? (string) $reportFor
             <a class="btn btn-primary btn-inline" href="<?php echo dashboard_escape($baseUrl); ?>/index.php?route=movimientos/nuevo">
                 <i class="bi bi-plus-circle"></i> Registrar movimiento
             </a>
+            <a class="btn btn-secondary btn-inline" href="<?php echo dashboard_escape($baseUrl); ?>/index.php?route=movimientos/nuevo&categoria=Ingreso">
+                <i class="bi bi-cash-coin"></i> Registrar ingreso
+            </a>
+            <a class="btn btn-secondary btn-inline" href="<?php echo dashboard_escape($baseUrl); ?>/index.php?route=informes">
+                <i class="bi bi-bar-chart-line"></i> Informes y KPIs
+            </a>
             <a class="btn btn-secondary btn-inline" href="<?php echo dashboard_escape($baseUrl); ?>/index.php?route=clasificaciones">
                 <i class="bi bi-tags"></i> Clasificaciones
             </a>

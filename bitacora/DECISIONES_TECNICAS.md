@@ -1,5 +1,31 @@
 ﻿# Decisiones Tecnicas
 
+## 2026-03-10
+
+### Decision: Duracion de sesion ampliada y configurable por usuario
+- Motivo: el uso operativo supera jornadas de 8 horas y requiere continuidad sin cierres frecuentes.
+- Impacto: sesion base de 12 horas con opciones configurables y control de inactividad por preferencia segura.
+
+### Decision: Registrar ingresos en `gastos_costos` para nuevo flujo operativo
+- Motivo: unificar captura diaria en un formulario rapido y evitar doble interfaz para operador.
+- Impacto: se habilita categoria `Ingreso` sin perder compatibilidad con tabla legacy `ingresos`.
+
+### Decision: Informes consolidan fuentes legacy + nuevas
+- Motivo: mantener consistencia historica mientras el sistema evoluciona por fases.
+- Impacto: KPIs y reportes usan `ingresos` + `gastos_costos` y permiten lectura ejecutiva completa.
+## 2026-03-10
+
+### Decision: Bandeja de correos con soporte IMAP nativo
+- Motivo: integrar correos de bancos/proveedores sin agregar dependencias pesadas.
+- Impacto: se usa extension IMAP de PHP y configuracion por `.env`, compatible con PHP 7.2-8.2.
+
+### Decision: Sugerencia hibrida para correos (reglas + OpenAI opcional)
+- Motivo: garantizar funcionamiento incluso sin API externa.
+- Impacto: continuidad operativa con prediccion local y mejora de precision cuando OpenAI esta disponible.
+
+### Decision: Soporte de correo como imagen PNG en almacenamiento privado
+- Motivo: dejar evidencia trazable del contenido importado sin exponer archivos en `/public`.
+- Impacto: cada movimiento creado desde correo queda con respaldo en `ingresos_detalle`.
 ## 2026-03-09
 
 ### Decision: Monolito modular
@@ -86,3 +112,5 @@
 ### Decision: Asesor KPI hibrido (reglas + OpenAI opcional)
 - Motivo: asegurar recomendaciones incluso si la API externa falla o no esta disponible.
 - Impacto: continuidad operativa con fallback local y mejora progresiva cuando OpenAI responde.
+
+
