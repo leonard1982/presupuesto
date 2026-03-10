@@ -57,20 +57,18 @@ if (!function_exists('medio_escape')) {
             <thead>
             <tr>
                 <th class="no-export">#</th>
-                <th>ID</th>
                 <th>Medio</th>
             </tr>
             </thead>
             <tbody>
             <?php if (empty($records)) : ?>
                 <tr>
-                    <td colspan="3" class="muted">No hay registros para mostrar.</td>
+                    <td colspan="2" class="muted">No hay registros para mostrar.</td>
                 </tr>
             <?php else : ?>
                 <?php foreach ($records as $record) : ?>
                     <tr>
                         <td></td>
-                        <td><?php echo (int) $record['id']; ?></td>
                         <td><?php echo medio_escape($record['medio']); ?></td>
                     </tr>
                 <?php endforeach; ?>

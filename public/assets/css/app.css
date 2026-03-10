@@ -966,6 +966,24 @@ textarea {
     gap: 0.5rem;
 }
 
+.confirm-modal-card {
+    width: min(500px, 100%);
+}
+
+.confirm-modal-header h3 {
+    color: #9b240f;
+}
+
+.confirm-modal-header h3 i {
+    color: #cf3e1c;
+}
+
+.confirm-modal-text {
+    margin: 0;
+    color: #1a3552;
+    font-weight: 600;
+}
+
 .pwa-modal-card {
     width: min(520px, 100%);
 }
@@ -1777,6 +1795,18 @@ body.theme-dark .notification-body p {
     color: #e2eefc;
 }
 
+body.theme-dark .confirm-modal-header h3 {
+    color: #ffad9c;
+}
+
+body.theme-dark .confirm-modal-header h3 i {
+    color: #ff8d74;
+}
+
+body.theme-dark .confirm-modal-text {
+    color: #e2eefc;
+}
+
 body.theme-dark .btn-app-install {
     background: #1a3047;
     border-color: #35516f;
@@ -1890,12 +1920,52 @@ body.theme-dark .dataTables_wrapper .dt-tools .dt-button.dt-export-button:hover 
     }
 
     .topbar {
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "left actions"
+            "search search";
+        align-items: center;
+        column-gap: 0.55rem;
+        row-gap: 0.55rem;
         padding: 0.72rem 0.8rem;
     }
 
+    .topbar-left {
+        grid-area: left;
+        min-width: 0;
+    }
+
+    .topbar-left .title-with-icon {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .topbar-left .title-with-icon span {
+        display: inline-block;
+        max-width: 170px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .user-block {
+        grid-area: actions;
+        justify-self: end;
+        gap: 0.32rem;
+    }
+
+    .user-menu summary {
+        padding: 0.5rem 0.58rem;
+    }
+
+    .user-menu summary span {
+        display: none;
+    }
+
     .topbar-search {
-        order: 3;
+        grid-area: search;
+        order: 0;
         max-width: none;
         width: 100%;
     }
@@ -1922,6 +1992,12 @@ body.theme-dark .dataTables_wrapper .dt-tools .dt-button.dt-export-button:hover 
     .page-header {
         flex-direction: column;
         align-items: flex-start;
+        gap: 0.7rem;
+    }
+
+    .page-header .btn {
+        width: 100%;
+        justify-content: center;
     }
 
     .dashboard-kpis {
@@ -1974,6 +2050,23 @@ body.theme-dark .dataTables_wrapper .dt-tools .dt-button.dt-export-button:hover 
 
     .password-row {
         grid-template-columns: 1fr;
+    }
+
+    .auth-topbar {
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .auth-topbar .title-with-icon span {
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: inline-block;
+    }
+
+    .auth-topbar-actions {
+        gap: 0.35rem;
     }
 }
 

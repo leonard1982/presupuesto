@@ -147,7 +147,7 @@ if (!function_exists('mov_encode_json')) {
                                 <a class="btn btn-secondary btn-inline btn-mini btn-icon-only" title="Editar movimiento" aria-label="Editar movimiento" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/editar&id=<?php echo (int) $movement['id']; ?>">
                                     <i class="bi bi-pencil-square"></i>
                                 </a>
-                                <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/eliminar" class="inline-form js-confirm-delete" data-confirm-message="Se eliminara este movimiento y sus soportes. Deseas continuar?">
+                                <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/eliminar" class="inline-form js-confirm-delete" data-confirm-title="Confirmar eliminacion" data-confirm-message="Se eliminara este movimiento y sus soportes. Esta accion no se puede deshacer." data-confirm-accept="Si, eliminar">
                                     <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
                                     <input type="hidden" name="movement_id" value="<?php echo (int) $movement['id']; ?>">
                                     <button type="submit" class="btn btn-danger btn-inline btn-mini btn-icon-only" title="Eliminar movimiento" aria-label="Eliminar movimiento">
@@ -216,7 +216,7 @@ if (!function_exists('mov_encode_json')) {
                         <a class="btn btn-secondary btn-inline btn-mini btn-icon-only" title="Editar movimiento" aria-label="Editar movimiento" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/editar&id=<?php echo (int) $movement['id']; ?>">
                             <i class="bi bi-pencil-square"></i>
                         </a>
-                        <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/eliminar" class="inline-form js-confirm-delete" data-confirm-message="Se eliminara este movimiento y sus soportes. Deseas continuar?">
+                        <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/eliminar" class="inline-form js-confirm-delete" data-confirm-title="Confirmar eliminacion" data-confirm-message="Se eliminara este movimiento y sus soportes. Esta accion no se puede deshacer." data-confirm-accept="Si, eliminar">
                             <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
                             <input type="hidden" name="movement_id" value="<?php echo (int) $movement['id']; ?>">
                             <button type="submit" class="btn btn-danger btn-inline btn-mini btn-icon-only" title="Eliminar movimiento" aria-label="Eliminar movimiento">

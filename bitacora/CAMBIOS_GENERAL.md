@@ -191,3 +191,33 @@
   - editar
   - eliminar con confirmacion.
 - La tabla DataTables se conserva para escritorio y el nuevo listado se activa solo en mobile por CSS responsive.
+
+## 2026-03-09 - Confirmacion visual profesional para eliminar registros
+- Se reemplaza `window.confirm` por modal visual de confirmacion reutilizable.
+- La eliminacion de movimientos ahora muestra cuadro de confirmacion elegante con:
+  - titulo
+  - mensaje claro de irreversible
+  - boton principal de eliminacion
+  - boton cancelar.
+- El modal se puede cerrar por boton, clic fuera o tecla ESC.
+- Se mantiene proteccion por backend y token CSRF en formularios de eliminacion.
+
+## 2026-03-09 - Mejora de distribucion del encabezado en movil
+- Se reorganiza la barra superior en mobile con estructura de grilla:
+  - titulo y menu a la izquierda
+  - acciones de usuario a la derecha
+  - buscador en fila completa inferior
+- Se compacta el bloque de usuario en movil ocultando el nombre en el resumen para evitar saturacion visual.
+- Se mejora el encabezado de modulo (`page-header`) para que el boton principal ocupe ancho completo en pantallas pequenas.
+- Se ajusta tambien la cabecera de login para mejor alineacion y legibilidad en celular.
+
+## 2026-03-09 - Listas de catalogos sin columna ID visible
+- Se retira la columna `ID` de las listas de:
+  - Clasificaciones
+  - Medios de pago
+- Se mantiene columna de numeracion `#` para orden visual del usuario.
+- Se ajusta `colspan` de filas vacias para mantener integridad del render.
+- Se valida en SQL base (`presupuesto.sql`) que las tablas de este modulo usan:
+  - `clasificaciones(id, descripcion)`
+  - `medios(id, medio)`
+  y no exigen campo `clasificacion2` en este contexto funcional.

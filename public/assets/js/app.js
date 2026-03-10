@@ -751,6 +751,11 @@
     var pwaInstallModalText = document.getElementById('pwa-install-modal-text');
     var pwaInstallModalSteps = document.getElementById('pwa-install-modal-steps');
     var pwaInstallConfirm = document.getElementById('pwa-install-confirm');
+    var confirmActionModal = document.getElementById('confirm-action-modal');
+    var confirmActionModalTitle = document.getElementById('confirm-action-modal-title');
+    var confirmActionModalText = document.getElementById('confirm-action-modal-text');
+    var confirmActionModalAccept = document.getElementById('confirm-action-modal-accept');
+    var pendingConfirmForm = null;
     var deferredInstallPrompt = null;
 
     function setInstallButtonsVisibility(isVisible) {
@@ -892,6 +897,39 @@
         movementSaveModal.setAttribute('aria-hidden', 'true');
     }
 
+    function closeConfirmActionModal() {
+        if (!confirmActionModal) {
+            return;
+        }
+
+        confirmActionModal.classList.add('hidden');
+        confirmActionModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function openConfirmActionModal(formElement) {
+        if (!confirmActionModal || !confirmActionModalText || !formElement) {
+            return;
+        }
+
+        var titleText = formElement.getAttribute('data-confirm-title') || 'Confirmar accion';
+        var messageText = formElement.getAttribute('data-confirm-message') || 'Deseas continuar con esta accion?';
+        var acceptText = formElement.getAttribute('data-confirm-accept') || 'Si, continuar';
+
+        if (confirmActionModalTitle) {
+            confirmActionModalTitle.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> ' + escapeHtml(titleText);
+        }
+
+        confirmActionModalText.textContent = messageText;
+
+        if (confirmActionModalAccept) {
+            confirmActionModalAccept.innerHTML = '<i class="bi bi-trash3"></i> ' + escapeHtml(acceptText);
+        }
+
+        pendingConfirmForm = formElement;
+        confirmActionModal.classList.remove('hidden');
+        confirmActionModal.setAttribute('aria-hidden', 'false');
+    }
+
     function closeMovementMobileModal() {
         if (!movementMobileModal) {
             return;
@@ -957,6 +995,28 @@
         if (closeNoticeButton) {
             event.preventDefault();
             closeMovementSaveModal();
+            return;
+        }
+
+        if (confirmActionModalAccept && event.target.closest('#confirm-action-modal-accept')) {
+            event.preventDefault();
+            if (pendingConfirmForm) {
+                var targetForm = pendingConfirmForm;
+                pendingConfirmForm = null;
+                closeConfirmActionModal();
+                targetForm.setAttribute('data-confirm-approved', '1');
+                targetForm.submit();
+            } else {
+                closeConfirmActionModal();
+            }
+            return;
+        }
+
+        var closeConfirmButton = event.target.closest('.js-close-confirm-modal');
+        if (closeConfirmButton) {
+            event.preventDefault();
+            pendingConfirmForm = null;
+            closeConfirmActionModal();
             return;
         }
 
@@ -1034,6 +1094,12 @@
             return;
         }
 
+        if (confirmActionModal && event.target === confirmActionModal) {
+            pendingConfirmForm = null;
+            closeConfirmActionModal();
+            return;
+        }
+
         if (pwaInstallModal && event.target === pwaInstallModal) {
             closePwaInstallModal();
         }
@@ -1044,6 +1110,8 @@
             closeSupportsModal();
             closeMovementSaveModal();
             closeMovementMobileModal();
+            pendingConfirmForm = null;
+            closeConfirmActionModal();
             closePwaInstallModal();
         }
     });
@@ -1052,10 +1120,13 @@
     if (confirmDeleteForms && confirmDeleteForms.length > 0) {
         for (var formIndex = 0; formIndex < confirmDeleteForms.length; formIndex += 1) {
             confirmDeleteForms[formIndex].addEventListener('submit', function (event) {
-                var message = this.getAttribute('data-confirm-message') || 'Deseas continuar con esta accion?';
-                if (!window.confirm(message)) {
-                    event.preventDefault();
+                if (this.getAttribute('data-confirm-approved') === '1') {
+                    this.removeAttribute('data-confirm-approved');
+                    return;
                 }
+
+                event.preventDefault();
+                openConfirmActionModal(this);
             });
         }
     }

@@ -182,6 +182,28 @@ $currentUserLabel = $isAuthenticated
     </div>
 </div>
 
+<div id="confirm-action-modal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-card confirm-modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-action-modal-title">
+        <div class="modal-header confirm-modal-header">
+            <h3 id="confirm-action-modal-title"><i class="bi bi-exclamation-triangle-fill"></i> Confirmar accion</h3>
+            <button type="button" class="btn btn-secondary btn-inline btn-mini btn-icon-only js-close-confirm-modal" title="Cerrar" aria-label="Cerrar">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p id="confirm-action-modal-text" class="confirm-modal-text">Deseas continuar con esta accion?</p>
+            <div class="notification-actions">
+                <button type="button" id="confirm-action-modal-accept" class="btn btn-danger btn-inline">
+                    <i class="bi bi-trash3"></i> Si, eliminar
+                </button>
+                <button type="button" class="btn btn-secondary btn-inline js-close-confirm-modal">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php if ($isAuthenticated) : ?>
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>

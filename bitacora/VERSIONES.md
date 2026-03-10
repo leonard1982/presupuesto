@@ -1,5 +1,20 @@
 ﻿# Versiones
 
+## v0.6.7 - 2026-03-09
+- Listados de Clasificaciones y Medios de pago sin columna ID visible.
+- Se conserva numeracion por fila con columna #.
+- Verificacion de SQL base: en este modulo no se requiere campo clasificacion2.
+
+## v0.6.6 - 2026-03-09
+- Mejora del encabezado en movil: distribucion ordenada de titulo, acciones y buscador.
+- Compactacion visual del bloque de usuario en topbar mobile.
+- Ajuste de "page-header" para botones principales de ancho completo en celular.
+
+## v0.6.5 - 2026-03-09
+- Confirmacion de eliminacion en modal visual profesional (sin popup nativo del navegador).
+- Integracion en movimientos escritorio y movil con mensaje claro de accion irreversible.
+- Cierre del modal por boton, clic fuera o tecla ESC.
+
 ## v0.6.4 - 2026-03-09
 - Nuevo listado movil de movimientos con fecha visible y acciones rapidas por registro.
 - Boton "Ver detalle" en mobile con popup completo del movimiento.
@@ -99,6 +114,9 @@
 - `MAJOR`: cambios incompatibles.
 - `MINOR`: funcionalidades nuevas compatibles.
 - `PATCH`: correcciones y ajustes sin romper API funcional.
+
+
+
 
 
 
