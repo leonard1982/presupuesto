@@ -1,5 +1,11 @@
 ﻿# Versiones
 
+## v0.9.2 - 2026-03-10
+- Correos: lectura IMAP robusta con fallback multipuerto (configurado, 993/SSL, 143/TLS y 143/notls).
+- Correos: MAIL_INBOX_PORT deja de heredar MAIL_PORT para evitar conflicto SMTP vs IMAP.
+- Informes: rediseño completo a 5 reportes corporativos tipo hoja A4 con navegación rápida e impresión.
+- Informes: separación visual y funcional del dashboard operativo para evitar duplicación de enfoque.
+
 ## v0.9.1 - 2026-03-10
 - Correccion de DataTables: se evita warning de conteo de columnas en tablas vacias.
 - Nueva sincronizacion automatica de esquema: crea tablas/campos/indices minimos faltantes al iniciar.
@@ -172,4 +178,5 @@
 - `MAJOR`: cambios incompatibles.
 - `MINOR`: funcionalidades nuevas compatibles.
 - `PATCH`: correcciones y ajustes sin romper API funcional.
+
 

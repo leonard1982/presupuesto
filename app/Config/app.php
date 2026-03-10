@@ -35,7 +35,7 @@ return array(
     ),
     'mail_inbox' => array(
         'host' => trim(Environment::get('MAIL_INBOX_HOST', Environment::get('MAIL_HOST', ''))),
-        'port' => Environment::getInteger('MAIL_INBOX_PORT', Environment::getInteger('MAIL_PORT', 993)),
+        'port' => Environment::getInteger('MAIL_INBOX_PORT', 993),
         'username' => trim(Environment::get('MAIL_INBOX_USER', Environment::get('MAIL_USER', ''))),
         'password' => Environment::get('MAIL_INBOX_PASS', Environment::get('MAIL_PASS', '')),
         'folder' => trim(Environment::get('MAIL_INBOX_FOLDER', 'INBOX')),

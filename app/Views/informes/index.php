@@ -1,6 +1,6 @@
 <?php
 /**
- * Proyecto PRESUPUESTO - Vista de informes y KPIs ejecutivos.
+ * Proyecto PRESUPUESTO - Vista de informes corporativos A4.
  */
 
 if (!function_exists('inf_escape')) {
@@ -23,16 +23,42 @@ if (!function_exists('inf_percent')) {
         return number_format((float) $value, 1, ',', '.') . '%';
     }
 }
+
+if (!function_exists('inf_status_class')) {
+    function inf_status_class($status)
+    {
+        $label = trim((string) $status);
+        if ($label === 'Optimo') {
+            return 'report-badge report-badge-good';
+        }
+        if ($label === 'Control') {
+            return 'report-badge report-badge-warn';
+        }
+        return 'report-badge report-badge-risk';
+    }
+}
+
+$reports = isset($corporateReports) && is_array($corporateReports) ? $corporateReports : array();
+$reportOne = isset($reports['report_1']) && is_array($reports['report_1']) ? $reports['report_1'] : array();
+$reportTwo = isset($reports['report_2']) && is_array($reports['report_2']) ? $reports['report_2'] : array();
+$reportThree = isset($reports['report_3']) && is_array($reports['report_3']) ? $reports['report_3'] : array();
+$reportFour = isset($reports['report_4']) && is_array($reports['report_4']) ? $reports['report_4'] : array();
+$reportFive = isset($reports['report_5']) && is_array($reports['report_5']) ? $reports['report_5'] : array();
+$reportPeriod = isset($reports['period_label']) ? (string) $reports['period_label'] : (isset($periodLabel) ? (string) $periodLabel : '');
 ?>
+
 <section class="page-header card">
     <div>
-        <span class="title-chip"><i class="bi bi-bar-chart-line"></i> Analitica ejecutiva</span>
-        <h2>Informes y KPIs</h2>
-        <p class="muted">Panel profesional para analizar ingresos, gastos, costos, balance y comportamiento financiero.</p>
+        <span class="title-chip"><i class="bi bi-journal-text"></i> Reporteria corporativa</span>
+        <h2>Informes Ejecutivos</h2>
+        <p class="muted">Cinco informes tipo hoja A4 para control financiero y operativo.</p>
     </div>
+    <button type="button" class="btn btn-secondary btn-inline" onclick="window.print()">
+        <i class="bi bi-printer"></i> Imprimir A4
+    </button>
 </section>
 
-<section class="card movement-filters-card">
+<section class="card movement-filters-card report-filters-card">
     <form method="get" action="<?php echo inf_escape($baseUrl); ?>/index.php" class="compact-form">
         <input type="hidden" name="route" value="informes">
         <div class="movement-filters-grid">
@@ -84,151 +110,287 @@ if (!function_exists('inf_percent')) {
             <a class="btn btn-secondary btn-inline" href="<?php echo inf_escape($baseUrl); ?>/index.php?route=informes">
                 <i class="bi bi-arrow-counterclockwise"></i> Limpiar
             </a>
+            <div class="report-nav">
+                <a href="#reporte-1" class="btn btn-ghost btn-inline btn-mini"><i class="bi bi-file-earmark-text"></i> R1</a>
+                <a href="#reporte-2" class="btn btn-ghost btn-inline btn-mini"><i class="bi bi-speedometer2"></i> R2</a>
+                <a href="#reporte-3" class="btn btn-ghost btn-inline btn-mini"><i class="bi bi-cash-coin"></i> R3</a>
+                <a href="#reporte-4" class="btn btn-ghost btn-inline btn-mini"><i class="bi bi-pie-chart"></i> R4</a>
+                <a href="#reporte-5" class="btn btn-ghost btn-inline btn-mini"><i class="bi bi-journal-richtext"></i> R5</a>
+            </div>
         </div>
     </form>
 </section>
 
-<section class="dashboard-kpis">
-    <article class="card kpi-card">
-        <span class="kpi-icon"><i class="bi bi-cash-stack"></i></span>
-        <p class="kpi-label">Ingresos totales</p>
-        <h2><?php echo inf_money(isset($kpis['ingresos_total']) ? $kpis['ingresos_total'] : 0); ?></h2>
-        <p class="muted">Legacy + nuevos ingresos</p>
-    </article>
-    <article class="card kpi-card">
-        <span class="kpi-icon"><i class="bi bi-cart-x"></i></span>
-        <p class="kpi-label">Gastos</p>
-        <h2><?php echo inf_money(isset($kpis['gastos_total']) ? $kpis['gastos_total'] : 0); ?></h2>
-        <p class="muted">Ratio: <?php echo inf_percent(isset($kpis['ratio_gasto_ingreso']) ? $kpis['ratio_gasto_ingreso'] : 0); ?></p>
-    </article>
-    <article class="card kpi-card">
-        <span class="kpi-icon"><i class="bi bi-tools"></i></span>
-        <p class="kpi-label">Costos</p>
-        <h2><?php echo inf_money(isset($kpis['costos_total']) ? $kpis['costos_total'] : 0); ?></h2>
-        <p class="muted">Ratio: <?php echo inf_percent(isset($kpis['ratio_costo_ingreso']) ? $kpis['ratio_costo_ingreso'] : 0); ?></p>
-    </article>
-    <article class="card kpi-card">
-        <span class="kpi-icon"><i class="bi bi-graph-up-arrow"></i></span>
-        <p class="kpi-label">Balance neto</p>
-        <h2><?php echo inf_money(isset($kpis['balance_neto']) ? $kpis['balance_neto'] : 0); ?></h2>
-        <p class="muted">Margen: <?php echo inf_percent(isset($kpis['margen_operativo']) ? $kpis['margen_operativo'] : 0); ?></p>
-    </article>
-    <article class="card kpi-card">
-        <span class="kpi-icon"><i class="bi bi-wallet2"></i></span>
-        <p class="kpi-label">Egresos totales</p>
-        <h2><?php echo inf_money(isset($kpis['egresos_total']) ? $kpis['egresos_total'] : 0); ?></h2>
-        <p class="muted">Gastos + costos</p>
-    </article>
-    <article class="card kpi-card">
-        <span class="kpi-icon"><i class="bi bi-hourglass-split"></i></span>
-        <p class="kpi-label">Cuentas por cobrar</p>
-        <h2><?php echo inf_money(isset($kpis['cuentas_por_cobrar']) ? $kpis['cuentas_por_cobrar'] : 0); ?></h2>
-        <p class="muted">Saldo pendiente de cobro</p>
-    </article>
-    <article class="card kpi-card">
-        <span class="kpi-icon"><i class="bi bi-hourglass-bottom"></i></span>
-        <p class="kpi-label">Cuentas por pagar</p>
-        <h2><?php echo inf_money(isset($kpis['cuentas_por_pagar']) ? $kpis['cuentas_por_pagar'] : 0); ?></h2>
-        <p class="muted">Compromisos pendientes</p>
-    </article>
-    <article class="card kpi-card">
-        <span class="kpi-icon"><i class="bi bi-piggy-bank"></i></span>
-        <p class="kpi-label">Ingresos legacy</p>
-        <h2><?php echo inf_money(isset($kpis['ingresos_legacy']) ? $kpis['ingresos_legacy'] : 0); ?></h2>
-        <p class="muted">Tabla historica `ingresos`</p>
-    </article>
-</section>
-
-<section class="chart-grid">
-    <article class="card chart-card">
-        <h3><i class="bi bi-activity"></i> Tendencia del periodo</h3>
-        <div class="chart-box">
-            <canvas id="chart-informes-trend"></canvas>
-        </div>
-    </article>
-    <article class="card chart-card">
-        <h3><i class="bi bi-pie-chart"></i> Distribucion por categoria</h3>
-        <div class="chart-box">
-            <canvas id="chart-informes-categorias"></canvas>
-        </div>
-    </article>
-</section>
-
-<section class="grid-cards">
-    <article class="card">
-        <span class="title-chip"><i class="bi bi-trophy"></i> Top clasificaciones</span>
-        <h2>Clasificaciones con mayor impacto</h2>
-        <?php if (empty($clasificacionBreakdown)) : ?>
-            <p class="muted">No hay datos para el filtro seleccionado.</p>
-        <?php else : ?>
-            <ul class="compact-list">
-                <?php foreach ($clasificacionBreakdown as $item) : ?>
-                    <li>
-                        <?php echo inf_escape(isset($item['clasificacion']) ? $item['clasificacion'] : 'Sin clasificacion'); ?>:
-                        <strong><?php echo inf_money(isset($item['total']) ? $item['total'] : 0); ?></strong>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
-        <?php endif; ?>
-    </article>
-    <article class="card">
-        <span class="title-chip"><i class="bi bi-clipboard2-data"></i> Lectura ejecutiva</span>
-        <h2>KPIs recomendados para control profesional</h2>
-        <ul class="compact-list">
-            <li>Margen operativo y variacion mensual de balance.</li>
-            <li>Ratio gasto/ingreso y costo/ingreso por periodo.</li>
-            <li>Cuentas por cobrar y por pagar con tendencia.</li>
-            <li>Top clasificaciones por valor acumulado.</li>
-            <li>Trazabilidad por origen: movimientos vs ingresos legacy.</li>
-        </ul>
-    </article>
-</section>
-
-<section class="card table-card">
-    <div class="table-header">
-        <h2><i class="bi bi-table"></i> Detalle de registros</h2>
-        <span class="muted"><?php echo count($detailRows); ?> registros</span>
-    </div>
-    <div class="table-wrapper">
-        <table class="table-professional js-data-table js-indexed-table" data-page-length="20" data-export-name="informes_kpis_detalle" data-preference-key="informes_table_length">
-            <thead>
-            <tr>
-                <th class="no-export">#</th>
-                <th>Origen</th>
-                <th>ID</th>
-                <th>Fecha</th>
-                <th>Clasificacion</th>
-                <th>Detalle</th>
-                <th>Categoria</th>
-                <th>Tipo</th>
-                <th>Valor</th>
-                <th>Usuario</th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php if (empty($detailRows)) : ?>
+<section class="corporate-reports-grid">
+    <article id="reporte-1" class="report-sheet card">
+        <header class="report-sheet-header">
+            <div>
+                <h3><i class="bi bi-file-earmark-ruled"></i> <?php echo inf_escape(isset($reportOne['title']) ? $reportOne['title'] : 'Informe 1'); ?></h3>
+                <p class="muted"><?php echo inf_escape(isset($reportOne['subtitle']) ? $reportOne['subtitle'] : ''); ?></p>
+            </div>
+            <span class="report-period"><i class="bi bi-calendar-range"></i> <?php echo inf_escape($reportPeriod); ?></span>
+        </header>
+        <div class="table-wrapper">
+            <table class="table-professional report-table-static">
+                <thead>
                 <tr>
-                    <td colspan="10" class="muted">No hay registros para los filtros aplicados.</td>
+                    <th>Concepto</th>
+                    <th>Valor</th>
                 </tr>
-            <?php else : ?>
-                <?php foreach ($detailRows as $row) : ?>
+                </thead>
+                <tbody>
+                <?php $reportOneRows = isset($reportOne['rows']) && is_array($reportOne['rows']) ? $reportOne['rows'] : array(); ?>
+                <?php foreach ($reportOneRows as $row) : ?>
                     <tr>
-                        <td></td>
-                        <td><?php echo inf_escape(isset($row['origen']) ? $row['origen'] : ''); ?></td>
-                        <td><?php echo (int) (isset($row['registro_id']) ? $row['registro_id'] : 0); ?></td>
-                        <td><?php echo inf_escape(isset($row['fecha']) ? $row['fecha'] : ''); ?></td>
-                        <td><?php echo inf_escape(isset($row['clasificacion']) ? $row['clasificacion'] : ''); ?></td>
-                        <td><?php echo inf_escape(isset($row['detalle']) ? $row['detalle'] : ''); ?></td>
-                        <td><?php echo inf_escape(isset($row['categoria']) ? $row['categoria'] : ''); ?></td>
-                        <td><?php echo inf_escape(isset($row['tipo']) ? $row['tipo'] : ''); ?></td>
-                        <td><?php echo inf_money(isset($row['valor']) ? $row['valor'] : 0); ?></td>
-                        <td><?php echo inf_escape(isset($row['usuario']) ? $row['usuario'] : ''); ?></td>
+                        <td><?php echo inf_escape(isset($row['concepto']) ? $row['concepto'] : ''); ?></td>
+                        <td>
+                            <?php if (isset($row['valor_percent'])) : ?>
+                                <?php echo inf_percent($row['valor_percent']); ?>
+                            <?php else : ?>
+                                <?php echo inf_money(isset($row['valor']) ? $row['valor'] : 0); ?>
+                            <?php endif; ?>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
-            <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-</section>
+                </tbody>
+            </table>
+        </div>
+        <footer class="report-note">
+            <strong>Dictamen:</strong> <?php echo inf_escape(isset($reportOne['highlight']) ? $reportOne['highlight'] : ''); ?>
+        </footer>
+    </article>
 
-<script id="informes-chart-data" type="application/json"><?php echo json_encode($chartPayload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
+    <article id="reporte-2" class="report-sheet card">
+        <header class="report-sheet-header">
+            <div>
+                <h3><i class="bi bi-graph-up-arrow"></i> <?php echo inf_escape(isset($reportTwo['title']) ? $reportTwo['title'] : 'Informe 2'); ?></h3>
+                <p class="muted"><?php echo inf_escape(isset($reportTwo['subtitle']) ? $reportTwo['subtitle'] : ''); ?></p>
+            </div>
+            <span class="report-period"><i class="bi bi-calendar-range"></i> <?php echo inf_escape($reportPeriod); ?></span>
+        </header>
+        <div class="table-wrapper">
+            <table class="table-professional report-table-static">
+                <thead>
+                <tr>
+                    <th>Indicador</th>
+                    <th>Valor</th>
+                    <th>Estado</th>
+                </tr>
+                </thead>
+                <tbody>
+                <?php $reportTwoRows = isset($reportTwo['rows']) && is_array($reportTwo['rows']) ? $reportTwo['rows'] : array(); ?>
+                <?php foreach ($reportTwoRows as $row) : ?>
+                    <?php $status = isset($row['estado']) ? (string) $row['estado'] : 'Riesgo'; ?>
+                    <tr>
+                        <td><?php echo inf_escape(isset($row['indicador']) ? $row['indicador'] : ''); ?></td>
+                        <td><?php echo inf_percent(isset($row['valor']) ? $row['valor'] : 0); ?></td>
+                        <td><span class="<?php echo inf_escape(inf_status_class($status)); ?>"><?php echo inf_escape($status); ?></span></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </article>
+
+    <article id="reporte-3" class="report-sheet card">
+        <header class="report-sheet-header">
+            <div>
+                <h3><i class="bi bi-wallet2"></i> <?php echo inf_escape(isset($reportThree['title']) ? $reportThree['title'] : 'Informe 3'); ?></h3>
+                <p class="muted"><?php echo inf_escape(isset($reportThree['subtitle']) ? $reportThree['subtitle'] : ''); ?></p>
+            </div>
+            <span class="report-period"><i class="bi bi-calendar-range"></i> <?php echo inf_escape($reportPeriod); ?></span>
+        </header>
+        <div class="table-wrapper">
+            <table class="table-professional report-table-static">
+                <thead>
+                <tr>
+                    <th>Concepto</th>
+                    <th>Valor</th>
+                </tr>
+                </thead>
+                <tbody>
+                <?php $reportThreeRows = isset($reportThree['rows']) && is_array($reportThree['rows']) ? $reportThree['rows'] : array(); ?>
+                <?php foreach ($reportThreeRows as $row) : ?>
+                    <tr>
+                        <td><?php echo inf_escape(isset($row['concepto']) ? $row['concepto'] : ''); ?></td>
+                        <td>
+                            <?php if (isset($row['valor_percent'])) : ?>
+                                <?php echo inf_percent($row['valor_percent']); ?>
+                            <?php else : ?>
+                                <?php echo inf_money(isset($row['valor']) ? $row['valor'] : 0); ?>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <footer class="report-note">
+            <strong>Lectura:</strong> <?php echo inf_escape(isset($reportThree['highlight']) ? $reportThree['highlight'] : ''); ?>
+        </footer>
+    </article>
+
+    <article id="reporte-4" class="report-sheet card">
+        <header class="report-sheet-header">
+            <div>
+                <h3><i class="bi bi-pie-chart-fill"></i> <?php echo inf_escape(isset($reportFour['title']) ? $reportFour['title'] : 'Informe 4'); ?></h3>
+                <p class="muted"><?php echo inf_escape(isset($reportFour['subtitle']) ? $reportFour['subtitle'] : ''); ?></p>
+            </div>
+            <span class="report-period"><i class="bi bi-calendar-range"></i> <?php echo inf_escape($reportPeriod); ?></span>
+        </header>
+        <div class="report-split-grid">
+            <div class="table-wrapper">
+                <table class="table-professional report-table-static">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Clasificacion</th>
+                        <th>Total</th>
+                        <th>Participacion</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php $reportFourClasif = isset($reportFour['clasificaciones']) && is_array($reportFour['clasificaciones']) ? $reportFour['clasificaciones'] : array(); ?>
+                    <?php if (empty($reportFourClasif)) : ?>
+                        <tr>
+                            <td colspan="4" class="muted">No hay datos para mostrar.</td>
+                        </tr>
+                    <?php else : ?>
+                        <?php foreach ($reportFourClasif as $row) : ?>
+                            <tr>
+                                <td><?php echo (int) (isset($row['orden']) ? $row['orden'] : 0); ?></td>
+                                <td><?php echo inf_escape(isset($row['clasificacion']) ? $row['clasificacion'] : ''); ?></td>
+                                <td><?php echo inf_money(isset($row['total']) ? $row['total'] : 0); ?></td>
+                                <td><?php echo inf_percent(isset($row['participacion']) ? $row['participacion'] : 0); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+            <div class="table-wrapper">
+                <table class="table-professional report-table-static">
+                    <thead>
+                    <tr>
+                        <th>Categoria</th>
+                        <th>Total</th>
+                        <th>Participacion</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php $reportFourCategorias = isset($reportFour['categorias']) && is_array($reportFour['categorias']) ? $reportFour['categorias'] : array(); ?>
+                    <?php if (empty($reportFourCategorias)) : ?>
+                        <tr>
+                            <td colspan="3" class="muted">No hay datos para mostrar.</td>
+                        </tr>
+                    <?php else : ?>
+                        <?php foreach ($reportFourCategorias as $row) : ?>
+                            <tr>
+                                <td><?php echo inf_escape(isset($row['categoria']) ? $row['categoria'] : ''); ?></td>
+                                <td><?php echo inf_money(isset($row['total']) ? $row['total'] : 0); ?></td>
+                                <td><?php echo inf_percent(isset($row['participacion']) ? $row['participacion'] : 0); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </article>
+
+    <article id="reporte-5" class="report-sheet card">
+        <header class="report-sheet-header">
+            <div>
+                <h3><i class="bi bi-journal-check"></i> <?php echo inf_escape(isset($reportFive['title']) ? $reportFive['title'] : 'Informe 5'); ?></h3>
+                <p class="muted"><?php echo inf_escape(isset($reportFive['subtitle']) ? $reportFive['subtitle'] : ''); ?></p>
+            </div>
+            <span class="report-period"><i class="bi bi-calendar-range"></i> <?php echo inf_escape($reportPeriod); ?></span>
+        </header>
+
+        <div class="report-source-summary">
+            <?php $sourceSummary = isset($reportFive['source_summary']) && is_array($reportFive['source_summary']) ? $reportFive['source_summary'] : array(); ?>
+            <?php foreach ($sourceSummary as $sourceLabel => $sourceCount) : ?>
+                <span class="report-source-chip">
+                    <i class="bi bi-dot"></i>
+                    <?php echo inf_escape($sourceLabel); ?>: <?php echo (int) $sourceCount; ?>
+                </span>
+            <?php endforeach; ?>
+            <span class="report-source-chip report-source-chip-total">
+                <i class="bi bi-collection"></i>
+                Total registros: <?php echo (int) (isset($reportFive['total_registros']) ? $reportFive['total_registros'] : 0); ?>
+            </span>
+        </div>
+
+        <div class="table-wrapper">
+            <table class="table-professional report-table-static">
+                <thead>
+                <tr>
+                    <th>Periodo</th>
+                    <th>Ingresos</th>
+                    <th>Gastos</th>
+                    <th>Costos</th>
+                    <th>Balance</th>
+                </tr>
+                </thead>
+                <tbody>
+                <?php $trendRows = isset($reportFive['trend_rows']) && is_array($reportFive['trend_rows']) ? $reportFive['trend_rows'] : array(); ?>
+                <?php if (empty($trendRows)) : ?>
+                    <tr>
+                        <td colspan="5" class="muted">Sin tendencia para el periodo filtrado.</td>
+                    </tr>
+                <?php else : ?>
+                    <?php foreach ($trendRows as $row) : ?>
+                        <tr>
+                            <td><?php echo inf_escape(isset($row['periodo']) ? $row['periodo'] : ''); ?></td>
+                            <td><?php echo inf_money(isset($row['ingresos']) ? $row['ingresos'] : 0); ?></td>
+                            <td><?php echo inf_money(isset($row['gastos']) ? $row['gastos'] : 0); ?></td>
+                            <td><?php echo inf_money(isset($row['costos']) ? $row['costos'] : 0); ?></td>
+                            <td><?php echo inf_money(isset($row['balance']) ? $row['balance'] : 0); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-wrapper">
+            <table class="table-professional js-data-table js-indexed-table" data-page-length="20" data-export-name="informe_5_trazabilidad_operacional" data-preference-key="informes_table_length">
+                <thead>
+                <tr>
+                    <th class="no-export">#</th>
+                    <th>Origen</th>
+                    <th>ID</th>
+                    <th>Fecha</th>
+                    <th>Clasificacion</th>
+                    <th>Categoria</th>
+                    <th>Tipo</th>
+                    <th>Valor</th>
+                    <th>Usuario</th>
+                </tr>
+                </thead>
+                <tbody>
+                <?php $operationalRows = isset($reportFive['operational_rows']) && is_array($reportFive['operational_rows']) ? $reportFive['operational_rows'] : array(); ?>
+                <?php if (empty($operationalRows)) : ?>
+                    <tr>
+                        <td colspan="9" class="muted">No hay registros para el periodo seleccionado.</td>
+                    </tr>
+                <?php else : ?>
+                    <?php foreach ($operationalRows as $row) : ?>
+                        <tr>
+                            <td></td>
+                            <td><?php echo inf_escape(isset($row['origen']) ? $row['origen'] : ''); ?></td>
+                            <td><?php echo (int) (isset($row['registro_id']) ? $row['registro_id'] : 0); ?></td>
+                            <td><?php echo inf_escape(isset($row['fecha']) ? $row['fecha'] : ''); ?></td>
+                            <td><?php echo inf_escape(isset($row['clasificacion']) ? $row['clasificacion'] : ''); ?></td>
+                            <td><?php echo inf_escape(isset($row['categoria']) ? $row['categoria'] : ''); ?></td>
+                            <td><?php echo inf_escape(isset($row['tipo']) ? $row['tipo'] : ''); ?></td>
+                            <td><?php echo inf_money(isset($row['valor']) ? $row['valor'] : 0); ?></td>
+                            <td><?php echo inf_escape(isset($row['usuario']) ? $row['usuario'] : ''); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </article>
+</section>

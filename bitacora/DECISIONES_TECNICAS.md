@@ -1,5 +1,12 @@
-﻿# Decisiones Tecnicas
+﻿## 2026-03-10
 
+### Decision: Fallback automatico IMAP multipuerto
+- Motivo: en varios entornos el correo SMTP y la bandeja IMAP usan puertos distintos, lo que rompe la lectura de correos si se comparte una sola configuracion.
+- Impacto: el sistema intenta conexion IMAP en combinaciones seguras (configurada, 993/SSL, 143/TLS y 143/notls) y deja trazabilidad en log.
+
+### Decision: Informes corporativos tipo hoja A4
+- Motivo: separar reporteria ejecutiva del dashboard operativo para presentacion gerencial y auditoria.
+- Impacto: el modulo de informes ahora expone 5 reportes estructurados, imprimibles y listos para uso corporativo.
 ## 2026-03-10
 
 ### Decision: Autoesquema idempotente al arranque
@@ -126,6 +133,7 @@
 ### Decision: Asesor KPI hibrido (reglas + OpenAI opcional)
 - Motivo: asegurar recomendaciones incluso si la API externa falla o no esta disponible.
 - Impacto: continuidad operativa con fallback local y mejora progresiva cuando OpenAI responde.
+
 
 
 

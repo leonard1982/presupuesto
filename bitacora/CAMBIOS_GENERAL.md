@@ -1,5 +1,19 @@
-﻿# Cambios Generales
-
+﻿## 2026-03-10 - Correos IMAP robusto e informes A4 corporativos
+- Se corrige configuracion de bandeja IMAP para no depender del puerto SMTP (MAIL_PORT).
+- Se ajusta fallback de MAIL_INBOX_PORT a 993 en configuracion central.
+- Se implementan intentos automaticos de conexion IMAP por combinaciones:
+  - puerto/configuracion definida
+  - 993 SSL
+  - 143 TLS
+  - 143 sin TLS
+- Se captura y registra diagnostico de apertura IMAP en logs sin mostrar errores tecnicos al usuario final.
+- Se redisenia el modulo de informes en formato corporativo con 5 reportes tipo hoja A4:
+  - Estado de resultados ejecutivo
+  - Ratios y productividad financiera
+  - Cartera y compromisos
+  - Impacto por clasificacion y categoria
+  - Trazabilidad operacional
+- Se agrega estilo visual corporativo para reportes y modo de impresion A4 por secciones.
 ## 2026-03-10 - Correccion DataTables y autoesquema de base de datos
 - Se corrige warning DataTables - Incorrect column count normalizando filas de tablas antes de inicializar DataTables.
 - Se elimina automaticamente la fila placeholder con colspan en tablas vacias para evitar desajustes de columnas.
@@ -366,4 +380,5 @@
   - Clasificaciones
   - Medios de pago
 - Se define ancho fijo corto para que ocupe solo el espacio del numero y no consuma area de contenido.
+
 

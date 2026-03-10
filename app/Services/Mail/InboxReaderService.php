@@ -28,11 +28,11 @@ class InboxReaderService
             );
         }
 
-        $mailbox = $this->buildMailboxString();
         $username = isset($this->config['username']) ? trim((string) $this->config['username']) : '';
         $password = isset($this->config['password']) ? (string) $this->config['password'] : '';
+        $mailboxCandidates = $this->buildMailboxCandidates();
 
-        if ($mailbox === '' || $username === '' || $password === '') {
+        if (empty($mailboxCandidates) || $username === '' || $password === '') {
             return array(
                 'ok' => false,
                 'message' => 'Configura credenciales de bandeja IMAP para consultar correos.',
@@ -40,14 +40,44 @@ class InboxReaderService
             );
         }
 
-        $stream = @imap_open($mailbox, $username, $password, OP_READONLY, 1, array('DISABLE_AUTHENTICATOR' => 'GSSAPI'));
+        $stream = false;
+        $openErrors = array();
+        $attempts = array();
+
+        foreach ($mailboxCandidates as $candidate) {
+            $attempts[] = isset($candidate['label']) ? (string) $candidate['label'] : 'imap';
+            $warningText = '';
+            $opened = $this->openMailboxStream($candidate, $username, $password, $warningText);
+
+            if ($opened !== false) {
+                $stream = $opened;
+                break;
+            }
+
+            $imapError = imap_last_error();
+            $errorParts = array();
+            if (is_string($imapError) && trim($imapError) !== '') {
+                $errorParts[] = trim($imapError);
+            }
+            if ($warningText !== '') {
+                $errorParts[] = $warningText;
+            }
+
+            if (!empty($errorParts)) {
+                $openErrors[] = implode(' | ', array_unique($errorParts));
+            }
+        }
+
         if ($stream === false) {
-            $error = imap_last_error();
-            $this->logger->warning('app', 'No fue posible abrir la bandeja IMAP.', array('error' => $error));
+            $error = !empty($openErrors) ? implode(' || ', $openErrors) : (string) imap_last_error();
+            $this->logger->warning('app', 'No fue posible abrir la bandeja IMAP.', array(
+                'error' => $error,
+                'attempts' => $attempts,
+            ));
 
             return array(
                 'ok' => false,
-                'message' => 'No fue posible abrir la bandeja de correos con las credenciales actuales.',
+                'message' => 'No fue posible abrir la bandeja de correos. Verifica servidor IMAP, puerto y cifrado.',
                 'messages' => array(),
             );
         }
@@ -111,7 +141,7 @@ class InboxReaderService
         );
     }
 
-    private function buildMailboxString()
+    private function buildMailboxCandidates()
     {
         $host = isset($this->config['host']) ? trim((string) $this->config['host']) : '';
         $port = isset($this->config['port']) ? (int) $this->config['port'] : 0;
@@ -120,27 +150,104 @@ class InboxReaderService
         $novalidate = !empty($this->config['novalidate_cert']);
 
         if ($host === '' || $port <= 0) {
-            return '';
-        }
-
-        $flags = '/imap';
-        if ($encryption === 'ssl') {
-            $flags .= '/ssl';
-        } elseif ($encryption === 'tls') {
-            $flags .= '/tls';
-        } else {
-            $flags .= '/notls';
-        }
-
-        if ($novalidate) {
-            $flags .= '/novalidate-cert';
+            return array();
         }
 
         if ($folder === '') {
             $folder = 'INBOX';
         }
 
-        return '{' . $host . ':' . $port . $flags . '}' . $folder;
+        $candidates = array();
+        $seen = array();
+
+        $candidateList = array(
+            array('port' => $port, 'encryption' => $encryption),
+            array('port' => 993, 'encryption' => 'ssl'),
+            array('port' => 143, 'encryption' => 'tls'),
+            array('port' => 143, 'encryption' => 'none'),
+        );
+
+        foreach ($candidateList as $candidateConfig) {
+            $candidatePort = isset($candidateConfig['port']) ? (int) $candidateConfig['port'] : 0;
+            $candidateEncryption = isset($candidateConfig['encryption']) ? strtolower(trim((string) $candidateConfig['encryption'])) : 'ssl';
+            if ($candidatePort <= 0) {
+                continue;
+            }
+            if (!in_array($candidateEncryption, array('ssl', 'tls', 'none'), true)) {
+                $candidateEncryption = 'ssl';
+            }
+
+            $candidateKey = $candidatePort . '|' . $candidateEncryption;
+            if (isset($seen[$candidateKey])) {
+                continue;
+            }
+            $seen[$candidateKey] = true;
+
+            $mailbox = $this->buildMailboxString($host, $candidatePort, $folder, $candidateEncryption, $novalidate);
+            if ($mailbox === '') {
+                continue;
+            }
+
+            $candidates[] = array(
+                'mailbox' => $mailbox,
+                'label' => $host . ':' . $candidatePort . ' (' . strtoupper($candidateEncryption) . ')',
+            );
+        }
+
+        return $candidates;
+    }
+
+    private function buildMailboxString($host, $port, $folder, $encryption, $novalidate)
+    {
+        $hostSafe = trim((string) $host);
+        $portInt = (int) $port;
+        $folderSafe = trim((string) $folder);
+        $encryptionSafe = strtolower(trim((string) $encryption));
+        $novalidateCert = (bool) $novalidate;
+
+        if ($hostSafe === '' || $portInt <= 0) {
+            return '';
+        }
+
+        $flags = '/imap';
+        if ($encryptionSafe === 'ssl') {
+            $flags .= '/ssl';
+        } elseif ($encryptionSafe === 'tls') {
+            $flags .= '/tls';
+        } else {
+            $flags .= '/notls';
+        }
+
+        if ($novalidateCert) {
+            $flags .= '/novalidate-cert';
+        }
+
+        if ($folderSafe === '') {
+            $folderSafe = 'INBOX';
+        }
+
+        return '{' . $hostSafe . ':' . $portInt . $flags . '}' . $folderSafe;
+    }
+
+    private function openMailboxStream(array $candidate, $username, $password, &$warningText)
+    {
+        $mailbox = isset($candidate['mailbox']) ? (string) $candidate['mailbox'] : '';
+        if ($mailbox === '') {
+            return false;
+        }
+
+        $warningText = '';
+        $errorCollector = '';
+        set_error_handler(function ($severity, $message) use (&$errorCollector) {
+            $errorCollector = trim((string) $message);
+            return true;
+        });
+
+        $stream = imap_open($mailbox, $username, $password, OP_READONLY, 1, array('DISABLE_AUTHENTICATOR' => 'GSSAPI'));
+        restore_error_handler();
+
+        $warningText = $errorCollector;
+        return $stream;
     }
 
     private function extractBodyAsPlainText($stream, $messageNumber)
