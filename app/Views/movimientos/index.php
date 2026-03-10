@@ -37,10 +37,10 @@ if (!function_exists('mov_money')) {
 
 <section class="card table-card">
     <div class="table-wrapper">
-        <table class="table-professional js-data-table js-indexed-table" data-page-length="20">
+        <table class="table-professional js-data-table js-indexed-table js-exportable" data-page-length="20" data-export-name="movimientos_registro_operativo">
             <thead>
             <tr>
-                <th>#</th>
+                <th class="no-export">#</th>
                 <th>ID</th>
                 <th>Fecha</th>
                 <th>Clasificacion</th>
@@ -48,9 +48,9 @@ if (!function_exists('mov_money')) {
                 <th>Categoria</th>
                 <th>Tipo</th>
                 <th>Valor</th>
-                <th>Soportes</th>
+                <th class="no-export">Soportes</th>
                 <th>Usuario</th>
-                <th>Acciones</th>
+                <th class="no-export">Acciones</th>
             </tr>
             </thead>
             <tbody>
@@ -71,33 +71,55 @@ if (!function_exists('mov_money')) {
                         <td><?php echo mov_escape($movement['tipo']); ?></td>
                         <td><?php echo mov_money($movement['valor']); ?></td>
                         <td>
-                            <?php if (empty($supports)) : ?>
-                                <span class="muted">Sin soportes</span>
+                            <?php
+                            $supportsPayload = array();
+                            foreach ($supports as $support) {
+                                $supportId = isset($support['support_id']) ? (int) $support['support_id'] : 0;
+                                if ($supportId <= 0) {
+                                    continue;
+                                }
+
+                                $originalName = isset($support['original_name']) ? (string) $support['original_name'] : '';
+                                $supportsPayload[] = array(
+                                    'id' => $supportId,
+                                    'name' => $originalName,
+                                    'url' => rtrim((string) $baseUrl, '/') . '/index.php?route=movimientos/soporte&id=' . (int) $movement['id'] . '&sid=' . $supportId,
+                                );
+                            }
+                            $supportsPayloadJson = json_encode($supportsPayload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+                            if ($supportsPayloadJson === false) {
+                                $supportsPayloadJson = '[]';
+                            }
+                            ?>
+                            <?php if (empty($supportsPayload)) : ?>
+                                <span class="muted">Sin soporte</span>
                             <?php else : ?>
-                                <div class="table-actions-stack">
-                                    <?php foreach ($supports as $support) : ?>
-                                        <?php
-                                        $storedName = isset($support['stored_name']) ? (string) $support['stored_name'] : '';
-                                        $originalName = isset($support['original_name']) ? (string) $support['original_name'] : $storedName;
-                                        ?>
-                                        <a class="btn btn-ghost btn-inline btn-mini" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/soporte&id=<?php echo (int) $movement['id']; ?>&file=<?php echo rawurlencode($storedName); ?>" target="_blank">
-                                            <i class="bi bi-paperclip"></i> <?php echo mov_escape($originalName); ?>
-                                        </a>
-                                    <?php endforeach; ?>
-                                </div>
+                                <button
+                                    type="button"
+                                    class="btn btn-ghost btn-inline btn-mini btn-icon-only supports-trigger js-open-supports-modal"
+                                    title="Ver soportes"
+                                    aria-label="Ver soportes"
+                                    data-supports-json="<?php echo mov_escape($supportsPayloadJson); ?>"
+                                    data-supports-title="Soportes del movimiento #<?php echo (int) $movement['id']; ?>">
+                                    <i class="bi bi-paperclip"></i>
+                                    <span class="supports-count-badge"><?php echo (int) count($supportsPayload); ?></span>
+                                </button>
                             <?php endif; ?>
                         </td>
                         <td><?php echo mov_escape($movement['usuario']); ?></td>
                         <td>
                             <div class="table-actions-stack">
-                                <a class="btn btn-secondary btn-inline btn-mini" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/editar&id=<?php echo (int) $movement['id']; ?>">
-                                    <i class="bi bi-pencil-square"></i> Editar
+                                <a class="btn btn-ghost btn-inline btn-mini btn-icon-only" title="Ver ticket" aria-label="Ver ticket" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/ticket&id=<?php echo (int) $movement['id']; ?>" target="_blank">
+                                    <i class="bi bi-receipt"></i>
+                                </a>
+                                <a class="btn btn-secondary btn-inline btn-mini btn-icon-only" title="Editar movimiento" aria-label="Editar movimiento" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/editar&id=<?php echo (int) $movement['id']; ?>">
+                                    <i class="bi bi-pencil-square"></i>
                                 </a>
                                 <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/eliminar" class="inline-form js-confirm-delete" data-confirm-message="Se eliminara este movimiento y sus soportes. Deseas continuar?">
                                     <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
                                     <input type="hidden" name="movement_id" value="<?php echo (int) $movement['id']; ?>">
-                                    <button type="submit" class="btn btn-danger btn-inline btn-mini">
-                                        <i class="bi bi-trash3"></i> Eliminar
+                                    <button type="submit" class="btn btn-danger btn-inline btn-mini btn-icon-only" title="Eliminar movimiento" aria-label="Eliminar movimiento">
+                                        <i class="bi bi-trash3"></i>
                                     </button>
                                 </form>
                             </div>
@@ -109,3 +131,17 @@ if (!function_exists('mov_money')) {
         </table>
     </div>
 </section>
+
+<div id="supports-modal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="supports-modal-title">
+        <div class="modal-header">
+            <h3 id="supports-modal-title"><i class="bi bi-paperclip"></i> Soportes</h3>
+            <button type="button" class="btn btn-secondary btn-inline btn-mini btn-icon-only js-close-supports-modal" title="Cerrar" aria-label="Cerrar">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div id="supports-modal-body" class="modal-body">
+            <p class="muted">No hay soportes para mostrar.</p>
+        </div>
+    </div>
+</div>

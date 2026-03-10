@@ -28,8 +28,98 @@
         }
     }
 
+    function escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function normalizeCurrencyDigits(rawValue) {
+        var text = String(rawValue || '').trim();
+        var isNegative = text.indexOf('-') === 0;
+        var digitsOnly = text.replace(/\D/g, '');
+        if (digitsOnly === '') {
+            return '';
+        }
+
+        digitsOnly = digitsOnly.replace(/^0+(?=\d)/, '');
+        if (digitsOnly === '') {
+            digitsOnly = '0';
+        }
+
+        return (isNegative ? '-' : '') + digitsOnly;
+    }
+
+    function formatCurrencyDisplay(rawValue, allowEmpty) {
+        var normalized = normalizeCurrencyDigits(rawValue);
+        if (normalized === '') {
+            return allowEmpty ? '' : '0';
+        }
+
+        var isNegative = normalized.indexOf('-') === 0;
+        var digits = isNegative ? normalized.substring(1) : normalized;
+        var formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return isNegative ? '-' + formatted : formatted;
+    }
+
+    function applyMoneyInputFormatting(fieldElement) {
+        if (!fieldElement) {
+            return;
+        }
+
+        var allowEmpty = fieldElement.getAttribute('data-empty-allowed') === '1';
+        fieldElement.value = formatCurrencyDisplay(fieldElement.value, allowEmpty);
+    }
+
     var body = document.body;
     var baseUrl = body ? (body.getAttribute('data-base-url') || '') : '';
+
+    var themeToggleButton = document.getElementById('theme-toggle');
+    function applyTheme(themeName) {
+        if (!body) {
+            return;
+        }
+
+        if (themeName === 'dark') {
+            body.classList.add('theme-dark');
+        } else {
+            body.classList.remove('theme-dark');
+        }
+
+        if (themeToggleButton) {
+            themeToggleButton.innerHTML = themeName === 'dark'
+                ? '<i class="bi bi-sun"></i>'
+                : '<i class="bi bi-moon-stars"></i>';
+        }
+    }
+
+    try {
+        var storedTheme = window.localStorage.getItem('presupuesto_theme');
+        if (storedTheme === 'dark' || storedTheme === 'light') {
+            applyTheme(storedTheme);
+        } else {
+            applyTheme('light');
+        }
+    } catch (themeError) {
+        applyTheme('light');
+    }
+
+    if (themeToggleButton) {
+        themeToggleButton.addEventListener('click', function () {
+            var isDarkEnabled = body && body.classList.contains('theme-dark');
+            var nextTheme = isDarkEnabled ? 'light' : 'dark';
+            applyTheme(nextTheme);
+
+            try {
+                window.localStorage.setItem('presupuesto_theme', nextTheme);
+            } catch (persistError) {
+                // almacenamiento local opcional.
+            }
+        });
+    }
 
     var loginForm = document.getElementById('login-form');
     if (loginForm) {
@@ -64,7 +154,29 @@
     if (movementForm) {
         var movementErrorId = 'movimiento-client-error';
         var supportsInput = document.getElementById('soportes');
+        var moneyInputs = movementForm.querySelectorAll('.js-money-input');
+
+        if (moneyInputs && moneyInputs.length > 0) {
+            for (var moneyIndex = 0; moneyIndex < moneyInputs.length; moneyIndex += 1) {
+                applyMoneyInputFormatting(moneyInputs[moneyIndex]);
+
+                moneyInputs[moneyIndex].addEventListener('input', function () {
+                    applyMoneyInputFormatting(this);
+                });
+
+                moneyInputs[moneyIndex].addEventListener('blur', function () {
+                    applyMoneyInputFormatting(this);
+                });
+            }
+        }
+
         movementForm.addEventListener('submit', function (event) {
+            if (moneyInputs && moneyInputs.length > 0) {
+                for (var moneySubmitIndex = 0; moneySubmitIndex < moneyInputs.length; moneySubmitIndex += 1) {
+                    applyMoneyInputFormatting(moneyInputs[moneySubmitIndex]);
+                }
+            }
+
             var requiredFields = ['fecha', 'id_clasificacion', 'detalle', 'valor', 'gasto_costo', 'tipo'];
             var invalidField = null;
 
@@ -246,13 +358,26 @@
                 }
 
                 var isIndexedTable = window.jQuery(this).hasClass('js-indexed-table');
+                var exportName = String(window.jQuery(this).data('export-name') || 'reporte').trim();
+                if (exportName === '') {
+                    exportName = 'reporte';
+                }
 
-                var dataTable = window.jQuery(this).DataTable({
+                var hasButtons = typeof window.jQuery.fn.dataTable !== 'undefined'
+                    && typeof window.jQuery.fn.dataTable.Buttons === 'function'
+                    && typeof window.JSZip !== 'undefined'
+                    && typeof window.pdfMake !== 'undefined';
+
+                var tableDom = hasButtons
+                    ? '<"dt-top"<"dt-tools"B><"dt-controls"lf>>t<"dt-bottom"p>'
+                    : '<"dt-top"lf>t<"dt-bottom"p>';
+
+                var dataTableOptions = {
                     responsive: true,
                     autoWidth: false,
                     pageLength: pageLength,
                     lengthMenu: [[10, 20, 30, 50, 100, 200, 300, 500, 1000, -1], [10, 20, 30, 50, 100, 200, 300, 500, 1000, 'Todos']],
-                    dom: '<"dt-top"lf>t<"dt-bottom"p>',
+                    dom: tableDom,
                     info: false,
                     columnDefs: isIndexedTable ? [{ targets: 0, orderable: false, searchable: false }] : [],
                     language: {
@@ -266,7 +391,38 @@
                             next: '<i class="bi bi-chevron-right"></i>'
                         }
                     }
-                });
+                };
+
+                if (hasButtons) {
+                    dataTableOptions.buttons = [
+                        {
+                            extend: 'excelHtml5',
+                            text: '<i class="bi bi-file-earmark-excel"></i>',
+                            titleAttr: 'Exportar a Excel',
+                            className: 'btn dt-export-button',
+                            filename: exportName,
+                            title: null,
+                            exportOptions: {
+                                columns: ':visible:not(.no-export)'
+                            }
+                        },
+                        {
+                            extend: 'pdfHtml5',
+                            text: '<i class="bi bi-file-earmark-pdf"></i>',
+                            titleAttr: 'Exportar a PDF',
+                            className: 'btn dt-export-button',
+                            filename: exportName,
+                            title: null,
+                            orientation: 'portrait',
+                            pageSize: 'A4',
+                            exportOptions: {
+                                columns: ':visible:not(.no-export)'
+                            }
+                        }
+                    ];
+                }
+
+                var dataTable = window.jQuery(this).DataTable(dataTableOptions);
 
                 if (isIndexedTable) {
                     dataTable.on('order.dt search.dt draw.dt', function () {
@@ -281,6 +437,95 @@
             });
         }
     }
+
+    var supportsModal = document.getElementById('supports-modal');
+    var supportsModalBody = document.getElementById('supports-modal-body');
+    var supportsModalTitle = document.getElementById('supports-modal-title');
+
+    function closeSupportsModal() {
+        if (!supportsModal) {
+            return;
+        }
+
+        supportsModal.classList.add('hidden');
+        supportsModal.setAttribute('aria-hidden', 'true');
+        if (supportsModalBody) {
+            supportsModalBody.innerHTML = '<p class="muted">No hay soportes para mostrar.</p>';
+        }
+    }
+
+    function openSupportsModal(buttonElement) {
+        if (!supportsModal || !buttonElement) {
+            return;
+        }
+
+        var titleText = buttonElement.getAttribute('data-supports-title') || 'Soportes';
+        var supportsJson = buttonElement.getAttribute('data-supports-json') || '';
+        var supportsList = readSafeJson(supportsJson);
+        var sourceId = buttonElement.getAttribute('data-supports-target') || '';
+        var sourceNode = sourceId !== '' ? document.getElementById(sourceId) : null;
+
+        if (supportsModalTitle) {
+            supportsModalTitle.innerHTML = '<i class="bi bi-paperclip"></i> ' + escapeHtml(titleText);
+        }
+
+        if (supportsModalBody) {
+            if (supportsList && supportsList.length > 0) {
+                var modalHtml = '<ul class="supports-modal-list">';
+                for (var supportIndex = 0; supportIndex < supportsList.length; supportIndex += 1) {
+                    var supportItem = supportsList[supportIndex] || {};
+                    var supportName = escapeHtml(supportItem.name || ('Soporte ' + (supportIndex + 1)));
+                    var supportUrl = escapeHtml(supportItem.url || '#');
+
+                    modalHtml += '<li class="supports-modal-item">';
+                    modalHtml += '<span class="supports-modal-name"><i class="bi bi-file-earmark-text"></i>' + supportName + '</span>';
+                    modalHtml += '<span class="supports-modal-actions">';
+                    modalHtml += '<a class="btn btn-ghost btn-inline btn-mini btn-icon-only" href="' + supportUrl + '" target="_blank" title="Ver soporte" aria-label="Ver soporte"><i class="bi bi-eye"></i></a>';
+                    modalHtml += '<a class="btn btn-ghost btn-inline btn-mini btn-icon-only" href="' + supportUrl + '" target="_blank" download title="Descargar soporte" aria-label="Descargar soporte"><i class="bi bi-download"></i></a>';
+                    modalHtml += '</span>';
+                    modalHtml += '</li>';
+                }
+                modalHtml += '</ul>';
+
+                supportsModalBody.innerHTML = modalHtml;
+            } else {
+                supportsModalBody.innerHTML = sourceNode ? sourceNode.innerHTML : '<p class="muted">No hay soportes para mostrar.</p>';
+            }
+        }
+
+        supportsModal.classList.remove('hidden');
+        supportsModal.setAttribute('aria-hidden', 'false');
+    }
+
+    document.addEventListener('click', function (event) {
+        if (!event.target || typeof event.target.closest !== 'function') {
+            return;
+        }
+
+        var openButton = event.target.closest('.js-open-supports-modal');
+        if (openButton) {
+            event.preventDefault();
+            openSupportsModal(openButton);
+            return;
+        }
+
+        var closeButton = event.target.closest('.js-close-supports-modal');
+        if (closeButton) {
+            event.preventDefault();
+            closeSupportsModal();
+            return;
+        }
+
+        if (supportsModal && event.target === supportsModal) {
+            closeSupportsModal();
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            closeSupportsModal();
+        }
+    });
 
     var confirmDeleteForms = document.querySelectorAll('.js-confirm-delete');
     if (confirmDeleteForms && confirmDeleteForms.length > 0) {

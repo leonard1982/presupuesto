@@ -121,10 +121,10 @@ $chartPayload = array(
         </a>
     </div>
     <div class="table-wrapper">
-        <table class="table-professional js-data-table js-indexed-table" data-page-length="10">
+        <table class="table-professional js-data-table js-indexed-table" data-page-length="10" data-export-name="dashboard_movimientos_recientes">
             <thead>
             <tr>
-                <th>#</th>
+                <th class="no-export">#</th>
                 <th>Fecha</th>
                 <th>Clasificacion</th>
                 <th>Detalle</th>

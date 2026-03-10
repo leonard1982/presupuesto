@@ -171,6 +171,15 @@ class Bootstrap
                 return;
             }
 
+            if ($routePath === '/movimientos/ticket' && $method === 'GET') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $movimientoController->ticketView();
+                return;
+            }
+
             if ($routePath === '/movimientos' && $method === 'POST') {
                 if (!$this->authService->isAuthenticated()) {
                     Response::redirect($this->buildUrl('/login'));
@@ -389,6 +398,8 @@ class Bootstrap
             $directory = substr($directory, 0, -18);
         } elseif (substr($directory, -20) === '/movimientos/soporte') {
             $directory = substr($directory, 0, -20);
+        } elseif (substr($directory, -19) === '/movimientos/ticket') {
+            $directory = substr($directory, 0, -19);
         } elseif (substr($directory, -16) === '/clasificaciones') {
             $directory = substr($directory, 0, -16);
         } elseif (substr($directory, -12) === '/medios-pago') {

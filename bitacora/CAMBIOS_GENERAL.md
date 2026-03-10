@@ -95,3 +95,42 @@
 - Se habilita selector de cantidad de registros: 10, 20, 30, 50, 100, 200, 300, 500, 1000 y Todos.
 - Se numeran registros en todas las tablas visibles por pagina.
 - Se ajusta formato monetario sin decimales en dashboard y movimientos.
+
+## 2026-03-09 - Soportes alineados al modelo real y mejora de contraste UI
+- Se corrige el modulo de soportes para usar `ingresos_detalle` como fuente oficial de multiples archivos por movimiento.
+- Se elimina dependencia funcional del campo `gastos_costos.soporte` para nuevas cargas y consultas.
+- Se agrega migracion `20260309_0005_supports_ingresos_detalle_indexes.sql` con indice compuesto `(id_ingreso, id)` para acelerar listados y descarga por soporte.
+- Se agrega rollback `20260309_0005_supports_ingresos_detalle_indexes_rollback.sql`.
+- Se dejan botones de editar/eliminar solo con icono en listados operativos.
+- Se corrige contraste de paginacion cargando `app.css` despues de estilos de librerias (DataTables/Select2), evitando texto oscuro en pagina activa.
+- Se mantiene el boton de modo claro/oscuro en topbar junto al menu de usuario.
+
+## 2026-03-09 - Correccion integral de contraste en modo oscuro
+- Se ajustan etiquetas de formularios (`label`), chips de encabezado y textos de soporte para mejorar legibilidad.
+- Se corrigen colores de controles en modo oscuro: `input`, `select`, `textarea` y placeholders.
+- Se corrige contraste de paginacion y estados hover en DataTables.
+- Se corrige contraste de Select2 en seleccion, dropdown, busqueda y resultados.
+- Se mejora contraste de botones `btn-ghost` usados en columna de soportes.
+
+## 2026-03-09 - Soportes por icono, ticket visual y exportacion de listados
+- En la columna de soportes se reemplaza el listado visible por un icono de clip solo cuando hay archivos.
+- Al hacer clic en el icono se abre modal emergente con listado de archivos y acciones de ver/descargar.
+- Se agrega accion por fila para abrir ticket del movimiento en formato media hoja con diseno imprimible.
+- Se agrega nueva ruta `movimientos/ticket` y entrada directa `movimientos/ticket/index.php` para entornos sin reescritura.
+- Se integra exportacion a Excel y PDF en tablas DataTables mediante Buttons + JSZip + pdfmake.
+- Se excluyen columnas operativas (`#`, soportes, acciones) de la exportacion para evitar ruido en reportes.
+
+## 2026-03-09 - Correccion modal de soportes en movimientos
+- Se corrige apertura de modal para tomar soportes desde atributo JSON del boton (`data-supports-json`).
+- Se evita dependencia de nodos ocultos en tabla para compatibilidad total con DataTables responsive/paginacion.
+- Se mantiene fallback de lectura desde DOM para compatibilidad con render previo.
+
+## 2026-03-09 - Ajuste de cierre de modal de soportes
+- Se corrige regla CSS para que la clase `hidden` prevalezca sobre `modal-overlay`.
+- Se evita que el popup de soportes quede abierto al cargar la pantalla.
+
+## 2026-03-09 - Formato numerico y valor neto automatico en movimientos
+- Se agrega formato de miles en tiempo real para `valor`, `valor_neto` y `saldo` durante digitacion.
+- Se normaliza captura de montos en backend para admitir entradas con separadores visuales.
+- Si `valor_neto` llega vacio al guardar, se asigna automaticamente el mismo valor de `valor`.
+- Si `valor_neto` viene diligenciado, se conserva y guarda el valor digitado.

@@ -37,11 +37,24 @@ class MovimientoController
         $successMessage = $this->pullFlash('movimientos_success');
         $errorMessage = $this->pullFlash('movimientos_error');
 
+        $movementIds = array();
+        foreach ($movimientos as $movement) {
+            if (isset($movement['id'])) {
+                $movementIds[] = (int) $movement['id'];
+            }
+        }
+
+        $supportsByMovement = $this->movimientoRepository->getSupportsByMovementIds($movementIds);
         foreach ($movimientos as &$movement) {
-            $movement['supports'] = $this->parseSoporteField(isset($movement['soporte']) ? $movement['soporte'] : '');
+            $movementId = isset($movement['id']) ? (int) $movement['id'] : 0;
+            $supportsRaw = isset($supportsByMovement[$movementId]) ? $supportsByMovement[$movementId] : array();
+            $movement['supports'] = $this->normalizeSupportRows($supportsRaw);
             $movement['supports_count'] = count($movement['supports']);
         }
         unset($movement);
+
+        $csrfTokenName = $this->appConfig['csrf_token_name'];
+        $csrfToken = CsrfTokenManager::generateToken($csrfTokenName);
 
         $this->viewRenderer->render('movimientos/index', array(
             'pageTitle' => 'Movimientos',
@@ -53,8 +66,8 @@ class MovimientoController
             'movimientos' => $movimientos,
             'successMessage' => $successMessage,
             'errorMessage' => $errorMessage,
-            'csrfTokenName' => $this->appConfig['csrf_token_name'],
-            'csrfToken' => CsrfTokenManager::generateToken($this->appConfig['csrf_token_name']),
+            'csrfTokenName' => $csrfTokenName,
+            'csrfToken' => $csrfToken,
         ));
     }
 
@@ -110,6 +123,7 @@ class MovimientoController
 
         $oldInput = $this->pullFlash('movimientos_old_input');
         $errorMessage = $this->pullFlash('movimientos_error');
+        $supportsRaw = $this->movimientoRepository->getSupportsByMovementId($movementId);
 
         $formData = is_array($oldInput) && !empty($oldInput) ? $oldInput : array(
             'fecha' => isset($movement['fecha']) ? (string) $movement['fecha'] : '',
@@ -141,7 +155,7 @@ class MovimientoController
             'formActionRoute' => 'movimientos/actualizar',
             'isEditMode' => true,
             'movementId' => $movementId,
-            'existingSupports' => $this->parseSoporteField(isset($movement['soporte']) ? $movement['soporte'] : ''),
+            'existingSupports' => $this->normalizeSupportRows($supportsRaw),
             'filesConfig' => array(
                 'maxMb' => isset($this->appConfig['files_max_upload_mb']) ? (int) $this->appConfig['files_max_upload_mb'] : 10,
                 'allowedExtensions' => isset($this->appConfig['files_allowed_extensions']) ? $this->appConfig['files_allowed_extensions'] : array(),
@@ -167,9 +181,9 @@ class MovimientoController
             Response::redirect($this->buildUrl('/movimientos/nuevo'));
         }
 
-        $uploadedSupportsResult = $this->handleUploadedSupports(array());
-        if (!$uploadedSupportsResult['ok']) {
-            $this->setFlash('movimientos_error', $uploadedSupportsResult['message']);
+        $fileValidation = $this->validateUploadBatch();
+        if (!$fileValidation['valid']) {
+            $this->setFlash('movimientos_error', $fileValidation['message']);
             $this->setFlash('movimientos_old_input', $formData);
             Response::redirect($this->buildUrl('/movimientos/nuevo'));
         }
@@ -177,12 +191,22 @@ class MovimientoController
         $authenticatedUser = $this->authService->getAuthenticatedUser();
         $userLogin = isset($authenticatedUser['login']) ? (string) $authenticatedUser['login'] : 'sistema';
 
-        $movementToPersist = $this->buildMovementPersistenceData($formData, $userLogin, $uploadedSupportsResult['supports']);
-        $saved = $this->movimientoRepository->createMovimiento($movementToPersist);
+        $movementToPersist = $this->buildMovementPersistenceData($formData, $userLogin);
+        $newMovementId = $this->movimientoRepository->createMovimiento($movementToPersist);
 
-        if (!$saved) {
-            $this->rollbackSupports($uploadedSupportsResult['supports']);
+        if ($newMovementId === false) {
             $this->setFlash('movimientos_error', 'No fue posible guardar el movimiento. Revisa el log de aplicacion.');
+            $this->setFlash('movimientos_old_input', $formData);
+            Response::redirect($this->buildUrl('/movimientos/nuevo'));
+        }
+
+        $storedSupports = $this->storeSupportsForMovement((int) $newMovementId, $userLogin);
+        if (!$storedSupports['ok']) {
+            $this->movimientoRepository->deleteSupportsByMovementId((int) $newMovementId);
+            $this->movimientoRepository->deleteMovimiento((int) $newMovementId);
+            $this->deleteSupportFiles($storedSupports['files']);
+
+            $this->setFlash('movimientos_error', $storedSupports['message']);
             $this->setFlash('movimientos_old_input', $formData);
             Response::redirect($this->buildUrl('/movimientos/nuevo'));
         }
@@ -221,10 +245,9 @@ class MovimientoController
             Response::redirect($this->buildUrl('/movimientos/editar') . '&id=' . $movementId);
         }
 
-        $existingSupports = $this->parseSoporteField(isset($existingMovement['soporte']) ? $existingMovement['soporte'] : '');
-        $uploadedSupportsResult = $this->handleUploadedSupports($existingSupports);
-        if (!$uploadedSupportsResult['ok']) {
-            $this->setFlash('movimientos_error', $uploadedSupportsResult['message']);
+        $fileValidation = $this->validateUploadBatch();
+        if (!$fileValidation['valid']) {
+            $this->setFlash('movimientos_error', $fileValidation['message']);
             $this->setFlash('movimientos_old_input', $formData);
             Response::redirect($this->buildUrl('/movimientos/editar') . '&id=' . $movementId);
         }
@@ -232,13 +255,19 @@ class MovimientoController
         $authenticatedUser = $this->authService->getAuthenticatedUser();
         $userLogin = isset($authenticatedUser['login']) ? (string) $authenticatedUser['login'] : 'sistema';
 
-        $movementToPersist = $this->buildMovementPersistenceData($formData, $userLogin, $uploadedSupportsResult['supports']);
+        $movementToPersist = $this->buildMovementPersistenceData($formData, $userLogin);
         $updated = $this->movimientoRepository->updateMovimiento($movementId, $movementToPersist);
 
         if (!$updated) {
-            $newOnlySupports = $this->getNewSupportsDiff($existingSupports, $uploadedSupportsResult['supports']);
-            $this->rollbackSupports($newOnlySupports);
             $this->setFlash('movimientos_error', 'No fue posible actualizar el movimiento.');
+            $this->setFlash('movimientos_old_input', $formData);
+            Response::redirect($this->buildUrl('/movimientos/editar') . '&id=' . $movementId);
+        }
+
+        $storedSupports = $this->storeSupportsForMovement($movementId, $userLogin);
+        if (!$storedSupports['ok']) {
+            $this->deleteSupportFiles($storedSupports['files']);
+            $this->setFlash('movimientos_error', $storedSupports['message']);
             $this->setFlash('movimientos_old_input', $formData);
             Response::redirect($this->buildUrl('/movimientos/editar') . '&id=' . $movementId);
         }
@@ -269,7 +298,14 @@ class MovimientoController
             Response::redirect($this->buildUrl('/movimientos'));
         }
 
-        $supports = $this->parseSoporteField(isset($movement['soporte']) ? $movement['soporte'] : '');
+        $supports = $this->movimientoRepository->getSupportsByMovementId($movementId);
+        $normalizedSupports = $this->normalizeSupportRows($supports);
+
+        $supportsDeleted = $this->movimientoRepository->deleteSupportsByMovementId($movementId);
+        if (!$supportsDeleted) {
+            $this->setFlash('movimientos_error', 'No fue posible eliminar los soportes del movimiento.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
 
         $deleted = $this->movimientoRepository->deleteMovimiento($movementId);
         if (!$deleted) {
@@ -277,7 +313,7 @@ class MovimientoController
             Response::redirect($this->buildUrl('/movimientos'));
         }
 
-        $this->deleteSupportsFromDisk($supports);
+        $this->deleteSupportFiles($normalizedSupports);
         CsrfTokenManager::rotateToken($tokenName);
         $this->setFlash('movimientos_success', 'Movimiento eliminado correctamente.');
         Response::redirect($this->buildUrl('/movimientos'));
@@ -286,9 +322,9 @@ class MovimientoController
     public function downloadSupport()
     {
         $movementId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-        $storedName = isset($_GET['file']) ? trim((string) $_GET['file']) : '';
+        $supportId = isset($_GET['sid']) ? (int) $_GET['sid'] : 0;
 
-        if ($movementId <= 0 || $storedName === '') {
+        if ($movementId <= 0 || $supportId <= 0) {
             http_response_code(400);
             echo 'Solicitud invalida.';
             exit;
@@ -301,31 +337,24 @@ class MovimientoController
             exit;
         }
 
-        $supports = $this->parseSoporteField(isset($movement['soporte']) ? $movement['soporte'] : '');
-        $selectedSupport = null;
-
-        foreach ($supports as $support) {
-            if (isset($support['stored_name']) && (string) $support['stored_name'] === $storedName) {
-                $selectedSupport = $support;
-                break;
-            }
-        }
-
-        if (!$selectedSupport) {
+        $support = $this->movimientoRepository->findSupportById($supportId);
+        if (!$support || (int) $support['id_ingreso'] !== $movementId) {
             http_response_code(404);
             echo 'Soporte no encontrado.';
             exit;
         }
 
-        $absolutePath = $this->resolveSupportAbsolutePath($selectedSupport);
-        if (!is_file($absolutePath)) {
+        $normalized = $this->normalizeSupportRow($support);
+        $absolutePath = $this->resolveSupportAbsolutePath($movementId, $normalized['stored_name']);
+        if ($absolutePath === '' || !is_file($absolutePath)) {
             http_response_code(404);
             echo 'Archivo no disponible.';
             exit;
         }
 
-        $mime = isset($selectedSupport['mime']) ? (string) $selectedSupport['mime'] : 'application/octet-stream';
-        $originalName = isset($selectedSupport['original_name']) ? (string) $selectedSupport['original_name'] : basename($absolutePath);
+        $originalName = isset($normalized['original_name']) ? (string) $normalized['original_name'] : basename($absolutePath);
+        $extension = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
+        $mime = $this->detectMimeByExtension($extension);
         $size = filesize($absolutePath);
 
         header('Content-Type: ' . $mime);
@@ -335,19 +364,56 @@ class MovimientoController
         exit;
     }
 
+    public function ticketView()
+    {
+        $movementId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+        if ($movementId <= 0) {
+            $this->setFlash('movimientos_error', 'Movimiento no valido para ticket.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $movement = $this->movimientoRepository->findMovimientoById($movementId);
+        if (!$movement) {
+            $this->setFlash('movimientos_error', 'No se encontro el movimiento solicitado.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $supportsRaw = $this->movimientoRepository->getSupportsByMovementId($movementId);
+        $normalizedSupports = $this->normalizeSupportRows($supportsRaw);
+        $authenticatedUser = $this->authService->getAuthenticatedUser();
+
+        $this->viewRenderer->render('movimientos/ticket', array(
+            'pageTitle' => 'Ticket movimiento #' . $movementId,
+            'baseUrl' => rtrim($this->appConfig['base_url'], '/'),
+            'assetVersion' => $this->appConfig['asset_version'],
+            'movement' => $movement,
+            'supports' => $normalizedSupports,
+            'generatedAt' => date('Y-m-d H:i:s'),
+            'generatedBy' => isset($authenticatedUser['login']) ? (string) $authenticatedUser['login'] : 'sistema',
+        ), 'layouts/print');
+    }
+
     private function collectMovementFormData(array $postData)
     {
+        $valor = $this->toCurrencyAmount(isset($postData['valor']) ? $postData['valor'] : '');
+        $valorNeto = $this->toCurrencyAmount(isset($postData['valor_neto']) ? $postData['valor_neto'] : '');
+        $saldo = $this->toCurrencyAmount(isset($postData['saldo']) ? $postData['saldo'] : '');
+
+        if ($valorNeto === null) {
+            $valorNeto = $valor !== null ? (float) $valor : 0.0;
+        }
+
         return array(
             'fecha' => isset($postData['fecha']) ? trim((string) $postData['fecha']) : '',
             'id_clasificacion' => isset($postData['id_clasificacion']) ? (int) $postData['id_clasificacion'] : 0,
             'detalle' => isset($postData['detalle']) ? trim((string) $postData['detalle']) : '',
-            'valor' => $this->toDecimal(isset($postData['valor']) ? $postData['valor'] : '0'),
+            'valor' => $valor !== null ? (float) $valor : 0.0,
             'id_presupuesto' => isset($postData['id_presupuesto']) ? (int) $postData['id_presupuesto'] : 0,
             'gasto_costo' => isset($postData['gasto_costo']) ? trim((string) $postData['gasto_costo']) : '',
             'tipo' => isset($postData['tipo']) ? trim((string) $postData['tipo']) : '',
             'por_pagar_cobrar' => isset($postData['por_pagar_cobrar']) ? trim((string) $postData['por_pagar_cobrar']) : 'NINGUNO',
-            'valor_neto' => $this->toDecimal(isset($postData['valor_neto']) ? $postData['valor_neto'] : '0'),
-            'saldo' => $this->toDecimal(isset($postData['saldo']) ? $postData['saldo'] : '0'),
+            'valor_neto' => (float) $valorNeto,
+            'saldo' => $saldo !== null ? (float) $saldo : 0.0,
         );
     }
 
@@ -384,58 +450,80 @@ class MovimientoController
         return array('valid' => true, 'message' => '');
     }
 
-    private function handleUploadedSupports(array $existingSupports)
+    private function validateUploadBatch()
     {
-        $supports = $existingSupports;
-
         if (!isset($_FILES['soportes']) || !is_array($_FILES['soportes'])) {
-            return array('ok' => true, 'message' => '', 'supports' => $supports);
+            return array('valid' => true, 'message' => '');
         }
 
-        $supportsFiles = $this->normalizeFilesArray($_FILES['soportes']);
-        if (empty($supportsFiles)) {
-            return array('ok' => true, 'message' => '', 'supports' => $supports);
-        }
-
-        $uploadDirectory = $this->ensureSupportsDirectory();
-        if ($uploadDirectory === '') {
-            return array('ok' => false, 'message' => 'No fue posible preparar el directorio de soportes.', 'supports' => $supports);
-        }
-
-        foreach ($supportsFiles as $file) {
+        $files = $this->normalizeFilesArray($_FILES['soportes']);
+        foreach ($files as $file) {
             if (!isset($file['error']) || (int) $file['error'] === UPLOAD_ERR_NO_FILE) {
                 continue;
             }
 
             $validation = FileUploadValidator::validate($file, $this->appConfig);
             if (empty($validation['is_valid'])) {
-                $errors = isset($validation['errors']) && is_array($validation['errors']) ? implode(' ', $validation['errors']) : 'Archivo invalido.';
-                return array('ok' => false, 'message' => $errors, 'supports' => $supports);
+                $errorMessage = isset($validation['errors']) && is_array($validation['errors'])
+                    ? implode(' ', $validation['errors'])
+                    : 'Archivo de soporte invalido.';
+                return array('valid' => false, 'message' => $errorMessage);
+            }
+        }
+
+        return array('valid' => true, 'message' => '');
+    }
+
+    private function storeSupportsForMovement($movementId, $username)
+    {
+        if (!isset($_FILES['soportes']) || !is_array($_FILES['soportes'])) {
+            return array('ok' => true, 'message' => '', 'files' => array());
+        }
+
+        $files = $this->normalizeFilesArray($_FILES['soportes']);
+        if (empty($files)) {
+            return array('ok' => true, 'message' => '', 'files' => array());
+        }
+
+        $storedFiles = array();
+        $supportIds = array();
+
+        foreach ($files as $file) {
+            if (!isset($file['error']) || (int) $file['error'] === UPLOAD_ERR_NO_FILE) {
+                continue;
             }
 
-            $extension = isset($validation['extension']) ? (string) $validation['extension'] : '';
-            $randomName = $this->generateSupportStoredName($extension);
-            $absolutePath = $uploadDirectory . DIRECTORY_SEPARATOR . $randomName;
+            $originalName = isset($file['name']) ? (string) $file['name'] : '';
+            $storedName = $this->buildStoredSupportFileName($originalName);
+            $targetDirectory = $this->ensureMovementSupportDirectory($movementId);
+            if ($targetDirectory === '') {
+                $this->movimientoRepository->deleteSupportsByIds($supportIds);
+                return array('ok' => false, 'message' => 'No fue posible preparar directorio de soportes.', 'files' => $storedFiles);
+            }
 
+            $absolutePath = $targetDirectory . DIRECTORY_SEPARATOR . $storedName;
             if (!move_uploaded_file((string) $file['tmp_name'], $absolutePath)) {
-                return array('ok' => false, 'message' => 'No fue posible guardar un archivo de soporte.', 'supports' => $supports);
+                $this->movimientoRepository->deleteSupportsByIds($supportIds);
+                return array('ok' => false, 'message' => 'No fue posible guardar un archivo de soporte.', 'files' => $storedFiles);
             }
 
-            $relativePath = $this->buildSupportRelativePath($randomName);
-            $supports[] = array(
-                'original_name' => isset($file['name']) ? (string) $file['name'] : $randomName,
-                'stored_name' => $randomName,
-                'relative_path' => $relativePath,
-                'mime' => isset($validation['detected_mime']) ? (string) $validation['detected_mime'] : 'application/octet-stream',
-                'size_bytes' => isset($validation['size_bytes']) ? (int) $validation['size_bytes'] : 0,
-                'uploaded_at' => date('Y-m-d H:i:s'),
+            $supportId = $this->movimientoRepository->createSupportRecord($movementId, $storedName, $username);
+            if ($supportId === false) {
+                $this->movimientoRepository->deleteSupportsByIds($supportIds);
+                return array('ok' => false, 'message' => 'No fue posible registrar soporte en base de datos.', 'files' => $storedFiles);
+            }
+
+            $supportIds[] = (int) $supportId;
+            $storedFiles[] = array(
+                'movement_id' => (int) $movementId,
+                'stored_name' => $storedName,
             );
         }
 
-        return array('ok' => true, 'message' => '', 'supports' => $supports);
+        return array('ok' => true, 'message' => '', 'files' => $storedFiles);
     }
 
-    private function buildMovementPersistenceData(array $formData, $userLogin, array $supports)
+    private function buildMovementPersistenceData(array $formData, $userLogin)
     {
         return array(
             'fecha' => $formData['fecha'],
@@ -444,7 +532,7 @@ class MovimientoController
             'valor' => (float) $formData['valor'],
             'fecha_periodo' => substr($formData['fecha'], 0, 10),
             'id_presupuesto' => (int) $formData['id_presupuesto'],
-            'soporte' => $this->serializeSoporteField($supports),
+            'soporte' => '',
             'gasto_costo' => $formData['gasto_costo'],
             'tipo' => $formData['tipo'],
             'por_pagar_cobrar' => $formData['por_pagar_cobrar'],
@@ -482,145 +570,121 @@ class MovimientoController
         return $normalized;
     }
 
-    private function ensureSupportsDirectory()
+    private function ensureMovementSupportDirectory($movementId)
     {
-        $basePath = PROJECT_ROOT . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'soportes';
-        $year = date('Y');
-        $month = date('m');
-        $targetPath = $basePath . DIRECTORY_SEPARATOR . $year . DIRECTORY_SEPARATOR . $month;
+        $movementIdInt = (int) $movementId;
+        if ($movementIdInt <= 0) {
+            return '';
+        }
 
-        if (!is_dir($targetPath)) {
-            $created = mkdir($targetPath, 0755, true);
-            if (!$created && !is_dir($targetPath)) {
+        $directory = PROJECT_ROOT . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'soportes' . DIRECTORY_SEPARATOR . $movementIdInt;
+        if (!is_dir($directory)) {
+            $created = mkdir($directory, 0755, true);
+            if (!$created && !is_dir($directory)) {
                 return '';
             }
         }
 
-        return $targetPath;
+        return $directory;
     }
 
-    private function buildSupportRelativePath($storedName)
+    private function buildStoredSupportFileName($originalName)
     {
-        return date('Y') . '/' . date('m') . '/' . $storedName;
-    }
-
-    private function generateSupportStoredName($extension)
-    {
-        $safeExtension = $extension !== '' ? '.' . $extension : '';
-        $randomPart = bin2hex(random_bytes(8));
-        return date('YmdHis') . '_' . $randomPart . $safeExtension;
-    }
-
-    private function parseSoporteField($rawSoporte)
-    {
-        $raw = trim((string) $rawSoporte);
-        if ($raw === '') {
-            return array();
+        $safeOriginal = preg_replace('/[^a-zA-Z0-9_\.-]/', '_', (string) $originalName);
+        if (!is_string($safeOriginal) || trim($safeOriginal) === '') {
+            $safeOriginal = 'soporte.dat';
         }
 
-        $decoded = json_decode($raw, true);
-        if (is_array($decoded)) {
-            $supports = array();
-            foreach ($decoded as $item) {
-                if (!is_array($item)) {
-                    continue;
-                }
+        $randomPart = bin2hex(random_bytes(6));
+        return date('YmdHis') . '_' . $randomPart . '__' . $safeOriginal;
+    }
 
-                if (!isset($item['stored_name']) || trim((string) $item['stored_name']) === '') {
-                    continue;
-                }
-
-                $supports[] = array(
-                    'original_name' => isset($item['original_name']) ? (string) $item['original_name'] : (string) $item['stored_name'],
-                    'stored_name' => (string) $item['stored_name'],
-                    'relative_path' => isset($item['relative_path']) ? (string) $item['relative_path'] : '',
-                    'mime' => isset($item['mime']) ? (string) $item['mime'] : 'application/octet-stream',
-                    'size_bytes' => isset($item['size_bytes']) ? (int) $item['size_bytes'] : 0,
-                    'uploaded_at' => isset($item['uploaded_at']) ? (string) $item['uploaded_at'] : '',
-                );
-            }
-
-            return $supports;
+    private function normalizeSupportRows(array $supportsRaw)
+    {
+        $normalized = array();
+        foreach ($supportsRaw as $support) {
+            $normalized[] = $this->normalizeSupportRow($support);
         }
+
+        return $normalized;
+    }
+
+    private function normalizeSupportRow(array $support)
+    {
+        $storedName = isset($support['imagen']) ? (string) $support['imagen'] : '';
+        $originalName = $this->extractOriginalSupportName($storedName);
 
         return array(
-            array(
-                'original_name' => basename($raw),
-                'stored_name' => basename($raw),
-                'relative_path' => $raw,
-                'mime' => 'application/octet-stream',
-                'size_bytes' => 0,
-                'uploaded_at' => '',
-            ),
+            'support_id' => isset($support['id']) ? (int) $support['id'] : 0,
+            'movement_id' => isset($support['id_ingreso']) ? (int) $support['id_ingreso'] : 0,
+            'stored_name' => $storedName,
+            'original_name' => $originalName,
+            'uploaded_at' => isset($support['fechayhora']) ? (string) $support['fechayhora'] : '',
+            'usuario' => isset($support['usuario']) ? (string) $support['usuario'] : '',
         );
     }
 
-    private function serializeSoporteField(array $supports)
+    private function extractOriginalSupportName($storedName)
     {
-        if (empty($supports)) {
+        $value = (string) $storedName;
+        $separatorPosition = strpos($value, '__');
+        if ($separatorPosition === false) {
+            return $value;
+        }
+
+        return substr($value, $separatorPosition + 2);
+    }
+
+    private function resolveSupportAbsolutePath($movementId, $storedName)
+    {
+        $movementIdInt = (int) $movementId;
+        $safeName = basename((string) $storedName);
+        if ($movementIdInt <= 0 || $safeName === '') {
             return '';
         }
 
-        $encoded = json_encode($supports);
-        return is_string($encoded) ? $encoded : '';
-    }
+        $candidatePaths = array(
+            PROJECT_ROOT . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'soportes' . DIRECTORY_SEPARATOR . $movementIdInt . DIRECTORY_SEPARATOR . $safeName,
+            PROJECT_ROOT . DIRECTORY_SEPARATOR . 'img' . DIRECTORY_SEPARATOR . $movementIdInt . DIRECTORY_SEPARATOR . $safeName,
+        );
 
-    private function resolveSupportAbsolutePath(array $support)
-    {
-        $relativePath = isset($support['relative_path']) ? trim((string) $support['relative_path']) : '';
-        if ($relativePath !== '') {
-            $normalizedRelative = str_replace(array('\\', '..'), array('/', ''), $relativePath);
-            return PROJECT_ROOT . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'soportes' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $normalizedRelative);
+        foreach ($candidatePaths as $candidatePath) {
+            if (is_file($candidatePath)) {
+                return $candidatePath;
+            }
         }
 
-        $storedName = isset($support['stored_name']) ? (string) $support['stored_name'] : '';
-        if ($storedName === '') {
-            return '';
-        }
-
-        return PROJECT_ROOT . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'soportes' . DIRECTORY_SEPARATOR . $storedName;
+        return $candidatePaths[0];
     }
 
-    private function rollbackSupports(array $supports)
+    private function deleteSupportFiles(array $supports)
     {
         foreach ($supports as $support) {
-            $absolutePath = $this->resolveSupportAbsolutePath($support);
-            if ($absolutePath !== '' && is_file($absolutePath)) {
-                @unlink($absolutePath);
-            }
-        }
-    }
-
-    private function deleteSupportsFromDisk(array $supports)
-    {
-        foreach ($supports as $support) {
-            $absolutePath = $this->resolveSupportAbsolutePath($support);
-            if ($absolutePath !== '' && is_file($absolutePath)) {
-                @unlink($absolutePath);
-            }
-        }
-    }
-
-    private function getNewSupportsDiff(array $oldSupports, array $newSupports)
-    {
-        $oldMap = array();
-        foreach ($oldSupports as $support) {
-            if (isset($support['stored_name'])) {
-                $oldMap[(string) $support['stored_name']] = true;
-            }
-        }
-
-        $diff = array();
-        foreach ($newSupports as $support) {
+            $movementId = isset($support['movement_id']) ? (int) $support['movement_id'] : 0;
             $storedName = isset($support['stored_name']) ? (string) $support['stored_name'] : '';
-            if ($storedName === '' || isset($oldMap[$storedName])) {
+            if ($movementId <= 0 || $storedName === '') {
                 continue;
             }
 
-            $diff[] = $support;
+            $absolutePath = $this->resolveSupportAbsolutePath($movementId, $storedName);
+            if ($absolutePath !== '' && is_file($absolutePath)) {
+                @unlink($absolutePath);
+            }
         }
+    }
 
-        return $diff;
+    private function detectMimeByExtension($extension)
+    {
+        $map = array(
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            'pdf' => 'application/pdf',
+        );
+
+        $key = strtolower((string) $extension);
+        return isset($map[$key]) ? $map[$key] : 'application/octet-stream';
     }
 
     private function toDecimal($value)
@@ -652,6 +716,28 @@ class MovimientoController
         }
 
         return (float) $normalized;
+    }
+
+    private function toCurrencyAmount($value)
+    {
+        $stringValue = trim((string) $value);
+        if ($stringValue === '') {
+            return null;
+        }
+
+        $isNegative = strpos($stringValue, '-') === 0;
+        $digitsOnly = preg_replace('/[^0-9]/', '', $stringValue);
+        if (!is_string($digitsOnly) || $digitsOnly === '') {
+            return null;
+        }
+
+        $normalizedDigits = ltrim($digitsOnly, '0');
+        if ($normalizedDigits === '') {
+            $normalizedDigits = '0';
+        }
+
+        $amount = (float) $normalizedDigits;
+        return $isNegative ? (-1 * $amount) : $amount;
     }
 
     private function isDateTimeString($dateTimeString)

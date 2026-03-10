@@ -53,10 +53,10 @@ if (!function_exists('medio_escape')) {
 
 <section class="card table-card">
     <div class="table-wrapper">
-        <table class="table-professional js-data-table js-indexed-table" data-page-length="20">
+        <table class="table-professional js-data-table js-indexed-table" data-page-length="20" data-export-name="catalogo_medios_pago">
             <thead>
             <tr>
-                <th>#</th>
+                <th class="no-export">#</th>
                 <th>ID</th>
                 <th>Medio</th>
             </tr>

@@ -13,7 +13,7 @@
 
 ## Modulos funcionales
 - Agregar historial de cambios (auditoria) para edicion/eliminacion de movimientos.
-- Agregar gestion de soportes (eliminar soporte individual y vista previa de imagen/PDF).
+- Completar gestion de soportes avanzada (eliminar soporte individual desde edicion y vista previa embebida dentro del formulario).
 - Conectar dashboard con comparativo contra presupuesto en tiempo real.
 
 ## API y automatizacion

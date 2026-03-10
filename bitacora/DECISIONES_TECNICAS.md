@@ -50,3 +50,27 @@
 ### Decision: Paginacion centrada con iconos y filas numeradas
 - Motivo: mejorar rapidez visual y ergonomia en uso diario intensivo.
 - Impacto: tablas mas claras, compactas y consistentes en todos los modulos.
+
+### Decision: Usar `ingresos_detalle` como origen de soportes multiples
+- Motivo: el modelo existente ya declara que `gastos_costos.soporte` no es el canal activo y centraliza adjuntos en tabla de detalle.
+- Impacto: compatibilidad real con datos legacy, multiples archivos por movimiento y trazabilidad de soporte por registro.
+
+### Decision: Cargar CSS propio despues de librerias UI
+- Motivo: evitar que DataTables/Select2 pisen estilos de contraste, paginacion y componentes del sistema.
+- Impacto: consistencia visual en tema claro/oscuro y mejor legibilidad de pagina activa.
+
+### Decision: Modal de soportes en listado en lugar de render directo de archivos
+- Motivo: mejorar legibilidad de tabla y evitar celdas extensas cuando un movimiento tiene varios soportes.
+- Impacto: columna compacta, acceso rapido por icono y flujo mas limpio para ver/descargar adjuntos.
+
+### Decision: Formato ticket en layout de impresion separado
+- Motivo: tener comprobante visual de media hoja sin ruido de navegacion y con salida de impresion consistente.
+- Impacto: nueva vista operativa para revisiones, validaciones y soporte documental por movimiento.
+
+### Decision: Exportacion Excel/PDF con DataTables Buttons
+- Motivo: entregar exportacion inmediata en listados sin construir reporteria backend adicional en esta fase.
+- Impacto: reportes operativos rapidos; se excluyen columnas de accion para mantener archivos limpios.
+
+### Decision: Formateo numerico visual con normalizacion backend
+- Motivo: mejorar velocidad de digitacion y evitar errores al ingresar montos grandes en movimientos.
+- Impacto: los campos monetarios muestran separadores de miles al escribir, y backend guarda montos limpios; `valor_neto` se autocompleta con `valor` cuando llega vacio.

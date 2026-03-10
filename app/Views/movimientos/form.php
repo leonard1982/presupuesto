@@ -10,6 +10,35 @@ if (!function_exists('mov_form_escape')) {
     }
 }
 
+if (!function_exists('mov_form_currency_input')) {
+    function mov_form_currency_input($value, $allowEmpty)
+    {
+        $stringValue = trim((string) $value);
+        if ($stringValue === '') {
+            return $allowEmpty ? '' : '0';
+        }
+
+        $isNegative = strpos($stringValue, '-') === 0;
+        $digitsOnly = preg_replace('/[^0-9]/', '', $stringValue);
+        if (!is_string($digitsOnly) || $digitsOnly === '') {
+            return $allowEmpty ? '' : '0';
+        }
+
+        $normalizedDigits = ltrim($digitsOnly, '0');
+        if ($normalizedDigits === '') {
+            $normalizedDigits = '0';
+        }
+
+        $reverseChunks = str_split(strrev($normalizedDigits), 3);
+        $formatted = strrev(implode('.', $reverseChunks));
+        if ($formatted === '') {
+            $formatted = '0';
+        }
+
+        return $isNegative ? '-' . $formatted : $formatted;
+    }
+}
+
 $movementTypes = array(
     'Compra',
     'Transferencia',
@@ -35,6 +64,10 @@ $supportsList = isset($existingSupports) && is_array($existingSupports) ? $exist
 $maxUploadMb = isset($filesConfig['maxMb']) ? (int) $filesConfig['maxMb'] : 10;
 $allowedExtensions = isset($filesConfig['allowedExtensions']) && is_array($filesConfig['allowedExtensions']) ? $filesConfig['allowedExtensions'] : array('jpg', 'jpeg', 'png', 'webp', 'pdf');
 $allowedExtensionsCsv = implode(',', $allowedExtensions);
+
+$valorInput = mov_form_currency_input(isset($formData['valor']) ? $formData['valor'] : '', true);
+$valorNetoInput = mov_form_currency_input(isset($formData['valor_neto']) ? $formData['valor_neto'] : '', true);
+$saldoInput = mov_form_currency_input(isset($formData['saldo']) ? $formData['saldo'] : '0', false);
 ?>
 <section class="page-header card">
     <div>
@@ -126,17 +159,17 @@ $allowedExtensionsCsv = implode(',', $allowedExtensions);
 
             <div class="form-field">
                 <label for="valor">Valor</label>
-                <input id="valor" name="valor" type="text" inputmode="numeric" value="<?php echo mov_form_escape(isset($formData['valor']) ? $formData['valor'] : ''); ?>" placeholder="Ejemplo: 1250000" required>
+                <input id="valor" name="valor" class="js-money-input" type="text" inputmode="numeric" value="<?php echo mov_form_escape($valorInput); ?>" placeholder="Ejemplo: 1.250.000" required>
             </div>
 
             <div class="form-field">
                 <label for="valor_neto">Valor neto</label>
-                <input id="valor_neto" name="valor_neto" type="text" inputmode="numeric" value="<?php echo mov_form_escape(isset($formData['valor_neto']) ? $formData['valor_neto'] : '0'); ?>">
+                <input id="valor_neto" name="valor_neto" class="js-money-input" data-empty-allowed="1" type="text" inputmode="numeric" value="<?php echo mov_form_escape($valorNetoInput); ?>" placeholder="Si lo dejas vacio, toma el valor">
             </div>
 
             <div class="form-field">
                 <label for="saldo">Saldo</label>
-                <input id="saldo" name="saldo" type="text" inputmode="numeric" value="<?php echo mov_form_escape(isset($formData['saldo']) ? $formData['saldo'] : '0'); ?>">
+                <input id="saldo" name="saldo" class="js-money-input" type="text" inputmode="numeric" value="<?php echo mov_form_escape($saldoInput); ?>">
             </div>
 
             <div class="form-field form-field-wide">
@@ -157,12 +190,14 @@ $allowedExtensionsCsv = implode(',', $allowedExtensions);
                 <div class="table-actions-stack">
                     <?php foreach ($supportsList as $support) : ?>
                         <?php
-                        $storedName = isset($support['stored_name']) ? (string) $support['stored_name'] : '';
-                        $originalName = isset($support['original_name']) ? (string) $support['original_name'] : $storedName;
+                        $supportId = isset($support['support_id']) ? (int) $support['support_id'] : 0;
+                        $originalName = isset($support['original_name']) ? (string) $support['original_name'] : '';
                         ?>
-                        <a class="btn btn-ghost btn-inline btn-mini" href="<?php echo mov_form_escape($baseUrl); ?>/index.php?route=movimientos/soporte&id=<?php echo $movementIdValue; ?>&file=<?php echo rawurlencode($storedName); ?>" target="_blank">
-                            <i class="bi bi-download"></i> <?php echo mov_form_escape($originalName); ?>
-                        </a>
+                        <?php if ($supportId > 0) : ?>
+                            <a class="btn btn-ghost btn-inline btn-mini" href="<?php echo mov_form_escape($baseUrl); ?>/index.php?route=movimientos/soporte&id=<?php echo $movementIdValue; ?>&sid=<?php echo $supportId; ?>" target="_blank">
+                                <i class="bi bi-download"></i> <?php echo mov_form_escape($originalName); ?>
+                            </a>
+                        <?php endif; ?>
                     <?php endforeach; ?>
                 </div>
             </div>

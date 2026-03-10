@@ -79,11 +79,17 @@ class MovimientoRepository
 
     public function getRecentMovimientos($limit)
     {
-        $query = 'SELECT gc.id, gc.fecha, gc.detalle, gc.valor, gc.gasto_costo, gc.tipo, gc.usuario, gc.soporte, c.descripcion AS clasificacion
+        $query = 'SELECT gc.id, gc.fecha, gc.detalle, gc.valor, gc.gasto_costo, gc.tipo, gc.usuario, c.descripcion AS clasificacion, COALESCE(s.total_soportes, 0) AS soportes_count
                   FROM gastos_costos gc
                   LEFT JOIN clasificaciones c ON c.id = gc.id_clasificacion
+                  LEFT JOIN (
+                    SELECT id_ingreso, COUNT(*) AS total_soportes
+                    FROM ingresos_detalle
+                    GROUP BY id_ingreso
+                  ) s ON s.id_ingreso = gc.id
                   ORDER BY gc.fecha DESC
                   LIMIT ?';
+
         $statement = $this->connection->prepare($query);
         if (!$statement instanceof mysqli_stmt) {
             $this->logger->error('app', 'No fue posible preparar consulta de listado de movimientos.', array(
@@ -112,9 +118,10 @@ class MovimientoRepository
 
     public function findMovimientoById($movementId)
     {
-        $query = 'SELECT id, fecha, id_clasificacion, detalle, valor, fecha_periodo, id_presupuesto, soporte, gasto_costo, tipo, por_pagar_cobrar, valor_neto, saldo, id_costo, usuario
-                  FROM gastos_costos
-                  WHERE id = ?
+        $query = 'SELECT gc.id, gc.fecha, gc.id_clasificacion, gc.detalle, gc.valor, gc.fecha_periodo, gc.id_presupuesto, gc.soporte, gc.gasto_costo, gc.tipo, gc.por_pagar_cobrar, gc.valor_neto, gc.saldo, gc.id_costo, gc.usuario, c.descripcion AS clasificacion
+                  FROM gastos_costos gc
+                  LEFT JOIN clasificaciones c ON c.id = gc.id_clasificacion
+                  WHERE gc.id = ?
                   LIMIT 1';
         $statement = $this->connection->prepare($query);
         if (!$statement instanceof mysqli_stmt) {
@@ -184,16 +191,19 @@ class MovimientoRepository
             $this->logger->error('app', 'Error al insertar movimiento.', array(
                 'error' => $statement->error,
             ));
+            $statement->close();
+            return false;
         }
 
+        $insertId = (int) $statement->insert_id;
         $statement->close();
-        return $ok;
+        return $insertId > 0 ? $insertId : false;
     }
 
     public function updateMovimiento($movementId, array $movementData)
     {
         $query = 'UPDATE gastos_costos
-                  SET fecha = ?, id_clasificacion = ?, detalle = ?, valor = ?, fecha_periodo = ?, id_presupuesto = ?, soporte = ?, gasto_costo = ?, tipo = ?, por_pagar_cobrar = ?, valor_neto = ?, saldo = ?, usuario = ?
+                  SET fecha = ?, id_clasificacion = ?, detalle = ?, valor = ?, fecha_periodo = ?, id_presupuesto = ?, gasto_costo = ?, tipo = ?, por_pagar_cobrar = ?, valor_neto = ?, saldo = ?, usuario = ?
                   WHERE id = ?
                   LIMIT 1';
 
@@ -207,14 +217,13 @@ class MovimientoRepository
 
         $movementIdInt = (int) $movementId;
         $statement->bind_param(
-            'sisdsissssddsi',
+            'sisdsisssddsi',
             $movementData['fecha'],
             $movementData['id_clasificacion'],
             $movementData['detalle'],
             $movementData['valor'],
             $movementData['fecha_periodo'],
             $movementData['id_presupuesto'],
-            $movementData['soporte'],
             $movementData['gasto_costo'],
             $movementData['tipo'],
             $movementData['por_pagar_cobrar'],
@@ -255,6 +264,213 @@ class MovimientoRepository
             $this->logger->error('app', 'Error al eliminar movimiento.', array(
                 'error' => $statement->error,
                 'movement_id' => $movementIdInt,
+            ));
+        }
+
+        $statement->close();
+        return $ok;
+    }
+
+    public function getSupportsByMovementIds(array $movementIds)
+    {
+        if (empty($movementIds)) {
+            return array();
+        }
+
+        $uniqueIds = array_values(array_unique(array_map('intval', $movementIds)));
+        $placeholders = implode(',', array_fill(0, count($uniqueIds), '?'));
+        $types = str_repeat('i', count($uniqueIds));
+
+        $query = 'SELECT id, id_ingreso, fechayhora, imagen, usuario
+                  FROM ingresos_detalle
+                  WHERE id_ingreso IN (' . $placeholders . ')
+                  ORDER BY id DESC';
+
+        $statement = $this->connection->prepare($query);
+        if (!$statement instanceof mysqli_stmt) {
+            $this->logger->error('app', 'No fue posible preparar consulta de soportes por movimientos.', array(
+                'error' => $this->connection->error,
+            ));
+            return array();
+        }
+
+        $params = array($types);
+        foreach ($uniqueIds as $index => $idValue) {
+            $params[] = &$uniqueIds[$index];
+        }
+
+        call_user_func_array(array($statement, 'bind_param'), $params);
+        $statement->execute();
+        $result = $statement->get_result();
+
+        $grouped = array();
+        while ($result && ($row = $result->fetch_assoc())) {
+            $movementId = isset($row['id_ingreso']) ? (int) $row['id_ingreso'] : 0;
+            if ($movementId <= 0) {
+                continue;
+            }
+
+            if (!isset($grouped[$movementId])) {
+                $grouped[$movementId] = array();
+            }
+
+            $grouped[$movementId][] = $row;
+        }
+
+        $statement->close();
+        return $grouped;
+    }
+
+    public function getSupportsByMovementId($movementId)
+    {
+        $movementIdInt = (int) $movementId;
+        if ($movementIdInt <= 0) {
+            return array();
+        }
+
+        $query = 'SELECT id, id_ingreso, fechayhora, imagen, usuario
+                  FROM ingresos_detalle
+                  WHERE id_ingreso = ?
+                  ORDER BY id DESC';
+        $statement = $this->connection->prepare($query);
+        if (!$statement instanceof mysqli_stmt) {
+            $this->logger->error('app', 'No fue posible preparar consulta de soportes por movimiento.', array(
+                'error' => $this->connection->error,
+            ));
+            return array();
+        }
+
+        $statement->bind_param('i', $movementIdInt);
+        $statement->execute();
+        $result = $statement->get_result();
+
+        $rows = array();
+        while ($result && ($row = $result->fetch_assoc())) {
+            $rows[] = $row;
+        }
+
+        $statement->close();
+        return $rows;
+    }
+
+    public function findSupportById($supportId)
+    {
+        $supportIdInt = (int) $supportId;
+        if ($supportIdInt <= 0) {
+            return null;
+        }
+
+        $query = 'SELECT id, id_ingreso, fechayhora, imagen, usuario
+                  FROM ingresos_detalle
+                  WHERE id = ?
+                  LIMIT 1';
+        $statement = $this->connection->prepare($query);
+        if (!$statement instanceof mysqli_stmt) {
+            $this->logger->error('app', 'No fue posible preparar consulta de soporte por ID.', array(
+                'error' => $this->connection->error,
+            ));
+            return null;
+        }
+
+        $statement->bind_param('i', $supportIdInt);
+        $statement->execute();
+        $result = $statement->get_result();
+        $row = $result ? $result->fetch_assoc() : null;
+        $statement->close();
+
+        return $row ?: null;
+    }
+
+    public function createSupportRecord($movementId, $imageName, $username)
+    {
+        $query = 'INSERT INTO ingresos_detalle (id_ingreso, fechayhora, imagen, usuario)
+                  VALUES (?, NOW(), ?, ?)';
+        $statement = $this->connection->prepare($query);
+        if (!$statement instanceof mysqli_stmt) {
+            $this->logger->error('app', 'No fue posible preparar insercion de soporte.', array(
+                'error' => $this->connection->error,
+            ));
+            return false;
+        }
+
+        $movementIdInt = (int) $movementId;
+        $imageNameSafe = (string) $imageName;
+        $usernameSafe = (string) $username;
+        $statement->bind_param('iss', $movementIdInt, $imageNameSafe, $usernameSafe);
+        $ok = $statement->execute();
+
+        if (!$ok) {
+            $this->logger->error('app', 'Error al crear soporte en ingresos_detalle.', array(
+                'error' => $statement->error,
+                'movement_id' => $movementIdInt,
+                'image_name' => $imageNameSafe,
+            ));
+            $statement->close();
+            return false;
+        }
+
+        $supportId = (int) $statement->insert_id;
+        $statement->close();
+        return $supportId > 0 ? $supportId : false;
+    }
+
+    public function deleteSupportsByMovementId($movementId)
+    {
+        $movementIdInt = (int) $movementId;
+        $query = 'DELETE FROM ingresos_detalle WHERE id_ingreso = ?';
+        $statement = $this->connection->prepare($query);
+        if (!$statement instanceof mysqli_stmt) {
+            $this->logger->error('app', 'No fue posible preparar eliminacion de soportes de movimiento.', array(
+                'error' => $this->connection->error,
+                'movement_id' => $movementIdInt,
+            ));
+            return false;
+        }
+
+        $statement->bind_param('i', $movementIdInt);
+        $ok = $statement->execute();
+
+        if (!$ok) {
+            $this->logger->error('app', 'Error al eliminar soportes de movimiento.', array(
+                'error' => $statement->error,
+                'movement_id' => $movementIdInt,
+            ));
+        }
+
+        $statement->close();
+        return $ok;
+    }
+
+    public function deleteSupportsByIds(array $supportIds)
+    {
+        if (empty($supportIds)) {
+            return true;
+        }
+
+        $uniqueIds = array_values(array_unique(array_map('intval', $supportIds)));
+        $placeholders = implode(',', array_fill(0, count($uniqueIds), '?'));
+        $types = str_repeat('i', count($uniqueIds));
+        $query = 'DELETE FROM ingresos_detalle WHERE id IN (' . $placeholders . ')';
+
+        $statement = $this->connection->prepare($query);
+        if (!$statement instanceof mysqli_stmt) {
+            $this->logger->error('app', 'No fue posible preparar eliminacion de soportes por IDs.', array(
+                'error' => $this->connection->error,
+            ));
+            return false;
+        }
+
+        $params = array($types);
+        foreach ($uniqueIds as $index => $idValue) {
+            $params[] = &$uniqueIds[$index];
+        }
+
+        call_user_func_array(array($statement, 'bind_param'), $params);
+        $ok = $statement->execute();
+
+        if (!$ok) {
+            $this->logger->error('app', 'Error al eliminar soportes por IDs.', array(
+                'error' => $statement->error,
             ));
         }
 
