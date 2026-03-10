@@ -1,5 +1,9 @@
 # Cambios Generales
 
+## 2026-03-10 - Lista PC de movimientos: columna # compacta y detalle por icono
+- En version PC, la columna de numeracion # se ajusta al ancho real del numero para optimizar espacio horizontal.
+- En version PC, la columna Detalle cambia a icono de consulta por fila.
+- Al hacer clic en el icono de detalle, se abre popup con el detalle completo del movimiento.
 ## 2026-03-09 - Correccion mostrar/ocultar panel lateral
 - Se corrige el boton de panel lateral en movimientos para alternar correctamente entre ocultar y mostrar.
 - Causa raiz: el handler validaba una clase antigua (summary-collapsed) en lugar del estado real (summary-hidden).

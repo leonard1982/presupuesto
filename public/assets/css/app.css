@@ -901,6 +901,25 @@ textarea {
     padding-right: 0.28rem;
 }
 
+.table-movement-compact-index th:first-child,
+.table-movement-compact-index td:first-child {
+    width: 42px;
+    min-width: 42px;
+    max-width: 42px;
+    text-align: center;
+    white-space: nowrap;
+    padding-left: 0.2rem;
+    padding-right: 0.2rem;
+}
+
+.movement-detail-icon-cell {
+    text-align: center;
+}
+
+.movement-detail-hidden-text {
+    display: none;
+}
+
 .mobile-movement-list {
     display: none;
 }

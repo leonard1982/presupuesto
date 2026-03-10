@@ -235,7 +235,7 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
 <section class="movement-workspace" id="movement-workspace">
     <div class="card table-card movement-list-card">
         <div class="table-wrapper movement-table-wrapper">
-            <table class="table-professional js-data-table js-indexed-table js-exportable js-movimientos-table" data-page-length="20" data-export-name="movimientos_registro_operativo" data-preference-key="movimientos_table_length">
+            <table class="table-professional table-movement-compact-index js-data-table js-indexed-table js-exportable js-movimientos-table" data-page-length="20" data-export-name="movimientos_registro_operativo" data-preference-key="movimientos_table_length">
                 <thead>
                 <tr>
                     <th class="no-export">#</th>
@@ -285,7 +285,12 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
                             <td></td>
                             <td><?php echo mov_escape($movement['fecha']); ?></td>
                             <td><?php echo mov_escape($movement['clasificacion'] !== null ? $movement['clasificacion'] : 'Sin clasificacion'); ?></td>
-                            <td><?php echo mov_escape($movement['detalle']); ?></td>
+                            <td class="movement-detail-icon-cell">
+                                <button type="button" class="btn btn-ghost btn-inline btn-mini btn-icon-only js-open-movement-mobile-modal" title="Ver detalle" aria-label="Ver detalle" data-movement-json="<?php echo mov_escape($movementDetailPayloadJson); ?>">
+                                    <i class="bi bi-card-text"></i>
+                                </button>
+                                <span class="movement-detail-hidden-text"><?php echo mov_escape($movement['detalle']); ?></span>
+                            </td>
                             <td><?php echo mov_escape($movement['gasto_costo']); ?></td>
                             <td><?php echo mov_escape($movement['tipo']); ?></td>
                             <td><?php echo mov_money($movement['valor']); ?></td>

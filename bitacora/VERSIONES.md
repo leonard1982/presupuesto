@@ -1,5 +1,8 @@
 # Versiones
 
+## v0.7.4 - 2026-03-10
+- Movimientos PC: columna # compactada al ancho del numero.
+- Movimientos PC: columna Detalle convertida a icono con popup de detalle por registro.
 ## v0.7.3 - 2026-03-09
 - Fix: boton de panel lateral en movimientos ahora alterna correctamente ocultar/mostrar.
 ## v0.7.2 - 2026-03-09
