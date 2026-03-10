@@ -1,5 +1,9 @@
 # Versiones
 
+## v0.7.2 - 2026-03-09
+- Movimientos: ocultado horizontal del panel lateral derecho para liberar ancho real de la lista.
+- Movimientos: boton de panel movido a la barra superior de acciones para mostrar/ocultar aun con panel cerrado.
+- Ajuste responsive: el colapso horizontal no afecta comportamiento movil existente.
 ## v0.7.1 - 2026-03-09
 - Movimientos: filtros ocultables con estado inicial oculto en movil.
 - Movimientos: panel lateral de resumen con boton ocultar/mostrar en escritorio.

@@ -1,5 +1,10 @@
 # Cambios Generales
 
+## 2026-03-09 - Panel lateral con ocultado horizontal real
+- El panel derecho de resumen en movimientos ahora se oculta de forma horizontal (hacia la derecha), liberando ancho para la tabla principal.
+- Al ocultar el panel, el layout pasa a una sola columna y el listado aprovecha todo el espacio disponible.
+- Se mueve el boton de mostrar/ocultar panel a la barra de acciones superior para permitir reabrirlo facilmente cuando esta oculto.
+- Se mantiene persistencia por usuario del estado del panel (visible/oculto).
 ## 2026-03-09 - Filtros moviles ocultos por defecto y panel lateral ocultable
 - Movimientos: se agrega boton para mostrar/ocultar filtros y se permite plegar el bloque completo.
 - En movil, los filtros quedan ocultos por defecto al entrar al modulo para priorizar la lista.

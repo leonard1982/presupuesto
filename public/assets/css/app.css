@@ -699,16 +699,32 @@ textarea {
     grid-template-columns: minmax(0, 1fr) 320px;
     gap: 1rem;
     align-items: start;
+    transition: grid-template-columns 0.24s ease;
 }
 
 .movement-summary-card {
     margin-top: 1rem;
     position: sticky;
     top: 236px;
+    width: 100%;
+    min-width: 0;
+    transition: width 0.24s ease, opacity 0.2s ease, transform 0.24s ease, padding 0.24s ease, border-width 0.24s ease, margin 0.24s ease;
 }
 
-.movement-summary-card.summary-collapsed #movement-summary-body {
-    display: none;
+.movement-workspace.summary-hidden {
+    grid-template-columns: minmax(0, 1fr) 0;
+    gap: 0;
+}
+
+.movement-workspace.summary-hidden .movement-summary-card {
+    width: 0;
+    opacity: 0;
+    transform: translateX(20px);
+    overflow: hidden;
+    padding: 0;
+    border-width: 0;
+    margin: 0;
+    pointer-events: none;
 }
 
 .movement-summary-head {
@@ -2458,6 +2474,10 @@ body.theme-dark .dataTables_wrapper .dt-tools .dt-button.dt-export-button:hover 
     }
 
     .movement-workspace {
+        grid-template-columns: 1fr;
+    }
+
+    .movement-workspace.summary-hidden {
         grid-template-columns: 1fr;
     }
 

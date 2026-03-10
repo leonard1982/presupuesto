@@ -219,6 +219,9 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
             <a class="btn btn-primary btn-inline btn-mini" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/nuevo&modo=rapido">
                 <i class="bi bi-lightning-charge"></i> Carga rapida
             </a>
+            <button type="button" id="movement-summary-toggle" class="btn btn-ghost btn-inline btn-mini" aria-expanded="true">
+                <i class="bi bi-layout-sidebar-inset"></i> Ocultar panel
+            </button>
             <span class="shortcut-chip"><i class="bi bi-keyboard"></i> Atajos: N, F, E</span>
         </div>
         <button type="button" id="movement-filter-reset" class="btn btn-secondary btn-inline btn-mini">
@@ -229,7 +232,7 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
     </div>
 </section>
 
-<section class="movement-workspace">
+<section class="movement-workspace" id="movement-workspace">
     <div class="card table-card movement-list-card">
         <div class="table-wrapper movement-table-wrapper">
             <table class="table-professional js-data-table js-indexed-table js-exportable js-movimientos-table" data-page-length="20" data-export-name="movimientos_registro_operativo" data-preference-key="movimientos_table_length">
@@ -417,9 +420,7 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
     <aside class="card movement-summary-card" id="movement-summary-card">
         <div class="movement-summary-head">
             <h3><i class="bi bi-card-checklist"></i> Resumen rapido</h3>
-            <button type="button" id="movement-summary-toggle" class="btn btn-ghost btn-inline btn-mini" aria-expanded="true">
-                <i class="bi bi-layout-sidebar-inset"></i> Ocultar panel
-            </button>
+            <span class="muted">Selecciona un movimiento</span>
         </div>
         <div id="movement-summary-body" class="movement-summary-body">
             <p class="muted">Haz clic en un registro del listado para ver detalle completo y accesos directos.</p>

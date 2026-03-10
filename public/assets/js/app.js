@@ -787,6 +787,7 @@
     var movementFiltersCard = document.querySelector('.movement-filters-card');
     var movementFiltersBody = document.getElementById('movement-filters-body');
     var movementFiltersToggleButton = document.getElementById('movement-filters-toggle');
+    var movementWorkspace = document.getElementById('movement-workspace');
     var movementTableElement = document.querySelector('.js-movimientos-table');
     var movementTableDataTable = null;
     var movementTableFilterAttached = false;
@@ -1020,11 +1021,11 @@
     }
 
     function setMovementSummaryCollapsed(collapsed, persistState) {
-        if (!movementSummaryCard || !movementSummaryBody) {
+        if (!movementWorkspace || !movementSummaryCard || !movementSummaryBody) {
             return;
         }
 
-        movementSummaryCard.classList.toggle('summary-collapsed', !!collapsed);
+        movementWorkspace.classList.toggle('summary-hidden', !!collapsed);
         if (movementSummaryToggleButton) {
             movementSummaryToggleButton.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
             movementSummaryToggleButton.innerHTML = collapsed
