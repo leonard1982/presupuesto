@@ -1,5 +1,7 @@
 # Versiones
 
+## v0.7.3 - 2026-03-09
+- Fix: boton de panel lateral en movimientos ahora alterna correctamente ocultar/mostrar.
 ## v0.7.2 - 2026-03-09
 - Movimientos: ocultado horizontal del panel lateral derecho para liberar ancho real de la lista.
 - Movimientos: boton de panel movido a la barra superior de acciones para mostrar/ocultar aun con panel cerrado.

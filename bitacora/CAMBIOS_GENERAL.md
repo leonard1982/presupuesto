@@ -1,5 +1,9 @@
 # Cambios Generales
 
+## 2026-03-09 - Correccion mostrar/ocultar panel lateral
+- Se corrige el boton de panel lateral en movimientos para alternar correctamente entre ocultar y mostrar.
+- Causa raiz: el handler validaba una clase antigua (summary-collapsed) en lugar del estado real (summary-hidden).
+- Resultado: el panel vuelve a mostrarse correctamente despues de ocultarlo.
 ## 2026-03-09 - Panel lateral con ocultado horizontal real
 - El panel derecho de resumen en movimientos ahora se oculta de forma horizontal (hacia la derecha), liberando ancho para la tabla principal.
 - Al ocultar el panel, el layout pasa a una sola columna y el listado aprovecha todo el espacio disponible.

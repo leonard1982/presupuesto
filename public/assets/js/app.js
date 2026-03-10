@@ -1585,7 +1585,8 @@
 
     if (movementSummaryToggleButton) {
         movementSummaryToggleButton.addEventListener('click', function () {
-            var willCollapse = !movementSummaryCard.classList.contains('summary-collapsed');
+            var isHidden = movementWorkspace ? movementWorkspace.classList.contains('summary-hidden') : false;
+            var willCollapse = !isHidden;
             setMovementSummaryCollapsed(willCollapse, true);
         });
     }
