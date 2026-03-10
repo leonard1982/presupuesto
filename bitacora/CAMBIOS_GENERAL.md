@@ -221,3 +221,24 @@
   - `clasificaciones(id, descripcion)`
   - `medios(id, medio)`
   y no exigen campo `clasificacion2` en este contexto funcional.
+
+## 2026-03-09 - Filtros de movimientos y mejora de PDF exportado
+- Se agrega panel de filtros en Movimientos para escritorio y movil con:
+  - fecha
+  - clasificacion
+  - categoria
+  - tipo/medio
+- En movil, el filtro de fecha inicia por defecto en el dia actual para mostrar movimientos del dia.
+- Se aplica filtrado sincronizado entre:
+  - tabla de escritorio (DataTables)
+  - tarjetas de listado movil
+- Se mejora exportacion PDF de Movimientos:
+  - orientacion horizontal para evitar desbordes
+  - cabecera con nombre del reporte
+  - fecha y hora de impresion
+  - pie con numeracion de paginas
+  - ajuste de anchos y estilo de tabla para mejor legibilidad.
+
+## 2026-03-09 - Fondo dark mode mas profundo
+- Se oscurece el fondo global en modo oscuro para reducir tono gris y mejorar contraste visual.
+- Se aplica nuevo gradiente en `body.theme-dark` con base mas oscura y atmosfera uniforme.

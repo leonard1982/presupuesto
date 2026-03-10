@@ -46,6 +46,74 @@ if (!function_exists('mov_encode_json')) {
         return $jsonText === false ? '[]' : $jsonText;
     }
 }
+
+if (!function_exists('mov_filter_key')) {
+    function mov_filter_key($value)
+    {
+        $text = trim((string) $value);
+        if ($text === '') {
+            return '';
+        }
+
+        if (function_exists('mb_strtolower')) {
+            return mb_strtolower($text, 'UTF-8');
+        }
+
+        return strtolower($text);
+    }
+}
+
+if (!function_exists('mov_register_option')) {
+    function mov_register_option(array &$optionMap, $value)
+    {
+        $label = trim((string) $value);
+        if ($label === '') {
+            return;
+        }
+
+        $key = mov_filter_key($label);
+        if ($key === '') {
+            return;
+        }
+
+        $optionMap[$key] = $label;
+    }
+}
+
+$movementTypesBase = array(
+    'Compra',
+    'Transferencia',
+    'Pago proveedor',
+    'Nomina',
+    'Suscripcion',
+    'Servicio',
+    'Tarjeta',
+    'Efectivo',
+);
+
+$clasificacionesCatalogo = isset($clasificacionesFiltro) && is_array($clasificacionesFiltro) ? $clasificacionesFiltro : array();
+$mediosPagoCatalogo = isset($mediosPagoFiltro) && is_array($mediosPagoFiltro) ? $mediosPagoFiltro : array();
+
+$clasificacionOptions = array();
+foreach ($clasificacionesCatalogo as $clasificacionCatalogo) {
+    mov_register_option($clasificacionOptions, isset($clasificacionCatalogo['descripcion']) ? $clasificacionCatalogo['descripcion'] : '');
+}
+
+$tipoOptions = array();
+foreach ($movementTypesBase as $tipoBase) {
+    mov_register_option($tipoOptions, $tipoBase);
+}
+foreach ($mediosPagoCatalogo as $medioCatalogo) {
+    mov_register_option($tipoOptions, isset($medioCatalogo['medio']) ? $medioCatalogo['medio'] : '');
+}
+
+foreach ($movimientos as $movementItem) {
+    mov_register_option($clasificacionOptions, isset($movementItem['clasificacion']) ? $movementItem['clasificacion'] : '');
+    mov_register_option($tipoOptions, isset($movementItem['tipo']) ? $movementItem['tipo'] : '');
+}
+
+asort($clasificacionOptions, SORT_NATURAL | SORT_FLAG_CASE);
+asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
 ?>
 <section class="page-header card">
     <div>
@@ -85,9 +153,50 @@ if (!function_exists('mov_encode_json')) {
     <div class="alert alert-error"><?php echo mov_escape($errorMessage); ?></div>
 <?php endif; ?>
 
+<section class="card movement-filters-card">
+    <div class="movement-filters-grid">
+        <div class="form-field">
+            <label for="movement-filter-date">Fecha</label>
+            <input id="movement-filter-date" type="date" value="">
+        </div>
+        <div class="form-field">
+            <label for="movement-filter-clasificacion">Clasificacion</label>
+            <select id="movement-filter-clasificacion">
+                <option value="">Todas</option>
+                <?php foreach ($clasificacionOptions as $clasificacionOption) : ?>
+                    <option value="<?php echo mov_escape($clasificacionOption); ?>"><?php echo mov_escape($clasificacionOption); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="form-field">
+            <label for="movement-filter-categoria">Categoria</label>
+            <select id="movement-filter-categoria">
+                <option value="">Todas</option>
+                <option value="Gasto">Gasto</option>
+                <option value="Costo">Costo</option>
+            </select>
+        </div>
+        <div class="form-field">
+            <label for="movement-filter-tipo">Tipo o medio</label>
+            <select id="movement-filter-tipo">
+                <option value="">Todos</option>
+                <?php foreach ($tipoOptions as $tipoOption) : ?>
+                    <option value="<?php echo mov_escape($tipoOption); ?>"><?php echo mov_escape($tipoOption); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+    </div>
+    <div class="movement-filters-actions">
+        <button type="button" id="movement-filter-reset" class="btn btn-secondary btn-inline btn-mini">
+            <i class="bi bi-arrow-counterclockwise"></i> Limpiar filtros
+        </button>
+        <span id="movement-filter-result-info" class="muted"></span>
+    </div>
+</section>
+
 <section class="card table-card movement-list-card">
     <div class="table-wrapper movement-table-wrapper">
-        <table class="table-professional js-data-table js-indexed-table js-exportable" data-page-length="20" data-export-name="movimientos_registro_operativo">
+        <table class="table-professional js-data-table js-indexed-table js-exportable js-movimientos-table" data-page-length="20" data-export-name="movimientos_registro_operativo">
             <thead>
             <tr>
                 <th class="no-export">#</th>
@@ -184,8 +293,14 @@ if (!function_exists('mov_encode_json')) {
                     'soportes' => count($supportsPayload),
                 );
                 $movementDetailPayloadJson = mov_encode_json($movementDetailPayload);
+                $movementDateOnly = substr((string) $movementDetailPayload['fecha'], 0, 10);
                 ?>
-                <article class="mobile-movement-card">
+                <article
+                    class="mobile-movement-card"
+                    data-filter-fecha="<?php echo mov_escape($movementDateOnly); ?>"
+                    data-filter-clasificacion="<?php echo mov_escape(mov_filter_key($movementDetailPayload['clasificacion'])); ?>"
+                    data-filter-categoria="<?php echo mov_escape(mov_filter_key($movementDetailPayload['categoria'])); ?>"
+                    data-filter-tipo="<?php echo mov_escape(mov_filter_key($movementDetailPayload['tipo'])); ?>">
                     <div class="mobile-movement-head">
                         <span class="mobile-movement-date"><i class="bi bi-calendar-event"></i> <?php echo mov_escape($movementDetailPayload['fecha']); ?></span>
                         <span class="mobile-movement-id">#<?php echo (int) $movementDetailPayload['id']; ?></span>
@@ -226,6 +341,7 @@ if (!function_exists('mov_encode_json')) {
                     </div>
                 </article>
             <?php endforeach; ?>
+            <div id="movement-mobile-empty-filter" class="mobile-movement-empty muted hidden">No hay movimientos para el filtro seleccionado.</div>
         <?php endif; ?>
     </div>
 </section>

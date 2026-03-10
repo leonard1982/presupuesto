@@ -639,6 +639,186 @@
         });
     }
 
+    var movementFilterDateInput = document.getElementById('movement-filter-date');
+    var movementFilterClasificacionInput = document.getElementById('movement-filter-clasificacion');
+    var movementFilterCategoriaInput = document.getElementById('movement-filter-categoria');
+    var movementFilterTipoInput = document.getElementById('movement-filter-tipo');
+    var movementFilterResetButton = document.getElementById('movement-filter-reset');
+    var movementFilterResultInfo = document.getElementById('movement-filter-result-info');
+    var movementTableElement = document.querySelector('.js-movimientos-table');
+    var movementTableDataTable = null;
+    var movementTableFilterAttached = false;
+
+    function normalizeFilterText(value) {
+        return String(value || '').trim().toLowerCase();
+    }
+
+    function extractDatePart(value) {
+        return String(value || '').trim().substring(0, 10);
+    }
+
+    function getTodayIsoDate() {
+        var currentDate = new Date();
+        var year = String(currentDate.getFullYear());
+        var month = String(currentDate.getMonth() + 1);
+        var day = String(currentDate.getDate());
+
+        if (month.length < 2) {
+            month = '0' + month;
+        }
+        if (day.length < 2) {
+            day = '0' + day;
+        }
+
+        return year + '-' + month + '-' + day;
+    }
+
+    function getMovementFilterState() {
+        return {
+            date: movementFilterDateInput ? String(movementFilterDateInput.value || '').trim() : '',
+            clasificacion: normalizeFilterText(movementFilterClasificacionInput ? movementFilterClasificacionInput.value : ''),
+            categoria: normalizeFilterText(movementFilterCategoriaInput ? movementFilterCategoriaInput.value : ''),
+            tipo: normalizeFilterText(movementFilterTipoInput ? movementFilterTipoInput.value : '')
+        };
+    }
+
+    function updateMovementFilterResultInfo(visibleCount) {
+        if (!movementFilterResultInfo) {
+            return;
+        }
+
+        if (typeof visibleCount !== 'number' || visibleCount < 0) {
+            movementFilterResultInfo.textContent = '';
+            return;
+        }
+
+        movementFilterResultInfo.textContent = visibleCount === 1
+            ? '1 movimiento encontrado.'
+            : (String(visibleCount) + ' movimientos encontrados.');
+    }
+
+    function applyMovementMobileFilters(filterState) {
+        var mobileCards = document.querySelectorAll('.mobile-movement-card');
+        if (!mobileCards || mobileCards.length === 0) {
+            updateMovementFilterResultInfo(-1);
+            return;
+        }
+
+        var visibleCount = 0;
+        for (var cardIndex = 0; cardIndex < mobileCards.length; cardIndex += 1) {
+            var card = mobileCards[cardIndex];
+            var matchDate = filterState.date === '' || extractDatePart(card.getAttribute('data-filter-fecha')) === filterState.date;
+            var matchClasificacion = filterState.clasificacion === '' || normalizeFilterText(card.getAttribute('data-filter-clasificacion')) === filterState.clasificacion;
+            var matchCategoria = filterState.categoria === '' || normalizeFilterText(card.getAttribute('data-filter-categoria')) === filterState.categoria;
+            var matchTipo = filterState.tipo === '' || normalizeFilterText(card.getAttribute('data-filter-tipo')) === filterState.tipo;
+            var isVisible = matchDate && matchClasificacion && matchCategoria && matchTipo;
+
+            card.classList.toggle('hidden', !isVisible);
+            if (isVisible) {
+                visibleCount += 1;
+            }
+        }
+
+        var mobileEmptyNode = document.getElementById('movement-mobile-empty-filter');
+        if (mobileEmptyNode) {
+            mobileEmptyNode.classList.toggle('hidden', visibleCount > 0);
+        }
+
+        updateMovementFilterResultInfo(visibleCount);
+    }
+
+    function ensureMovementDataTableFilter() {
+        if (movementTableFilterAttached || !movementTableElement || !window.jQuery || !window.jQuery.fn || !window.jQuery.fn.dataTable || !window.jQuery.fn.dataTable.ext) {
+            return;
+        }
+
+        window.jQuery.fn.dataTable.ext.search.push(function (settings, data) {
+            if (!settings || settings.nTable !== movementTableElement) {
+                return true;
+            }
+
+            var filters = getMovementFilterState();
+            var rowDate = extractDatePart(data[2]);
+            var rowClasificacion = normalizeFilterText(data[3]);
+            var rowCategoria = normalizeFilterText(data[5]);
+            var rowTipo = normalizeFilterText(data[6]);
+
+            if (filters.date !== '' && rowDate !== filters.date) {
+                return false;
+            }
+            if (filters.clasificacion !== '' && rowClasificacion !== filters.clasificacion) {
+                return false;
+            }
+            if (filters.categoria !== '' && rowCategoria !== filters.categoria) {
+                return false;
+            }
+            if (filters.tipo !== '' && rowTipo !== filters.tipo) {
+                return false;
+            }
+
+            return true;
+        });
+
+        movementTableFilterAttached = true;
+    }
+
+    function applyMovementFilters() {
+        var filters = getMovementFilterState();
+        applyMovementMobileFilters(filters);
+
+        if (movementTableDataTable) {
+            movementTableDataTable.draw();
+            var tableInfo = movementTableDataTable.page.info();
+            if (tableInfo && typeof tableInfo.recordsDisplay === 'number') {
+                updateMovementFilterResultInfo(tableInfo.recordsDisplay);
+            }
+        }
+    }
+
+    function initializeMovementFilters() {
+        if (!movementFilterDateInput && !movementFilterClasificacionInput && !movementFilterCategoriaInput && !movementFilterTipoInput) {
+            return;
+        }
+
+        if (movementFilterDateInput && movementFilterDateInput.value === '' && window.innerWidth <= 760) {
+            movementFilterDateInput.value = getTodayIsoDate();
+        }
+
+        var changeHandlers = [
+            movementFilterDateInput,
+            movementFilterClasificacionInput,
+            movementFilterCategoriaInput,
+            movementFilterTipoInput
+        ];
+
+        for (var handlerIndex = 0; handlerIndex < changeHandlers.length; handlerIndex += 1) {
+            if (changeHandlers[handlerIndex]) {
+                changeHandlers[handlerIndex].addEventListener('change', applyMovementFilters);
+            }
+        }
+
+        if (movementFilterResetButton) {
+            movementFilterResetButton.addEventListener('click', function () {
+                if (movementFilterDateInput) {
+                    movementFilterDateInput.value = window.innerWidth <= 760 ? getTodayIsoDate() : '';
+                }
+                if (movementFilterClasificacionInput) {
+                    movementFilterClasificacionInput.value = '';
+                }
+                if (movementFilterCategoriaInput) {
+                    movementFilterCategoriaInput.value = '';
+                }
+                if (movementFilterTipoInput) {
+                    movementFilterTipoInput.value = '';
+                }
+
+                applyMovementFilters();
+            });
+        }
+
+        applyMovementFilters();
+    }
+
     if (window.jQuery && window.jQuery.fn) {
         if (typeof window.jQuery.fn.select2 === 'function') {
             window.jQuery('.js-searchable-select').each(function () {
@@ -714,16 +894,95 @@
                             className: 'btn dt-export-button',
                             filename: exportName,
                             title: null,
-                            orientation: 'portrait',
+                            orientation: 'landscape',
                             pageSize: 'A4',
                             exportOptions: {
                                 columns: ':visible:not(.no-export)'
+                            },
+                            customize: function (doc) {
+                                var printedAt = new Date();
+                                var printedAtText = printedAt.toLocaleDateString('es-CO') + ' ' + printedAt.toLocaleTimeString('es-CO');
+                                var reportTitle = 'Reporte de movimientos';
+                                if (exportName !== '') {
+                                    reportTitle = String(exportName).replace(/_/g, ' ').toUpperCase();
+                                }
+
+                                doc.pageMargins = [18, 52, 18, 30];
+                                doc.defaultStyle.fontSize = 7;
+                                doc.styles.tableHeader.fontSize = 8;
+                                doc.styles.tableHeader.bold = true;
+
+                                doc.header = function () {
+                                    return {
+                                        margin: [18, 12, 18, 0],
+                                        columns: [
+                                            { text: reportTitle, bold: true, fontSize: 10, color: '#0f4c81' },
+                                            { text: 'Impresion: ' + printedAtText, alignment: 'right', fontSize: 8, color: '#475569' }
+                                        ]
+                                    };
+                                };
+
+                                doc.footer = function (currentPage, pageCount) {
+                                    return {
+                                        margin: [18, 0, 18, 8],
+                                        columns: [
+                                            { text: 'Sistema Presupuesto', fontSize: 7, color: '#64748b' },
+                                            { text: 'Pagina ' + currentPage + ' de ' + pageCount, alignment: 'right', fontSize: 8, color: '#334155' }
+                                        ]
+                                    };
+                                };
+
+                                for (var contentIndex = 0; contentIndex < doc.content.length; contentIndex += 1) {
+                                    if (!doc.content[contentIndex] || !doc.content[contentIndex].table) {
+                                        continue;
+                                    }
+
+                                    var tableNode = doc.content[contentIndex];
+                                    if (tableNode.table && tableNode.table.body && tableNode.table.body.length > 0) {
+                                        var columnCount = tableNode.table.body[0].length;
+                                        var tableWidths = [];
+                                        for (var columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+                                            tableWidths.push('*');
+                                        }
+
+                                        tableNode.table.widths = tableWidths;
+                                        tableNode.layout = {
+                                            hLineWidth: function () { return 0.5; },
+                                            vLineWidth: function () { return 0.5; },
+                                            hLineColor: function () { return '#d1d5db'; },
+                                            vLineColor: function () { return '#d1d5db'; },
+                                            paddingLeft: function () { return 3; },
+                                            paddingRight: function () { return 3; },
+                                            paddingTop: function () { return 2; },
+                                            paddingBottom: function () { return 2; }
+                                        };
+
+                                        for (var rowIndex = 0; rowIndex < tableNode.table.body.length; rowIndex += 1) {
+                                            for (var cellIndex = 0; cellIndex < tableNode.table.body[rowIndex].length; cellIndex += 1) {
+                                                var cell = tableNode.table.body[rowIndex][cellIndex];
+                                                if (typeof cell === 'string') {
+                                                    tableNode.table.body[rowIndex][cellIndex] = {
+                                                        text: cell,
+                                                        noWrap: false
+                                                    };
+                                                } else if (cell && typeof cell === 'object') {
+                                                    cell.noWrap = false;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     ];
                 }
 
                 var dataTable = window.jQuery(this).DataTable(dataTableOptions);
+
+                if (window.jQuery(this).hasClass('js-movimientos-table')) {
+                    movementTableDataTable = dataTable;
+                    ensureMovementDataTableFilter();
+                }
 
                 if (isIndexedTable) {
                     dataTable.on('order.dt search.dt draw.dt', function () {
@@ -738,6 +997,8 @@
             });
         }
     }
+
+    initializeMovementFilters();
 
     var supportsModal = document.getElementById('supports-modal');
     var supportsModalBody = document.getElementById('supports-modal-body');

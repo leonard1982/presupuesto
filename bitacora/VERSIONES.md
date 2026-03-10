@@ -1,5 +1,14 @@
 ﻿# Versiones
 
+## v0.6.9 - 2026-03-09
+- Tema oscuro: fondo global ajustado a un tono mas oscuro para mejor contraste visual.
+
+## v0.6.8 - 2026-03-09
+- Movimientos: filtros por fecha, clasificacion, categoria y tipo/medio en escritorio y movil.
+- En movil la fecha inicia en el dia actual para ver movimientos del dia.
+- Exportacion PDF mejorada con cabecera, fecha/hora de impresion y paginacion.
+- Ajuste visual de tabla PDF para reducir desbordes de informacion.
+
 ## v0.6.7 - 2026-03-09
 - Listados de Clasificaciones y Medios de pago sin columna ID visible.
 - Se conserva numeracion por fila con columna #.
@@ -114,6 +123,8 @@
 - `MAJOR`: cambios incompatibles.
 - `MINOR`: funcionalidades nuevas compatibles.
 - `PATCH`: correcciones y ajustes sin romper API funcional.
+
+
 
 
 

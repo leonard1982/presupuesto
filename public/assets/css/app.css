@@ -41,6 +41,12 @@ body {
     min-height: 100vh;
 }
 
+body.theme-dark {
+    background:
+        radial-gradient(circle at 14% 8%, rgba(50, 78, 112, 0.3) 0%, rgba(20, 34, 52, 0.14) 38%, rgba(12, 20, 30, 0) 64%),
+        linear-gradient(180deg, #0a121d 0%, #081018 100%);
+}
+
 a {
     color: inherit;
 }
@@ -602,6 +608,30 @@ textarea {
 
 .table-card {
     margin-top: 1rem;
+}
+
+.movement-filters-card {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+.movement-filters-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(170px, 1fr));
+    gap: 0.7rem;
+}
+
+.movement-filters-grid .form-field label {
+    margin-top: 0;
+}
+
+.movement-filters-actions {
+    margin-top: 0.72rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+    flex-wrap: wrap;
 }
 
 .table-header {
@@ -1864,6 +1894,10 @@ body.theme-dark .dataTables_wrapper .dt-tools .dt-button.dt-export-button:hover 
     .auth-card {
         margin-top: 0.25rem;
     }
+
+    .movement-filters-grid {
+        grid-template-columns: repeat(2, minmax(170px, 1fr));
+    }
 }
 
 @media (max-width: 840px) {
@@ -1987,6 +2021,15 @@ body.theme-dark .dataTables_wrapper .dt-tools .dt-button.dt-export-button:hover 
 
     .app-main {
         padding: 0.82rem 0.75rem 1.5rem;
+    }
+
+    .movement-filters-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .movement-filters-actions .btn {
+        width: 100%;
+        justify-content: center;
     }
 
     .page-header {

@@ -64,6 +64,8 @@ class MovimientoController
             'currentUser' => $this->authService->getAuthenticatedUser(),
             'activeMenu' => 'movimientos',
             'movimientos' => $movimientos,
+            'clasificacionesFiltro' => $this->movimientoRepository->getClasificaciones(),
+            'mediosPagoFiltro' => $this->movimientoRepository->getMediosPago(),
             'successMessage' => $successMessage,
             'errorMessage' => $errorMessage,
             'csrfTokenName' => $csrfTokenName,
