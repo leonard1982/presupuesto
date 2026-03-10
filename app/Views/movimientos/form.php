@@ -88,6 +88,7 @@ $saldoInput = mov_form_currency_input(isset($formData['saldo']) ? $formData['sal
 <section class="card form-card">
     <form id="movimiento-form" method="post" action="<?php echo mov_form_escape($baseUrl); ?>/index.php?route=<?php echo mov_form_escape($actionRoute); ?>" enctype="multipart/form-data" novalidate>
         <input type="hidden" name="<?php echo mov_form_escape($csrfTokenName); ?>" value="<?php echo mov_form_escape($csrfToken); ?>">
+        <input type="hidden" id="soportes_clipboard_json" name="soportes_clipboard_json" value="">
         <?php if ($isEdit) : ?>
             <input type="hidden" name="movement_id" value="<?php echo $movementIdValue; ?>">
         <?php endif; ?>
@@ -188,6 +189,11 @@ $saldoInput = mov_form_currency_input(isset($formData['saldo']) ? $formData['sal
                         <span id="soportes-file-count" class="file-picker-count">Sin archivos seleccionados</span>
                     </div>
                     <ul id="soportes-file-list" class="file-picker-list hidden"></ul>
+                    <div id="soportes-paste-zone" class="file-paste-zone" tabindex="0" aria-label="Pegar imagen desde portapapeles">
+                        <i class="bi bi-clipboard-plus"></i>
+                        <span>Pega una imagen aqui con <strong>Ctrl + V</strong></span>
+                    </div>
+                    <div id="soportes-paste-feedback" class="muted hidden"></div>
                 </div>
                 <p class="muted">Puedes seleccionar varios archivos. Extensiones permitidas: <?php echo mov_form_escape($allowedExtensionsCsv); ?>. Maximo por archivo: <?php echo $maxUploadMb; ?> MB.</p>
             </div>

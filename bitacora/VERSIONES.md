@@ -1,5 +1,21 @@
 ﻿# Versiones
 
+## v0.6.3 - 2026-03-09
+- Opcion visible de "Instalar app" en login y panel principal.
+- Flujo de instalacion PWA con prompt nativo cuando aplica y guia simple para iPhone/iPad.
+- Manifest actualizado para subruta del proyecto y accesos directos a Dashboard/Nuevo movimiento.
+- Iconos PWA agregados (192, 512 y apple-touch-icon).
+- Service Worker con cache ligera de assets y limpieza de versiones anteriores.
+
+## v0.6.2 - 2026-03-09
+- Correccion completa de pegado de imagenes desde portapapeles (Ctrl + V) en movimientos.
+- Nuevo fallback backend/frontend para navegadores que no permiten asignar archivos pegados al input file.
+- Validacion de seguridad para soportes pegados: base64, tamano, extension y MIME compatible.
+- Persistencia de soportes pegados en ingresos_detalle con almacenamiento fisico en storage/uploads/soportes/{id}.
+
+## v0.6.1 - 2026-03-09
+- Fix de compatibilidad en sesiones para PHP 7.2 evitando Notice en session_set_cookie_params.
+
 ## v0.6.0 - 2026-03-09
 - Envio de informe mensual por correo desde dashboard con servicio SMTP integrado.
 - Nuevo asesor KPI con IA (reglas internas y soporte OpenAI opcional).
@@ -78,6 +94,9 @@
 - `MAJOR`: cambios incompatibles.
 - `MINOR`: funcionalidades nuevas compatibles.
 - `PATCH`: correcciones y ajustes sin romper API funcional.
+
+
+
 
 
 

@@ -211,6 +211,17 @@ class MovimientoController
             Response::redirect($this->buildUrl('/movimientos/nuevo'));
         }
 
+        $storedClipboardSupports = $this->storeClipboardSupportsForMovement((int) $newMovementId, $userLogin);
+        if (!$storedClipboardSupports['ok']) {
+            $this->movimientoRepository->deleteSupportsByMovementId((int) $newMovementId);
+            $this->movimientoRepository->deleteMovimiento((int) $newMovementId);
+            $this->deleteSupportFiles(array_merge($storedSupports['files'], $storedClipboardSupports['files']));
+
+            $this->setFlash('movimientos_error', $storedClipboardSupports['message']);
+            $this->setFlash('movimientos_old_input', $formData);
+            Response::redirect($this->buildUrl('/movimientos/nuevo'));
+        }
+
         CsrfTokenManager::rotateToken($tokenName);
         $this->setFlash('movimientos_success', 'Movimiento registrado correctamente.');
         Response::redirect($this->buildUrl('/movimientos'));
@@ -268,6 +279,21 @@ class MovimientoController
         if (!$storedSupports['ok']) {
             $this->deleteSupportFiles($storedSupports['files']);
             $this->setFlash('movimientos_error', $storedSupports['message']);
+            $this->setFlash('movimientos_old_input', $formData);
+            Response::redirect($this->buildUrl('/movimientos/editar') . '&id=' . $movementId);
+        }
+
+        $storedClipboardSupports = $this->storeClipboardSupportsForMovement($movementId, $userLogin);
+        if (!$storedClipboardSupports['ok']) {
+            if (!empty($storedSupports['support_ids'])) {
+                $this->movimientoRepository->deleteSupportsByIds($storedSupports['support_ids']);
+            }
+            if (!empty($storedClipboardSupports['support_ids'])) {
+                $this->movimientoRepository->deleteSupportsByIds($storedClipboardSupports['support_ids']);
+            }
+
+            $this->deleteSupportFiles(array_merge($storedSupports['files'], $storedClipboardSupports['files']));
+            $this->setFlash('movimientos_error', $storedClipboardSupports['message']);
             $this->setFlash('movimientos_old_input', $formData);
             Response::redirect($this->buildUrl('/movimientos/editar') . '&id=' . $movementId);
         }
@@ -453,7 +479,7 @@ class MovimientoController
     private function validateUploadBatch()
     {
         if (!isset($_FILES['soportes']) || !is_array($_FILES['soportes'])) {
-            return array('valid' => true, 'message' => '');
+            return $this->validateClipboardSupportsPayload();
         }
 
         $files = $this->normalizeFilesArray($_FILES['soportes']);
@@ -471,18 +497,18 @@ class MovimientoController
             }
         }
 
-        return array('valid' => true, 'message' => '');
+        return $this->validateClipboardSupportsPayload();
     }
 
     private function storeSupportsForMovement($movementId, $username)
     {
         if (!isset($_FILES['soportes']) || !is_array($_FILES['soportes'])) {
-            return array('ok' => true, 'message' => '', 'files' => array());
+            return array('ok' => true, 'message' => '', 'files' => array(), 'support_ids' => array());
         }
 
         $files = $this->normalizeFilesArray($_FILES['soportes']);
         if (empty($files)) {
-            return array('ok' => true, 'message' => '', 'files' => array());
+            return array('ok' => true, 'message' => '', 'files' => array(), 'support_ids' => array());
         }
 
         $storedFiles = array();
@@ -498,29 +524,290 @@ class MovimientoController
             $targetDirectory = $this->ensureMovementSupportDirectory($movementId);
             if ($targetDirectory === '') {
                 $this->movimientoRepository->deleteSupportsByIds($supportIds);
-                return array('ok' => false, 'message' => 'No fue posible preparar directorio de soportes.', 'files' => $storedFiles);
+                return array('ok' => false, 'message' => 'No fue posible preparar directorio de soportes.', 'files' => $storedFiles, 'support_ids' => $supportIds);
             }
 
             $absolutePath = $targetDirectory . DIRECTORY_SEPARATOR . $storedName;
             if (!move_uploaded_file((string) $file['tmp_name'], $absolutePath)) {
                 $this->movimientoRepository->deleteSupportsByIds($supportIds);
-                return array('ok' => false, 'message' => 'No fue posible guardar un archivo de soporte.', 'files' => $storedFiles);
+                return array('ok' => false, 'message' => 'No fue posible guardar un archivo de soporte.', 'files' => $storedFiles, 'support_ids' => $supportIds);
             }
 
-            $supportId = $this->movimientoRepository->createSupportRecord($movementId, $storedName, $username);
-            if ($supportId === false) {
-                $this->movimientoRepository->deleteSupportsByIds($supportIds);
-                return array('ok' => false, 'message' => 'No fue posible registrar soporte en base de datos.', 'files' => $storedFiles);
-            }
-
-            $supportIds[] = (int) $supportId;
             $storedFiles[] = array(
                 'movement_id' => (int) $movementId,
                 'stored_name' => $storedName,
             );
+
+            $supportId = $this->movimientoRepository->createSupportRecord($movementId, $storedName, $username);
+            if ($supportId === false) {
+                $this->movimientoRepository->deleteSupportsByIds($supportIds);
+                return array('ok' => false, 'message' => 'No fue posible registrar soporte en base de datos.', 'files' => $storedFiles, 'support_ids' => $supportIds);
+            }
+
+            $supportIds[] = (int) $supportId;
         }
 
-        return array('ok' => true, 'message' => '', 'files' => $storedFiles);
+        return array('ok' => true, 'message' => '', 'files' => $storedFiles, 'support_ids' => $supportIds);
+    }
+
+    private function validateClipboardSupportsPayload()
+    {
+        $payloadResult = $this->getClipboardSupportsPayload();
+        if (!$payloadResult['valid']) {
+            return array('valid' => false, 'message' => $payloadResult['message']);
+        }
+
+        foreach ($payloadResult['items'] as $index => $item) {
+            $validation = $this->validateClipboardSupportItem($item);
+            if (!$validation['valid']) {
+                return array(
+                    'valid' => false,
+                    'message' => 'Soporte pegado #' . ($index + 1) . ': ' . $validation['message'],
+                );
+            }
+        }
+
+        return array('valid' => true, 'message' => '');
+    }
+
+    private function storeClipboardSupportsForMovement($movementId, $username)
+    {
+        $payloadResult = $this->getClipboardSupportsPayload();
+        if (!$payloadResult['valid']) {
+            return array('ok' => false, 'message' => $payloadResult['message'], 'files' => array(), 'support_ids' => array());
+        }
+
+        if (empty($payloadResult['items'])) {
+            return array('ok' => true, 'message' => '', 'files' => array(), 'support_ids' => array());
+        }
+
+        $storedFiles = array();
+        $supportIds = array();
+        $targetDirectory = $this->ensureMovementSupportDirectory($movementId);
+        if ($targetDirectory === '') {
+            return array('ok' => false, 'message' => 'No fue posible preparar directorio de soportes.', 'files' => array(), 'support_ids' => array());
+        }
+
+        foreach ($payloadResult['items'] as $item) {
+            $validation = $this->validateClipboardSupportItem($item);
+            if (!$validation['valid']) {
+                $this->movimientoRepository->deleteSupportsByIds($supportIds);
+                return array('ok' => false, 'message' => $validation['message'], 'files' => $storedFiles, 'support_ids' => $supportIds);
+            }
+
+            $originalName = isset($item['name']) ? trim((string) $item['name']) : '';
+            if ($originalName === '') {
+                $originalName = 'portapapeles.' . $validation['extension'];
+            }
+            $storedName = $this->buildStoredSupportFileName($originalName);
+
+            $decodeResult = $this->decodeClipboardBinaryData(isset($item['data_base64']) ? $item['data_base64'] : '');
+            if (!$decodeResult['valid']) {
+                $this->movimientoRepository->deleteSupportsByIds($supportIds);
+                return array('ok' => false, 'message' => $decodeResult['message'], 'files' => $storedFiles, 'support_ids' => $supportIds);
+            }
+
+            $absolutePath = $targetDirectory . DIRECTORY_SEPARATOR . $storedName;
+            $writtenBytes = @file_put_contents($absolutePath, $decodeResult['binary']);
+            if ($writtenBytes === false || (int) $writtenBytes <= 0) {
+                $this->movimientoRepository->deleteSupportsByIds($supportIds);
+                return array('ok' => false, 'message' => 'No fue posible guardar un soporte pegado.', 'files' => $storedFiles, 'support_ids' => $supportIds);
+            }
+
+            $storedFiles[] = array(
+                'movement_id' => (int) $movementId,
+                'stored_name' => $storedName,
+            );
+
+            $supportId = $this->movimientoRepository->createSupportRecord($movementId, $storedName, $username);
+            if ($supportId === false) {
+                $this->movimientoRepository->deleteSupportsByIds($supportIds);
+                return array('ok' => false, 'message' => 'No fue posible registrar soporte pegado en base de datos.', 'files' => $storedFiles, 'support_ids' => $supportIds);
+            }
+
+            $supportIds[] = (int) $supportId;
+        }
+
+        return array('ok' => true, 'message' => '', 'files' => $storedFiles, 'support_ids' => $supportIds);
+    }
+
+    private function getClipboardSupportsPayload()
+    {
+        $rawPayload = isset($_POST['soportes_clipboard_json']) ? trim((string) $_POST['soportes_clipboard_json']) : '';
+        if ($rawPayload === '') {
+            return array('valid' => true, 'items' => array(), 'message' => '');
+        }
+
+        $decoded = json_decode($rawPayload, true);
+        if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
+            return array('valid' => false, 'items' => array(), 'message' => 'Los soportes pegados tienen formato invalido.');
+        }
+
+        if (!is_array($decoded)) {
+            return array('valid' => false, 'items' => array(), 'message' => 'Los soportes pegados deben enviarse en formato de lista.');
+        }
+
+        if (isset($decoded['data_base64'])) {
+            $decoded = array($decoded);
+        }
+
+        $items = array_values($decoded);
+        if (count($items) > 20) {
+            return array('valid' => false, 'items' => array(), 'message' => 'Solo puedes pegar hasta 20 soportes por movimiento.');
+        }
+
+        return array('valid' => true, 'items' => $items, 'message' => '');
+    }
+
+    private function validateClipboardSupportItem($item)
+    {
+        if (!is_array($item)) {
+            return array('valid' => false, 'message' => 'Estructura de soporte pegado invalida.', 'extension' => '', 'mime' => '', 'size_bytes' => 0);
+        }
+
+        $fileName = isset($item['name']) ? trim((string) $item['name']) : '';
+        $declaredMime = isset($item['mime']) ? strtolower(trim((string) $item['mime'])) : '';
+        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        $decodedData = $this->decodeClipboardBinaryData(isset($item['data_base64']) ? $item['data_base64'] : '');
+
+        if (!$decodedData['valid']) {
+            return array('valid' => false, 'message' => $decodedData['message'], 'extension' => '', 'mime' => '', 'size_bytes' => 0);
+        }
+
+        $binary = $decodedData['binary'];
+        $sizeBytes = strlen($binary);
+        $maxBytes = ((int) $this->appConfig['files_max_upload_mb']) * 1024 * 1024;
+        if ($sizeBytes <= 0 || $sizeBytes > $maxBytes) {
+            return array('valid' => false, 'message' => 'Tamano de archivo fuera del limite permitido.', 'extension' => '', 'mime' => '', 'size_bytes' => $sizeBytes);
+        }
+
+        $detectedMime = $this->detectMimeFromBinary($binary);
+        $effectiveMime = $detectedMime !== '' ? $detectedMime : $declaredMime;
+        if ($effectiveMime === '') {
+            return array('valid' => false, 'message' => 'No fue posible detectar el tipo de archivo pegado.', 'extension' => '', 'mime' => '', 'size_bytes' => $sizeBytes);
+        }
+
+        $allowedMime = $this->normalizeMimeList(isset($this->appConfig['files_allowed_mime']) ? $this->appConfig['files_allowed_mime'] : array());
+        if (!in_array($effectiveMime, $allowedMime, true)) {
+            return array('valid' => false, 'message' => 'Tipo MIME de archivo no permitido.', 'extension' => '', 'mime' => $effectiveMime, 'size_bytes' => $sizeBytes);
+        }
+
+        if ($extension === '') {
+            $extension = $this->extensionByMime($effectiveMime);
+        }
+
+        $allowedExtensions = $this->normalizeExtensionList(isset($this->appConfig['files_allowed_extensions']) ? $this->appConfig['files_allowed_extensions'] : array());
+        if ($extension === '' || !in_array($extension, $allowedExtensions, true)) {
+            return array('valid' => false, 'message' => 'Extension de archivo no permitida.', 'extension' => $extension, 'mime' => $effectiveMime, 'size_bytes' => $sizeBytes);
+        }
+
+        if (!$this->isMimeCompatibleWithExtension($effectiveMime, $extension)) {
+            return array('valid' => false, 'message' => 'El contenido del archivo no coincide con su extension.', 'extension' => $extension, 'mime' => $effectiveMime, 'size_bytes' => $sizeBytes);
+        }
+
+        return array('valid' => true, 'message' => '', 'extension' => $extension, 'mime' => $effectiveMime, 'size_bytes' => $sizeBytes);
+    }
+
+    private function decodeClipboardBinaryData($base64Value)
+    {
+        $encoded = preg_replace('/\s+/', '', (string) $base64Value);
+        if (!is_string($encoded) || $encoded === '') {
+            return array('valid' => false, 'message' => 'No se encontro contenido del archivo pegado.', 'binary' => '');
+        }
+
+        $binary = base64_decode($encoded, true);
+        if ($binary === false || $binary === '') {
+            return array('valid' => false, 'message' => 'No fue posible decodificar el archivo pegado.', 'binary' => '');
+        }
+
+        return array('valid' => true, 'message' => '', 'binary' => $binary);
+    }
+
+    private function detectMimeFromBinary($binaryData)
+    {
+        if (!is_string($binaryData) || $binaryData === '') {
+            return '';
+        }
+
+        if (function_exists('finfo_open') && function_exists('finfo_buffer')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            if ($finfo !== false) {
+                $detected = finfo_buffer($finfo, $binaryData);
+                finfo_close($finfo);
+                if (is_string($detected)) {
+                    return strtolower(trim($detected));
+                }
+            }
+        }
+
+        return '';
+    }
+
+    private function normalizeExtensionList($extensions)
+    {
+        if (!is_array($extensions)) {
+            return array();
+        }
+
+        $normalized = array();
+        foreach ($extensions as $extension) {
+            $item = strtolower(trim((string) $extension));
+            if ($item !== '') {
+                $normalized[] = ltrim($item, '.');
+            }
+        }
+
+        return array_values(array_unique($normalized));
+    }
+
+    private function normalizeMimeList($mimeValues)
+    {
+        if (!is_array($mimeValues)) {
+            return array();
+        }
+
+        $normalized = array();
+        foreach ($mimeValues as $mimeValue) {
+            $item = strtolower(trim((string) $mimeValue));
+            if ($item !== '') {
+                $normalized[] = $item;
+            }
+        }
+
+        return array_values(array_unique($normalized));
+    }
+
+    private function extensionByMime($mimeType)
+    {
+        $map = array(
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            'application/pdf' => 'pdf',
+        );
+
+        $key = strtolower(trim((string) $mimeType));
+        return isset($map[$key]) ? $map[$key] : '';
+    }
+
+    private function isMimeCompatibleWithExtension($mimeType, $extension)
+    {
+        $mime = strtolower(trim((string) $mimeType));
+        $ext = strtolower(trim((string) $extension));
+
+        $map = array(
+            'jpg' => array('image/jpeg'),
+            'jpeg' => array('image/jpeg'),
+            'png' => array('image/png'),
+            'webp' => array('image/webp'),
+            'pdf' => array('application/pdf'),
+        );
+
+        if (!isset($map[$ext])) {
+            return false;
+        }
+
+        return in_array($mime, $map[$ext], true);
     }
 
     private function buildMovementPersistenceData(array $formData, $userLogin)

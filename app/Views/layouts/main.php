@@ -29,6 +29,10 @@ $currentUserLabel = $isAuthenticated
     <title><?php echo escape_html($title); ?></title>
     <link rel="manifest" href="<?php echo escape_html($baseUrlSafe); ?>/public/manifest.webmanifest?v=<?php echo escape_html($assetVersionSafe); ?>">
     <meta name="theme-color" content="#1f2937">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Presupuesto">
+    <link rel="apple-touch-icon" href="<?php echo escape_html($baseUrlSafe); ?>/public/assets/pwa/apple-touch-icon.png?v=<?php echo escape_html($assetVersionSafe); ?>">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <?php if ($isAuthenticated) : ?>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
@@ -101,6 +105,10 @@ $currentUserLabel = $isAuthenticated
                 </div>
 
                 <div class="user-block">
+                    <button type="button" class="btn btn-ghost btn-inline btn-app-install js-app-install-button hidden" title="Instalar app" aria-label="Instalar app">
+                        <i class="bi bi-phone"></i>
+                        <span class="btn-app-install-text">Instalar app</span>
+                    </button>
                     <button type="button" id="theme-toggle" class="btn btn-ghost btn-icon btn-theme-toggle" title="Cambiar tema" aria-label="Cambiar tema">
                         <i class="bi bi-moon-stars"></i>
                     </button>
@@ -138,12 +146,41 @@ $currentUserLabel = $isAuthenticated
             <i class="bi bi-wallet2"></i>
             <span>PRESUPUESTO</span>
         </div>
-        <div class="header-badge"><i class="bi bi-shield-lock"></i> Acceso seguro</div>
+        <div class="auth-topbar-actions">
+            <button type="button" class="btn btn-ghost btn-inline btn-app-install js-app-install-button hidden" title="Instalar app" aria-label="Instalar app">
+                <i class="bi bi-phone"></i>
+                <span class="btn-app-install-text">Instalar app</span>
+            </button>
+            <div class="header-badge"><i class="bi bi-shield-lock"></i> Acceso seguro</div>
+        </div>
     </header>
     <main class="app-main">
         <?php echo $content; ?>
     </main>
 <?php endif; ?>
+
+<div id="pwa-install-modal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-card pwa-modal-card" role="dialog" aria-modal="true" aria-labelledby="pwa-install-modal-title">
+        <div class="modal-header">
+            <h3 id="pwa-install-modal-title"><i class="bi bi-phone"></i> Instalar app</h3>
+            <button type="button" class="btn btn-secondary btn-inline btn-mini btn-icon-only js-close-pwa-modal" title="Cerrar" aria-label="Cerrar">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p id="pwa-install-modal-text" class="pwa-modal-text"></p>
+            <ol id="pwa-install-modal-steps" class="pwa-modal-steps"></ol>
+            <div class="notification-actions">
+                <button type="button" id="pwa-install-confirm" class="btn btn-primary btn-inline hidden">
+                    <i class="bi bi-download"></i> Instalar ahora
+                </button>
+                <button type="button" class="btn btn-secondary btn-inline js-close-pwa-modal">
+                    <i class="bi bi-x-circle"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php if ($isAuthenticated) : ?>
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>

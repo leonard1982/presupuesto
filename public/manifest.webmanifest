@@ -1,10 +1,41 @@
 {
-  "name": "Presupuesto Web",
+  "name": "Presupuesto",
   "short_name": "Presupuesto",
-  "start_url": "/",
+  "start_url": "../index.php?route=dashboard",
+  "scope": "../",
   "display": "standalone",
-  "background_color": "#f4f6fb",
-  "theme_color": "#1f2937",
-  "description": "Sistema web de presupuestos y movimientos.",
-  "icons": []
+  "background_color": "#eef3f9",
+  "theme_color": "#0f4c81",
+  "description": "Control diario de presupuestos, gastos, costos y movimientos.",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "assets/pwa/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/pwa/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/pwa/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "../index.php?route=dashboard",
+      "description": "Resumen general"
+    },
+    {
+      "name": "Nuevo movimiento",
+      "url": "../index.php?route=movimientos/nuevo",
+      "description": "Registrar gasto o costo"
+    }
+  ]
 }

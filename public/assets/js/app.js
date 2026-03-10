@@ -74,6 +74,23 @@
         fieldElement.value = formatCurrencyDisplay(fieldElement.value, allowEmpty);
     }
 
+    function extensionByMimeType(mimeType) {
+        var normalizedMime = String(mimeType || '').toLowerCase();
+        if (normalizedMime === 'image/jpeg') {
+            return 'jpg';
+        }
+        if (normalizedMime === 'image/png') {
+            return 'png';
+        }
+        if (normalizedMime === 'image/webp') {
+            return 'webp';
+        }
+        if (normalizedMime === 'image/gif') {
+            return 'gif';
+        }
+        return 'png';
+    }
+
     var body = document.body;
     var baseUrl = body ? (body.getAttribute('data-base-url') || '') : '';
 
@@ -156,6 +173,10 @@
         var supportsInput = document.getElementById('soportes');
         var supportsFileCount = document.getElementById('soportes-file-count');
         var supportsFileList = document.getElementById('soportes-file-list');
+        var supportsClipboardInput = document.getElementById('soportes_clipboard_json');
+        var supportsPasteZone = document.getElementById('soportes-paste-zone');
+        var supportsPasteFeedback = document.getElementById('soportes-paste-feedback');
+        var clipboardFallbackItems = [];
         var moneyInputs = movementForm.querySelectorAll('.js-money-input');
 
         function renderSupportsSelection() {
@@ -163,30 +184,239 @@
                 return;
             }
 
-            if (!supportsInput.files || supportsInput.files.length === 0) {
+            var regularFilesCount = supportsInput.files ? supportsInput.files.length : 0;
+            var fallbackFilesCount = clipboardFallbackItems.length;
+            var totalFilesCount = regularFilesCount + fallbackFilesCount;
+
+            if (totalFilesCount === 0) {
                 supportsFileCount.textContent = 'Sin archivos seleccionados';
                 supportsFileList.innerHTML = '';
                 supportsFileList.classList.add('hidden');
                 return;
             }
 
-            supportsFileCount.textContent = supportsInput.files.length === 1
+            supportsFileCount.textContent = totalFilesCount === 1
                 ? '1 archivo seleccionado'
-                : (String(supportsInput.files.length) + ' archivos seleccionados');
+                : (String(totalFilesCount) + ' archivos seleccionados');
 
             var listHtml = '';
-            for (var supportListIndex = 0; supportListIndex < supportsInput.files.length; supportListIndex += 1) {
+            for (var supportListIndex = 0; supportListIndex < regularFilesCount; supportListIndex += 1) {
                 listHtml += '<li><i class="bi bi-file-earmark"></i> ' + escapeHtml(supportsInput.files[supportListIndex].name || '') + '</li>';
+            }
+            for (var fallbackIndex = 0; fallbackIndex < fallbackFilesCount; fallbackIndex += 1) {
+                listHtml += '<li><i class="bi bi-clipboard-image"></i> ' + escapeHtml(clipboardFallbackItems[fallbackIndex].name || 'Imagen portapapeles') + ' <span class="muted">(portapapeles)</span></li>';
             }
 
             supportsFileList.innerHTML = listHtml;
             supportsFileList.classList.remove('hidden');
         }
 
+        function syncClipboardPayload() {
+            if (!supportsClipboardInput) {
+                return;
+            }
+
+            if (clipboardFallbackItems.length === 0) {
+                supportsClipboardInput.value = '';
+                return;
+            }
+
+            supportsClipboardInput.value = JSON.stringify(clipboardFallbackItems);
+        }
+
+        function updatePasteFeedback(message, isError) {
+            if (!supportsPasteFeedback) {
+                return;
+            }
+
+            supportsPasteFeedback.textContent = message;
+            supportsPasteFeedback.classList.remove('hidden');
+            supportsPasteFeedback.classList.toggle('text-danger', !!isError);
+        }
+
+        function addPastedImagesToSupports(filesToAdd) {
+            if (!supportsInput || !filesToAdd || filesToAdd.length === 0) {
+                return false;
+            }
+
+            if (typeof DataTransfer === 'undefined') {
+                updatePasteFeedback('Tu navegador no soporta pegado directo en este formulario.', true);
+                return false;
+            }
+
+            var existingCount = supportsInput.files ? supportsInput.files.length : 0;
+            var dataTransfer = new DataTransfer();
+            if (supportsInput.files && supportsInput.files.length > 0) {
+                for (var currentIndex = 0; currentIndex < supportsInput.files.length; currentIndex += 1) {
+                    dataTransfer.items.add(supportsInput.files[currentIndex]);
+                }
+            }
+
+            for (var addIndex = 0; addIndex < filesToAdd.length; addIndex += 1) {
+                dataTransfer.items.add(filesToAdd[addIndex]);
+            }
+
+            try {
+                supportsInput.files = dataTransfer.files;
+            } catch (assignError) {
+                return false;
+            }
+
+            var expectedCount = existingCount + filesToAdd.length;
+            if (!supportsInput.files || supportsInput.files.length < expectedCount) {
+                return false;
+            }
+
+            renderSupportsSelection();
+            return true;
+        }
+
+        function convertFileToPayload(fileObject, callback) {
+            if (!fileObject || typeof FileReader === 'undefined') {
+                callback(null);
+                return;
+            }
+
+            var reader = new FileReader();
+            reader.onload = function () {
+                var result = String(reader.result || '');
+                var base64Marker = 'base64,';
+                var markerPosition = result.indexOf(base64Marker);
+                if (markerPosition === -1) {
+                    callback(null);
+                    return;
+                }
+
+                var encoded = result.substring(markerPosition + base64Marker.length);
+                if (encoded === '') {
+                    callback(null);
+                    return;
+                }
+
+                callback({
+                    name: String(fileObject.name || ('portapapeles_' + String(Date.now()) + '.png')),
+                    mime: String(fileObject.type || 'image/png'),
+                    data_base64: encoded
+                });
+            };
+            reader.onerror = function () {
+                callback(null);
+            };
+            reader.readAsDataURL(fileObject);
+        }
+
+        function addPastedImagesAsFallback(filesToAdd) {
+            if (!filesToAdd || filesToAdd.length === 0) {
+                return;
+            }
+
+            var processedCount = 0;
+            var insertedCount = 0;
+
+            function finish() {
+                processedCount += 1;
+                if (processedCount < filesToAdd.length) {
+                    return;
+                }
+
+                syncClipboardPayload();
+                renderSupportsSelection();
+
+                if (insertedCount > 0) {
+                    updatePasteFeedback(insertedCount === 1
+                        ? 'Se agrego 1 imagen desde el portapapeles.'
+                        : ('Se agregaron ' + String(insertedCount) + ' imagenes desde el portapapeles.'), false);
+                } else {
+                    updatePasteFeedback('No fue posible procesar las imagenes del portapapeles.', true);
+                }
+            }
+
+            for (var fileIndex = 0; fileIndex < filesToAdd.length; fileIndex += 1) {
+                convertFileToPayload(filesToAdd[fileIndex], function (payload) {
+                    if (payload) {
+                        clipboardFallbackItems.push(payload);
+                        insertedCount += 1;
+                    }
+                    finish();
+                });
+            }
+        }
+
+        function handleClipboardPaste(event) {
+            if (!event || !event.clipboardData || !event.clipboardData.items) {
+                return;
+            }
+
+            var addedImages = [];
+            var clipboardItems = event.clipboardData.items;
+            for (var itemIndex = 0; itemIndex < clipboardItems.length; itemIndex += 1) {
+                var clipboardItem = clipboardItems[itemIndex];
+                if (!clipboardItem || clipboardItem.kind !== 'file') {
+                    continue;
+                }
+
+                var mimeType = String(clipboardItem.type || '').toLowerCase();
+                if (mimeType.indexOf('image/') !== 0) {
+                    continue;
+                }
+
+                var clipboardFile = clipboardItem.getAsFile();
+                if (!clipboardFile) {
+                    continue;
+                }
+
+                var extension = extensionByMimeType(mimeType);
+                var generatedName = 'portapapeles_' + String(Date.now()) + '_' + String(itemIndex + 1) + '.' + extension;
+
+                var renamedFile = clipboardFile;
+                try {
+                    renamedFile = new File([clipboardFile], generatedName, {
+                        type: clipboardFile.type || 'image/png',
+                        lastModified: Date.now()
+                    });
+                } catch (fileError) {
+                    renamedFile = clipboardFile;
+                }
+
+                addedImages.push(renamedFile);
+            }
+
+            if (addedImages.length === 0) {
+                return;
+            }
+
+            event.preventDefault();
+            var ok = addPastedImagesToSupports(addedImages);
+            if (ok) {
+                if (supportsClipboardInput) {
+                    clipboardFallbackItems = [];
+                    syncClipboardPayload();
+                }
+                updatePasteFeedback(addedImages.length === 1
+                    ? 'Se agrego 1 imagen desde el portapapeles.'
+                    : ('Se agregaron ' + String(addedImages.length) + ' imagenes desde el portapapeles.'), false);
+                return;
+            }
+
+            addPastedImagesAsFallback(addedImages);
+        }
+
         if (supportsInput) {
             supportsInput.addEventListener('change', renderSupportsSelection);
             renderSupportsSelection();
         }
+
+        if (supportsPasteZone) {
+            supportsPasteZone.addEventListener('click', function () {
+                supportsPasteZone.focus();
+            });
+
+            supportsPasteZone.addEventListener('paste', handleClipboardPaste);
+        }
+
+        movementForm.addEventListener('paste', function (event) {
+            handleClipboardPaste(event);
+        });
 
         if (moneyInputs && moneyInputs.length > 0) {
             for (var moneyIndex = 0; moneyIndex < moneyInputs.length; moneyIndex += 1) {
@@ -203,6 +433,8 @@
         }
 
         movementForm.addEventListener('submit', function (event) {
+            syncClipboardPayload();
+
             if (moneyInputs && moneyInputs.length > 0) {
                 for (var moneySubmitIndex = 0; moneySubmitIndex < moneyInputs.length; moneySubmitIndex += 1) {
                     applyMoneyInputFormatting(moneyInputs[moneySubmitIndex]);
@@ -511,6 +743,87 @@
     var supportsModalBody = document.getElementById('supports-modal-body');
     var supportsModalTitle = document.getElementById('supports-modal-title');
     var movementSaveModal = document.getElementById('movement-save-modal');
+    var installButtons = document.querySelectorAll('.js-app-install-button');
+    var pwaInstallModal = document.getElementById('pwa-install-modal');
+    var pwaInstallModalText = document.getElementById('pwa-install-modal-text');
+    var pwaInstallModalSteps = document.getElementById('pwa-install-modal-steps');
+    var pwaInstallConfirm = document.getElementById('pwa-install-confirm');
+    var deferredInstallPrompt = null;
+
+    function setInstallButtonsVisibility(isVisible) {
+        if (!installButtons || installButtons.length === 0) {
+            return;
+        }
+
+        for (var buttonIndex = 0; buttonIndex < installButtons.length; buttonIndex += 1) {
+            installButtons[buttonIndex].classList.toggle('hidden', !isVisible);
+        }
+    }
+
+    function closePwaInstallModal() {
+        if (!pwaInstallModal) {
+            return;
+        }
+
+        pwaInstallModal.classList.add('hidden');
+        pwaInstallModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function openPwaInstallModal(mode) {
+        if (!pwaInstallModal || !pwaInstallModalText || !pwaInstallModalSteps || !pwaInstallConfirm) {
+            return;
+        }
+
+        var steps = arrayFromPwaSteps(mode);
+        pwaInstallModalText.textContent = pwaDescriptionByMode(mode);
+        pwaInstallModalSteps.innerHTML = '';
+
+        for (var stepIndex = 0; stepIndex < steps.length; stepIndex += 1) {
+            var listItem = document.createElement('li');
+            listItem.textContent = steps[stepIndex];
+            pwaInstallModalSteps.appendChild(listItem);
+        }
+
+        pwaInstallConfirm.classList.toggle('hidden', mode !== 'prompt' || !deferredInstallPrompt);
+        pwaInstallModal.classList.remove('hidden');
+        pwaInstallModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function pwaDescriptionByMode(mode) {
+        if (mode === 'prompt') {
+            return 'Puedes instalar esta aplicacion en tu celular para abrirla rapido desde la pantalla principal.';
+        }
+
+        if (mode === 'ios') {
+            return 'En iPhone o iPad la instalacion se hace desde el menu de compartir del navegador.';
+        }
+
+        return 'Puedes agregar esta aplicacion a inicio desde el menu de tu navegador para usarla como app.';
+    }
+
+    function arrayFromPwaSteps(mode) {
+        if (mode === 'prompt') {
+            return [
+                'Pulsa "Instalar ahora".',
+                'Confirma la instalacion en el cuadro del navegador.',
+                'Abre la app desde tu pantalla principal.'
+            ];
+        }
+
+        if (mode === 'ios') {
+            return [
+                'Abre esta pagina en Safari.',
+                'Pulsa el boton Compartir del navegador.',
+                'Elige "Agregar a pantalla de inicio".'
+            ];
+        }
+
+        return [
+            'Abre el menu del navegador (tres puntos).',
+            'Selecciona "Instalar aplicacion" o "Agregar a pantalla de inicio".',
+            'Confirma y abre la app desde tu pantalla principal.'
+        ];
+    }
 
     function closeSupportsModal() {
         if (!supportsModal) {
@@ -593,6 +906,42 @@
             return;
         }
 
+        var openInstallButton = event.target.closest('.js-app-install-button');
+        if (openInstallButton) {
+            event.preventDefault();
+            if (deferredInstallPrompt) {
+                openPwaInstallModal('prompt');
+            } else {
+                var isIosDevice = /iphone|ipad|ipod/i.test(window.navigator.userAgent || '');
+                openPwaInstallModal(isIosDevice ? 'ios' : 'general');
+            }
+            return;
+        }
+
+        var closeInstallButton = event.target.closest('.js-close-pwa-modal');
+        if (closeInstallButton) {
+            event.preventDefault();
+            closePwaInstallModal();
+            return;
+        }
+
+        if (pwaInstallConfirm && event.target.closest('#pwa-install-confirm')) {
+            event.preventDefault();
+            if (deferredInstallPrompt && typeof deferredInstallPrompt.prompt === 'function') {
+                deferredInstallPrompt.prompt();
+                deferredInstallPrompt.userChoice.then(function () {
+                    deferredInstallPrompt = null;
+                    setInstallButtonsVisibility(false);
+                    closePwaInstallModal();
+                }).catch(function () {
+                    closePwaInstallModal();
+                });
+            } else {
+                closePwaInstallModal();
+            }
+            return;
+        }
+
         var openButton = event.target.closest('.js-open-supports-modal');
         if (openButton) {
             event.preventDefault();
@@ -609,6 +958,11 @@
 
         if (supportsModal && event.target === supportsModal) {
             closeSupportsModal();
+            return;
+        }
+
+        if (pwaInstallModal && event.target === pwaInstallModal) {
+            closePwaInstallModal();
         }
     });
 
@@ -616,6 +970,7 @@
         if (event.key === 'Escape') {
             closeSupportsModal();
             closeMovementSaveModal();
+            closePwaInstallModal();
         }
     });
 
@@ -717,6 +1072,32 @@
 
     var enablePwa = body && body.getAttribute('data-enable-pwa') === 'true';
     var assetVersion = body ? (body.getAttribute('data-asset-version') || '0.1.0') : '0.1.0';
+    var isStandaloneMode = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+    var isIosStandalone = typeof window.navigator.standalone !== 'undefined' && window.navigator.standalone === true;
+    var isAppAlreadyInstalled = isStandaloneMode || isIosStandalone;
+    var isIosDevice = /iphone|ipad|ipod/i.test(window.navigator.userAgent || '');
+
+    if (enablePwa) {
+        if (isAppAlreadyInstalled) {
+            setInstallButtonsVisibility(false);
+        } else {
+            setInstallButtonsVisibility(true);
+        }
+
+        window.addEventListener('beforeinstallprompt', function (event) {
+            event.preventDefault();
+            deferredInstallPrompt = event;
+            setInstallButtonsVisibility(true);
+        });
+
+        window.addEventListener('appinstalled', function () {
+            deferredInstallPrompt = null;
+            setInstallButtonsVisibility(false);
+            closePwaInstallModal();
+        });
+    } else {
+        setInstallButtonsVisibility(false);
+    }
 
     if (enablePwa && 'serviceWorker' in navigator) {
         navigator.serviceWorker.register(baseUrl + '/public/sw.js?v=' + encodeURIComponent(assetVersion)).catch(function () {

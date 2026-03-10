@@ -10,7 +10,7 @@ return array(
     'debug' => Environment::getBoolean('APP_DEBUG', false),
     'base_url' => trim(Environment::get('APP_BASE_URL', 'AUTO')),
     'timezone' => Environment::get('APP_TIMEZONE', 'America/Bogota'),
-    'enable_pwa' => Environment::getBoolean('APP_ENABLE_PWA', false),
+    'enable_pwa' => Environment::getBoolean('APP_ENABLE_PWA', true),
     'asset_version' => Environment::get('APP_ASSET_VERSION', '0.1.0'),
     'session_name' => Environment::get('APP_SESSION_NAME', 'presupuesto_session'),
     'session_lifetime_seconds' => Environment::getInteger('APP_SESSION_LIFETIME_SECONDS', 7200),

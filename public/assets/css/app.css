@@ -54,6 +54,10 @@ a {
     font-size: 0.92rem;
 }
 
+.text-danger {
+    color: #b42318 !important;
+}
+
 .title-with-icon {
     display: inline-flex;
     align-items: center;
@@ -77,6 +81,12 @@ a {
     background: rgba(255, 255, 255, 0.88);
     border-bottom: 1px solid rgba(151, 172, 194, 0.32);
     backdrop-filter: blur(8px);
+}
+
+.auth-topbar-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .header-badge {
@@ -232,6 +242,28 @@ a {
 .user-block {
     display: inline-flex;
     align-items: center;
+    gap: 0.45rem;
+}
+
+.btn-app-install {
+    min-height: 38px;
+    border: 1px solid #c7daef;
+    background: #edf5fe;
+    color: #12497b;
+    white-space: nowrap;
+}
+
+.btn-app-install:hover {
+    background: #e2effd;
+}
+
+.btn-app-install .btn-app-install-text {
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.btn-app-install i {
+    margin-right: 0.3rem;
 }
 
 .user-menu {
@@ -707,6 +739,30 @@ textarea {
     font-size: 0.86rem;
 }
 
+.file-paste-zone {
+    margin-top: 0.62rem;
+    border: 1px dashed #bfd2e7;
+    border-radius: 10px;
+    padding: 0.62rem 0.7rem;
+    background: #ffffff;
+    color: #33567a;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.file-paste-zone:focus {
+    outline: 0;
+    border-color: #6ea5da;
+    box-shadow: 0 0 0 3px rgba(16, 111, 194, 0.14);
+}
+
+.file-paste-zone strong {
+    color: #0f4c81;
+}
+
 .table-actions-stack {
     display: flex;
     flex-direction: column;
@@ -808,6 +864,25 @@ textarea {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
+}
+
+.pwa-modal-card {
+    width: min(520px, 100%);
+}
+
+.pwa-modal-text {
+    margin: 0;
+    color: #1a3552;
+    font-weight: 600;
+}
+
+.pwa-modal-steps {
+    margin: 0.72rem 0 0.35rem;
+    padding-left: 1.18rem;
+    display: grid;
+    gap: 0.34rem;
+    color: #2d4f72;
+    font-weight: 600;
 }
 
 .modal-header {
@@ -1403,6 +1478,16 @@ body.theme-dark .file-picker-list li {
     color: #e2eefc;
 }
 
+body.theme-dark .file-paste-zone {
+    background: #142a40;
+    border-color: #355070;
+    color: #d3e6fb;
+}
+
+body.theme-dark .file-paste-zone strong {
+    color: #9fcbff;
+}
+
 body.theme-dark .link-action {
     color: #9eceff;
 }
@@ -1419,6 +1504,10 @@ body.theme-dark .table-professional th {
 body.theme-dark .table-professional td,
 body.theme-dark .muted {
     color: #c4d4e8;
+}
+
+body.theme-dark .text-danger {
+    color: #ff9e9e !important;
 }
 
 body.theme-dark .user-menu summary {
@@ -1552,6 +1641,21 @@ body.theme-dark .notification-body p {
     color: #e2eefc;
 }
 
+body.theme-dark .btn-app-install {
+    background: #1a3047;
+    border-color: #35516f;
+    color: #dcecff;
+}
+
+body.theme-dark .btn-app-install:hover {
+    background: #26415d;
+}
+
+body.theme-dark .pwa-modal-text,
+body.theme-dark .pwa-modal-steps {
+    color: #d8e8fa;
+}
+
 body.theme-dark .dataTables_wrapper .dt-tools .dt-button.dt-export-button {
     background: #1d3248 !important;
     border-color: #355070 !important;
@@ -1658,6 +1762,21 @@ body.theme-dark .dataTables_wrapper .dt-tools .dt-button.dt-export-button:hover 
         order: 3;
         max-width: none;
         width: 100%;
+    }
+
+    .btn-app-install .btn-app-install-text {
+        display: none;
+    }
+
+    .btn-app-install {
+        width: 38px;
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .btn-app-install i {
+        margin-right: 0;
     }
 
     .app-main {

@@ -147,3 +147,36 @@
 - Se agrega opcion de `Generar consejo IA` en dashboard con panel de recomendaciones KPI.
 - El asesor KPI funciona en modo hibrido: reglas internas + OpenAI opcional si hay API key.
 - Se agregan validaciones frontend/backend para los formularios de correo y consejo KPI.
+
+## 2026-03-09 - Correccion compatibilidad de sesiones en PHP 7.2
+- Se corrige `SessionManager` para evitar `Notice: Array to string conversion` en servidores con PHP 7.2.
+- `session_set_cookie_params` ahora usa estrategia dual:
+  - PHP >= 7.3 con arreglo y `samesite`.
+  - PHP 7.2 con firma legacy y `samesite` en `path`.
+
+## 2026-03-09 - Soportes por portapapeles en movimientos (Ctrl + V)
+- Se completa flujo end-to-end para soportes pegados desde portapapeles en formulario de movimientos.
+- El frontend ya no depende solo de `input[type=file]`: si el navegador no permite asignar `DataTransfer`, usa fallback JSON (`soportes_clipboard_json`).
+- El backend procesa y valida los soportes pegados con reglas de seguridad:
+  - base64 valido
+  - tamano maximo por archivo
+  - extension permitida
+  - MIME detectado y compatible con extension
+- Los soportes pegados se guardan en `storage/uploads/soportes/{id_movimiento}` y se registran en `ingresos_detalle`.
+- Se agregan rollbacks de integridad para guardar/actualizar:
+  - limpieza de archivos escritos
+  - limpieza de registros de soporte insertados parcialmente
+  - mantenimiento de consistencia en errores.
+
+## 2026-03-09 - Instalacion en celular (PWA) habilitada
+- Se habilita opcion visible de `Instalar app` en cabecera para usuarios autenticados y pantalla de login.
+- Se agrega modal guiado de instalacion:
+  - instalacion directa en Android/Chrome cuando el navegador la permite
+  - guia para iPhone/iPad por `Agregar a pantalla de inicio`
+- Se actualiza `manifest.webmanifest` para subruta del proyecto (`../`) con accesos directos a dashboard y nuevo movimiento.
+- Se agregan iconos PWA locales:
+  - `public/assets/pwa/icon-192.png`
+  - `public/assets/pwa/icon-512.png`
+  - `public/assets/pwa/apple-touch-icon.png`
+- Se mejora `sw.js` con cache ligera de recursos estaticos y limpieza de versiones antiguas.
+- Se activa PWA por defecto en configuracion (`APP_ENABLE_PWA` con valor default `true`, configurable por `.env`).
