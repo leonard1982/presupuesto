@@ -1,5 +1,29 @@
-﻿# Cambios Generales
+# Cambios Generales
 
+## 2026-03-09 - Productividad integral PC y movil en movimientos
+- Se implementa barra de filtros sticky en movimientos con acceso rapido visible durante scroll.
+- Se agregan filtros rapidos por fecha: Hoy, Semana, Mes y Todo.
+- Se agrega panel lateral de resumen rapido en escritorio al seleccionar filas del listado.
+- Se reemplaza popup invasivo de soportes por selector contextual no bloqueante en la columna de soportes.
+- Se redisenia la lista movil para dejar 3 acciones primarias visibles por registro:
+  - ver detalle
+  - editar
+  - eliminar
+- Se amplian detalles moviles con soportes y accesos secundarios (ticket/ver-descargar soporte) dentro del popup.
+- Se agrega modo de captura rapida en formulario de movimientos para ocultar campos avanzados y acelerar digitacion.
+- Se agregan atajos de teclado para uso diario:
+  - N nuevo movimiento
+  - F foco de busqueda
+  - E exportar Excel en movimientos
+- Se implementa persistencia de preferencias por usuario (local storage con namespace por login):
+  - tema
+  - filtros de movimientos
+  - cantidad de registros por tabla (cuando el listado define clave de preferencia).
+- Se extiende soporte de preferencias de paginacion a:
+  - movimientos
+  - clasificaciones
+  - medios de pago
+  - movimientos recientes del dashboard.
 ## 2026-03-09 - Fase 2 base tecnica inicial
 - Se crea estructura de carpetas profesional y modular.
 - Se agrega configuracion centralizada por entorno (`.env`).
@@ -53,7 +77,7 @@
 - Se elimina el texto tecnico de migracion MD5 en la pantalla de login para evitar ruido al usuario final.
 - Se implementa opcion `Recordar usuario en este dispositivo` con cookie segura (sin guardar contrasena).
 - Se agrega compatibilidad de cookies para PHP 7.2 a 8.2 mediante `CookieManager`.
-- Se rediseña el login con interfaz profesional y responsive (desktop/movil).
+- Se redise�a el login con interfaz profesional y responsive (desktop/movil).
 - Se mejora validacion frontend del formulario con mensajes en pantalla y boton para ver/ocultar contrasena.
 
 ## 2026-03-09 - Navegacion profesional y modulos operativos iniciales
@@ -263,3 +287,9 @@
   - usuario
 - En escritorio se mantiene la tabla DataTables actual.
 - En movil se oculta la tabla y se muestra el nuevo listado adaptado sin desbordes.
+
+## 2026-03-09 - Columna numerica compacta en catalogos
+- Se ajusta ancho de la columna numerica `#` en:
+  - Clasificaciones
+  - Medios de pago
+- Se define ancho fijo corto para que ocupe solo el espacio del numero y no consuma area de contenido.

@@ -186,7 +186,7 @@ $reportSubjectValue = isset($reportForm['asunto_informe']) ? (string) $reportFor
         </a>
     </div>
     <div class="table-wrapper dashboard-recent-table-wrapper">
-        <table class="table-professional js-data-table js-indexed-table" data-page-length="10" data-export-name="dashboard_movimientos_recientes">
+        <table class="table-professional js-data-table js-indexed-table" data-page-length="10" data-export-name="dashboard_movimientos_recientes" data-preference-key="dashboard_movimientos_recientes_table_length">
             <thead>
             <tr>
                 <th class="no-export">#</th>

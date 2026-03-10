@@ -93,6 +93,79 @@
 
     var body = document.body;
     var baseUrl = body ? (body.getAttribute('data-base-url') || '') : '';
+    var authenticatedUser = body ? String(body.getAttribute('data-auth-user') || '').trim() : '';
+    var activeMenu = body ? String(body.getAttribute('data-active-menu') || '').trim().toLowerCase() : '';
+    var preferenceNamespace = 'presupuesto_prefs_' + (authenticatedUser !== '' ? authenticatedUser.toLowerCase() : 'anonimo');
+
+    function isTypingContext(targetElement) {
+        if (!targetElement || !targetElement.tagName) {
+            return false;
+        }
+
+        var tagName = String(targetElement.tagName).toLowerCase();
+        if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
+            return true;
+        }
+
+        if (targetElement.isContentEditable) {
+            return true;
+        }
+
+        return false;
+    }
+
+    function readUserPreferences() {
+        try {
+            var rawValue = window.localStorage.getItem(preferenceNamespace);
+            if (!rawValue) {
+                return {};
+            }
+
+            var parsed = JSON.parse(rawValue);
+            if (!parsed || typeof parsed !== 'object') {
+                return {};
+            }
+
+            return parsed;
+        } catch (error) {
+            return {};
+        }
+    }
+
+    function writeUserPreferences(preferences) {
+        if (!preferences || typeof preferences !== 'object') {
+            return;
+        }
+
+        try {
+            window.localStorage.setItem(preferenceNamespace, JSON.stringify(preferences));
+        } catch (error) {
+            // almacenamiento local opcional.
+        }
+    }
+
+    function getUserPreference(key, defaultValue) {
+        if (!key) {
+            return defaultValue;
+        }
+
+        var preferences = readUserPreferences();
+        if (Object.prototype.hasOwnProperty.call(preferences, key)) {
+            return preferences[key];
+        }
+
+        return defaultValue;
+    }
+
+    function setUserPreference(key, value) {
+        if (!key) {
+            return;
+        }
+
+        var preferences = readUserPreferences();
+        preferences[key] = value;
+        writeUserPreferences(preferences);
+    }
 
     var themeToggleButton = document.getElementById('theme-toggle');
     function applyTheme(themeName) {
@@ -114,7 +187,11 @@
     }
 
     try {
-        var storedTheme = window.localStorage.getItem('presupuesto_theme');
+        var storedTheme = getUserPreference('theme', null);
+        if (storedTheme !== 'dark' && storedTheme !== 'light') {
+            storedTheme = window.localStorage.getItem('presupuesto_theme');
+        }
+
         if (storedTheme === 'dark' || storedTheme === 'light') {
             applyTheme(storedTheme);
         } else {
@@ -132,6 +209,7 @@
 
             try {
                 window.localStorage.setItem('presupuesto_theme', nextTheme);
+                setUserPreference('theme', nextTheme);
             } catch (persistError) {
                 // almacenamiento local opcional.
             }
@@ -178,6 +256,10 @@
         var supportsPasteFeedback = document.getElementById('soportes-paste-feedback');
         var clipboardFallbackItems = [];
         var moneyInputs = movementForm.querySelectorAll('.js-money-input');
+        var quickCaptureToggleButton = document.getElementById('toggle-quick-capture');
+        var quickCaptureModeInput = document.getElementById('modo_captura');
+        var quickCaptureOptionalFields = movementForm.querySelectorAll('.js-quick-capture-optional');
+        var quickSelectButtons = movementForm.querySelectorAll('.js-field-quick-select');
 
         function renderSupportsSelection() {
             if (!supportsInput || !supportsFileCount || !supportsFileList) {
@@ -418,6 +500,62 @@
             handleClipboardPaste(event);
         });
 
+        function updateQuickCaptureMode(isEnabled, persistMode) {
+            movementForm.classList.toggle('quick-capture-active', !!isEnabled);
+
+            if (quickCaptureToggleButton) {
+                quickCaptureToggleButton.setAttribute('aria-pressed', isEnabled ? 'true' : 'false');
+                quickCaptureToggleButton.innerHTML = isEnabled
+                    ? '<i class="bi bi-lightning-charge-fill"></i> Modo rapido activo'
+                    : '<i class="bi bi-lightning-charge"></i> Modo rapido';
+            }
+
+            if (quickCaptureModeInput) {
+                quickCaptureModeInput.value = isEnabled ? 'rapido' : 'completo';
+            }
+
+            for (var optionalIndex = 0; optionalIndex < quickCaptureOptionalFields.length; optionalIndex += 1) {
+                quickCaptureOptionalFields[optionalIndex].classList.toggle('hidden', !!isEnabled);
+            }
+
+            if (persistMode) {
+                setUserPreference('movimientos_quick_mode', isEnabled ? 1 : 0);
+            }
+        }
+
+        if (quickCaptureToggleButton) {
+            quickCaptureToggleButton.addEventListener('click', function () {
+                var enabled = !movementForm.classList.contains('quick-capture-active');
+                updateQuickCaptureMode(enabled, true);
+            });
+        }
+
+        if (quickSelectButtons && quickSelectButtons.length > 0) {
+            for (var quickButtonIndex = 0; quickButtonIndex < quickSelectButtons.length; quickButtonIndex += 1) {
+                quickSelectButtons[quickButtonIndex].addEventListener('click', function () {
+                    var targetFieldId = String(this.getAttribute('data-target') || '');
+                    var targetValue = String(this.getAttribute('data-value') || '');
+                    if (targetFieldId === '') {
+                        return;
+                    }
+
+                    var targetField = document.getElementById(targetFieldId);
+                    if (!targetField) {
+                        return;
+                    }
+
+                    targetField.value = targetValue;
+                    if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2 && window.jQuery(targetField).hasClass('select2-hidden-accessible')) {
+                        window.jQuery(targetField).trigger('change');
+                    }
+                });
+            }
+        }
+
+        var quickModeDefault = movementForm.getAttribute('data-quick-mode-default') === '1';
+        var storedQuickMode = parseInt(getUserPreference('movimientos_quick_mode', quickModeDefault ? 1 : 0), 10);
+        updateQuickCaptureMode(storedQuickMode === 1 || quickModeDefault, false);
+
         if (moneyInputs && moneyInputs.length > 0) {
             for (var moneyIndex = 0; moneyIndex < moneyInputs.length; moneyIndex += 1) {
                 applyMoneyInputFormatting(moneyInputs[moneyIndex]);
@@ -644,10 +782,16 @@
     var movementFilterCategoriaInput = document.getElementById('movement-filter-categoria');
     var movementFilterTipoInput = document.getElementById('movement-filter-tipo');
     var movementFilterResetButton = document.getElementById('movement-filter-reset');
+    var movementQuickDateButtons = document.querySelectorAll('.js-movement-quick-date');
     var movementFilterResultInfo = document.getElementById('movement-filter-result-info');
     var movementTableElement = document.querySelector('.js-movimientos-table');
     var movementTableDataTable = null;
     var movementTableFilterAttached = false;
+    var movementSummaryBody = document.getElementById('movement-summary-body');
+    var movementDateFilterMode = 'exact';
+    var movementDateRangeStart = '';
+    var movementDateRangeEnd = '';
+    var movementInitializationDone = false;
 
     function normalizeFilterText(value) {
         return String(value || '').trim().toLowerCase();
@@ -673,12 +817,211 @@
         return year + '-' + month + '-' + day;
     }
 
+    function isoDateFromObject(dateObject) {
+        var year = String(dateObject.getFullYear());
+        var month = String(dateObject.getMonth() + 1);
+        var day = String(dateObject.getDate());
+
+        if (month.length < 2) {
+            month = '0' + month;
+        }
+        if (day.length < 2) {
+            day = '0' + day;
+        }
+
+        return year + '-' + month + '-' + day;
+    }
+
+    function getWeekRange(referenceDate) {
+        var baseDate = referenceDate ? new Date(referenceDate + 'T00:00:00') : new Date();
+        if (isNaN(baseDate.getTime())) {
+            baseDate = new Date();
+        }
+
+        var dayOfWeek = baseDate.getDay();
+        var offsetToMonday = dayOfWeek === 0 ? -6 : (1 - dayOfWeek);
+        var rangeStart = new Date(baseDate);
+        rangeStart.setDate(baseDate.getDate() + offsetToMonday);
+
+        var rangeEnd = new Date(rangeStart);
+        rangeEnd.setDate(rangeStart.getDate() + 6);
+
+        return {
+            start: isoDateFromObject(rangeStart),
+            end: isoDateFromObject(rangeEnd)
+        };
+    }
+
+    function getMonthRange(referenceDate) {
+        var baseDate = referenceDate ? new Date(referenceDate + 'T00:00:00') : new Date();
+        if (isNaN(baseDate.getTime())) {
+            baseDate = new Date();
+        }
+
+        var startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+        var endDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
+
+        return {
+            start: isoDateFromObject(startDate),
+            end: isoDateFromObject(endDate)
+        };
+    }
+
+    function setQuickRangeButtonState(rangeName) {
+        if (!movementQuickDateButtons || movementQuickDateButtons.length === 0) {
+            return;
+        }
+
+        for (var quickRangeIndex = 0; quickRangeIndex < movementQuickDateButtons.length; quickRangeIndex += 1) {
+            var button = movementQuickDateButtons[quickRangeIndex];
+            var buttonRange = String(button.getAttribute('data-range') || '');
+            button.classList.toggle('active', buttonRange === rangeName);
+        }
+    }
+
+    function setDateFilterRange(rangeName) {
+        var todayDate = getTodayIsoDate();
+
+        if (rangeName === 'today') {
+            movementDateFilterMode = 'exact';
+            movementDateRangeStart = todayDate;
+            movementDateRangeEnd = todayDate;
+            if (movementFilterDateInput) {
+                movementFilterDateInput.value = todayDate;
+            }
+            setQuickRangeButtonState('today');
+            return;
+        }
+
+        if (rangeName === 'week') {
+            var weekRange = getWeekRange(todayDate);
+            movementDateFilterMode = 'range';
+            movementDateRangeStart = weekRange.start;
+            movementDateRangeEnd = weekRange.end;
+            if (movementFilterDateInput) {
+                movementFilterDateInput.value = '';
+            }
+            setQuickRangeButtonState('week');
+            return;
+        }
+
+        if (rangeName === 'month') {
+            var monthRange = getMonthRange(todayDate);
+            movementDateFilterMode = 'range';
+            movementDateRangeStart = monthRange.start;
+            movementDateRangeEnd = monthRange.end;
+            if (movementFilterDateInput) {
+                movementFilterDateInput.value = '';
+            }
+            setQuickRangeButtonState('month');
+            return;
+        }
+
+        movementDateFilterMode = 'all';
+        movementDateRangeStart = '';
+        movementDateRangeEnd = '';
+        if (movementFilterDateInput) {
+            movementFilterDateInput.value = '';
+        }
+        setQuickRangeButtonState('all');
+    }
+
+    function setSelectFieldValue(selectElement, value) {
+        if (!selectElement) {
+            return;
+        }
+
+        selectElement.value = value;
+        if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2 && window.jQuery(selectElement).hasClass('select2-hidden-accessible')) {
+            window.jQuery(selectElement).val(value).trigger('change.select2');
+        }
+    }
+
+    function loadMovementFilterPreferences() {
+        var raw = getUserPreference('movimientos_filters', null);
+        if (!raw || typeof raw !== 'object') {
+            return null;
+        }
+
+        return {
+            date: String(raw.date || ''),
+            clasificacion: String(raw.clasificacion || ''),
+            categoria: String(raw.categoria || ''),
+            tipo: String(raw.tipo || ''),
+            mode: String(raw.mode || ''),
+            rangeStart: String(raw.rangeStart || ''),
+            rangeEnd: String(raw.rangeEnd || ''),
+            quickRange: String(raw.quickRange || '')
+        };
+    }
+
+    function saveMovementFilterPreferences(filterState) {
+        if (!movementInitializationDone || !filterState) {
+            return;
+        }
+
+        setUserPreference('movimientos_filters', {
+            date: filterState.date,
+            clasificacion: movementFilterClasificacionInput ? String(movementFilterClasificacionInput.value || '') : '',
+            categoria: movementFilterCategoriaInput ? String(movementFilterCategoriaInput.value || '') : '',
+            tipo: movementFilterTipoInput ? String(movementFilterTipoInput.value || '') : '',
+            mode: filterState.dateMode,
+            rangeStart: filterState.dateRangeStart,
+            rangeEnd: filterState.dateRangeEnd,
+            quickRange: filterState.quickRange
+        });
+    }
+
+    function movementDateMatchesFilter(rowDate, filterState) {
+        var rowDateSafe = String(rowDate || '').trim();
+        if (rowDateSafe === '') {
+            return false;
+        }
+
+        if (filterState.dateMode === 'all') {
+            return true;
+        }
+
+        if (filterState.dateMode === 'range') {
+            if (filterState.dateRangeStart === '' || filterState.dateRangeEnd === '') {
+                return true;
+            }
+            return rowDateSafe >= filterState.dateRangeStart && rowDateSafe <= filterState.dateRangeEnd;
+        }
+
+        if (filterState.date === '') {
+            return true;
+        }
+
+        return rowDateSafe === filterState.date;
+    }
+
     function getMovementFilterState() {
+        var quickRange = '';
+        if (movementDateFilterMode === 'all') {
+            quickRange = 'all';
+        } else if (movementDateFilterMode === 'range' && movementDateRangeStart !== '') {
+            var todayDate = getTodayIsoDate();
+            var currentWeekRange = getWeekRange(todayDate);
+            var currentMonthRange = getMonthRange(todayDate);
+            if (movementDateRangeStart === currentWeekRange.start && movementDateRangeEnd === currentWeekRange.end) {
+                quickRange = 'week';
+            } else if (movementDateRangeStart === currentMonthRange.start && movementDateRangeEnd === currentMonthRange.end) {
+                quickRange = 'month';
+            }
+        } else if (movementDateFilterMode === 'exact' && movementFilterDateInput && movementFilterDateInput.value === getTodayIsoDate()) {
+            quickRange = 'today';
+        }
+
         return {
             date: movementFilterDateInput ? String(movementFilterDateInput.value || '').trim() : '',
             clasificacion: normalizeFilterText(movementFilterClasificacionInput ? movementFilterClasificacionInput.value : ''),
             categoria: normalizeFilterText(movementFilterCategoriaInput ? movementFilterCategoriaInput.value : ''),
-            tipo: normalizeFilterText(movementFilterTipoInput ? movementFilterTipoInput.value : '')
+            tipo: normalizeFilterText(movementFilterTipoInput ? movementFilterTipoInput.value : ''),
+            dateMode: movementDateFilterMode,
+            dateRangeStart: movementDateRangeStart,
+            dateRangeEnd: movementDateRangeEnd,
+            quickRange: quickRange
         };
     }
 
@@ -707,7 +1050,7 @@
         var visibleCount = 0;
         for (var cardIndex = 0; cardIndex < mobileCards.length; cardIndex += 1) {
             var card = mobileCards[cardIndex];
-            var matchDate = filterState.date === '' || extractDatePart(card.getAttribute('data-filter-fecha')) === filterState.date;
+            var matchDate = movementDateMatchesFilter(extractDatePart(card.getAttribute('data-filter-fecha')), filterState);
             var matchClasificacion = filterState.clasificacion === '' || normalizeFilterText(card.getAttribute('data-filter-clasificacion')) === filterState.clasificacion;
             var matchCategoria = filterState.categoria === '' || normalizeFilterText(card.getAttribute('data-filter-categoria')) === filterState.categoria;
             var matchTipo = filterState.tipo === '' || normalizeFilterText(card.getAttribute('data-filter-tipo')) === filterState.tipo;
@@ -743,7 +1086,7 @@
             var rowCategoria = normalizeFilterText(data[5]);
             var rowTipo = normalizeFilterText(data[6]);
 
-            if (filters.date !== '' && rowDate !== filters.date) {
+            if (!movementDateMatchesFilter(rowDate, filters)) {
                 return false;
             }
             if (filters.clasificacion !== '' && rowClasificacion !== filters.clasificacion) {
@@ -762,8 +1105,103 @@
         movementTableFilterAttached = true;
     }
 
+    function renderMovementSummary(movementData) {
+        if (!movementSummaryBody || !movementData || typeof movementData !== 'object') {
+            return;
+        }
+
+        var supportItems = movementData.support_items && movementData.support_items.length ? movementData.support_items : [];
+        var supportsHtml = '';
+
+        if (supportItems.length > 0) {
+            supportsHtml += '<ul class="movement-summary-support-list">';
+            for (var supportIndex = 0; supportIndex < supportItems.length; supportIndex += 1) {
+                var support = supportItems[supportIndex] || {};
+                var supportName = escapeHtml(support.name || ('Soporte ' + String(supportIndex + 1)));
+                var supportUrl = escapeHtml(support.url || '#');
+                supportsHtml += '<li>';
+                supportsHtml += '<span><i class="bi bi-paperclip"></i> ' + supportName + '</span>';
+                supportsHtml += '<span class="movement-summary-support-actions">';
+                supportsHtml += '<a href="' + supportUrl + '" target="_blank" class="btn btn-ghost btn-inline btn-mini btn-icon-only" aria-label="Ver soporte"><i class="bi bi-eye"></i></a>';
+                supportsHtml += '<a href="' + supportUrl + '" target="_blank" download class="btn btn-ghost btn-inline btn-mini btn-icon-only" aria-label="Descargar soporte"><i class="bi bi-download"></i></a>';
+                supportsHtml += '</span>';
+                supportsHtml += '</li>';
+            }
+            supportsHtml += '</ul>';
+        } else {
+            supportsHtml = '<p class="muted">Sin soportes.</p>';
+        }
+
+        var editUrl = movementData.urls && movementData.urls.editar ? escapeHtml(movementData.urls.editar) : '';
+        var ticketUrl = movementData.urls && movementData.urls.ticket ? escapeHtml(movementData.urls.ticket) : '';
+
+        var summaryHtml = '<div class="movement-summary-grid">';
+        summaryHtml += '<div><span>ID</span><strong>#' + escapeHtml(movementData.id || '') + '</strong></div>';
+        summaryHtml += '<div><span>Fecha</span><strong>' + escapeHtml(movementData.fecha || '') + '</strong></div>';
+        summaryHtml += '<div><span>Clasificacion</span><strong>' + escapeHtml(movementData.clasificacion || '') + '</strong></div>';
+        summaryHtml += '<div><span>Categoria</span><strong>' + escapeHtml(movementData.categoria || '') + '</strong></div>';
+        summaryHtml += '<div><span>Tipo</span><strong>' + escapeHtml(movementData.tipo || '') + '</strong></div>';
+        summaryHtml += '<div><span>Valor</span><strong>' + escapeHtml(movementData.valor || '') + '</strong></div>';
+        summaryHtml += '<div><span>Usuario</span><strong>' + escapeHtml(movementData.usuario || '') + '</strong></div>';
+        summaryHtml += '<div><span>Soportes</span><strong>' + escapeHtml(movementData.soportes || 0) + '</strong></div>';
+        summaryHtml += '</div>';
+        summaryHtml += '<div class="movement-summary-detail"><span>Detalle</span><p>' + escapeHtml(movementData.detalle || '') + '</p></div>';
+        summaryHtml += '<div class="movement-summary-supports"><h4><i class="bi bi-paperclip"></i> Soportes</h4>' + supportsHtml + '</div>';
+        summaryHtml += '<div class="movement-summary-actions">';
+        if (editUrl !== '') {
+            summaryHtml += '<a class="btn btn-secondary btn-inline btn-mini" href="' + editUrl + '"><i class="bi bi-pencil-square"></i> Editar</a>';
+        }
+        if (ticketUrl !== '') {
+            summaryHtml += '<a class="btn btn-ghost btn-inline btn-mini" href="' + ticketUrl + '" target="_blank"><i class="bi bi-receipt"></i> Ticket</a>';
+        }
+        summaryHtml += '</div>';
+
+        movementSummaryBody.innerHTML = summaryHtml;
+    }
+
+    function setActiveMovementRow(rowElement) {
+        if (!movementTableElement || !rowElement) {
+            return;
+        }
+
+        var allRows = movementTableElement.querySelectorAll('tbody tr.js-movement-row-summary');
+        for (var rowIndex = 0; rowIndex < allRows.length; rowIndex += 1) {
+            allRows[rowIndex].classList.remove('movement-row-selected');
+        }
+
+        rowElement.classList.add('movement-row-selected');
+    }
+
+    function trySelectFirstVisibleMovementRow() {
+        if (!movementTableElement || !movementSummaryBody) {
+            return;
+        }
+
+        var firstRow = null;
+
+        if (movementTableDataTable) {
+            var nodes = movementTableDataTable.rows({ page: 'current', search: 'applied' }).nodes();
+            if (nodes && nodes.length > 0) {
+                firstRow = nodes[0];
+            }
+        } else {
+            firstRow = movementTableElement.querySelector('tbody tr.js-movement-row-summary');
+        }
+
+        if (!firstRow) {
+            movementSummaryBody.innerHTML = '<p class="muted">No hay movimientos para el filtro seleccionado.</p>';
+            return;
+        }
+
+        var movementJson = firstRow.getAttribute('data-movement-json') || '{}';
+        var movementData = readSafeJson(movementJson);
+        setActiveMovementRow(firstRow);
+        renderMovementSummary(movementData);
+    }
+
     function applyMovementFilters() {
         var filters = getMovementFilterState();
+        saveMovementFilterPreferences(filters);
         applyMovementMobileFilters(filters);
 
         if (movementTableDataTable) {
@@ -772,6 +1210,7 @@
             if (tableInfo && typeof tableInfo.recordsDisplay === 'number') {
                 updateMovementFilterResultInfo(tableInfo.recordsDisplay);
             }
+            trySelectFirstVisibleMovementRow();
         }
     }
 
@@ -780,8 +1219,38 @@
             return;
         }
 
-        if (movementFilterDateInput && movementFilterDateInput.value === '' && window.innerWidth <= 760) {
-            movementFilterDateInput.value = getTodayIsoDate();
+        var storedFilterState = loadMovementFilterPreferences();
+        if (storedFilterState) {
+            if (movementFilterDateInput) {
+                movementFilterDateInput.value = storedFilterState.date;
+            }
+            if (movementFilterClasificacionInput) {
+                setSelectFieldValue(movementFilterClasificacionInput, storedFilterState.clasificacion);
+            }
+            if (movementFilterCategoriaInput) {
+                setSelectFieldValue(movementFilterCategoriaInput, storedFilterState.categoria);
+            }
+            if (movementFilterTipoInput) {
+                setSelectFieldValue(movementFilterTipoInput, storedFilterState.tipo);
+            }
+
+            movementDateFilterMode = storedFilterState.mode || 'exact';
+            movementDateRangeStart = storedFilterState.rangeStart || '';
+            movementDateRangeEnd = storedFilterState.rangeEnd || '';
+            if (storedFilterState.quickRange !== '') {
+                setQuickRangeButtonState(storedFilterState.quickRange);
+            }
+        } else if (movementFilterDateInput && movementFilterDateInput.value === '' && window.innerWidth <= 760) {
+            movementDateFilterMode = 'exact';
+            movementDateRangeStart = getTodayIsoDate();
+            movementDateRangeEnd = movementDateRangeStart;
+            movementFilterDateInput.value = movementDateRangeStart;
+            setQuickRangeButtonState('today');
+        } else {
+            movementDateFilterMode = movementFilterDateInput && movementFilterDateInput.value !== '' ? 'exact' : 'all';
+            movementDateRangeStart = movementFilterDateInput ? movementFilterDateInput.value : '';
+            movementDateRangeEnd = movementFilterDateInput ? movementFilterDateInput.value : '';
+            setQuickRangeButtonState('');
         }
 
         var changeHandlers = [
@@ -793,29 +1262,59 @@
 
         for (var handlerIndex = 0; handlerIndex < changeHandlers.length; handlerIndex += 1) {
             if (changeHandlers[handlerIndex]) {
-                changeHandlers[handlerIndex].addEventListener('change', applyMovementFilters);
+                changeHandlers[handlerIndex].addEventListener('change', function () {
+                    if (this === movementFilterDateInput) {
+                        movementDateFilterMode = movementFilterDateInput.value === '' ? 'all' : 'exact';
+                        movementDateRangeStart = movementFilterDateInput.value;
+                        movementDateRangeEnd = movementFilterDateInput.value;
+                        setQuickRangeButtonState('');
+                    }
+                    applyMovementFilters();
+                });
+            }
+        }
+
+        if (movementQuickDateButtons && movementQuickDateButtons.length > 0) {
+            for (var rangeButtonIndex = 0; rangeButtonIndex < movementQuickDateButtons.length; rangeButtonIndex += 1) {
+                movementQuickDateButtons[rangeButtonIndex].addEventListener('click', function () {
+                    var range = String(this.getAttribute('data-range') || '');
+                    if (range === '') {
+                        return;
+                    }
+
+                    setDateFilterRange(range);
+                    applyMovementFilters();
+                });
             }
         }
 
         if (movementFilterResetButton) {
             movementFilterResetButton.addEventListener('click', function () {
                 if (movementFilterDateInput) {
-                    movementFilterDateInput.value = window.innerWidth <= 760 ? getTodayIsoDate() : '';
+                    movementFilterDateInput.value = '';
                 }
                 if (movementFilterClasificacionInput) {
-                    movementFilterClasificacionInput.value = '';
+                    setSelectFieldValue(movementFilterClasificacionInput, '');
                 }
                 if (movementFilterCategoriaInput) {
-                    movementFilterCategoriaInput.value = '';
+                    setSelectFieldValue(movementFilterCategoriaInput, '');
                 }
                 if (movementFilterTipoInput) {
-                    movementFilterTipoInput.value = '';
+                    setSelectFieldValue(movementFilterTipoInput, '');
                 }
 
+                movementDateFilterMode = window.innerWidth <= 760 ? 'exact' : 'all';
+                movementDateRangeStart = movementDateFilterMode === 'exact' ? getTodayIsoDate() : '';
+                movementDateRangeEnd = movementDateRangeStart;
+                if (movementFilterDateInput && movementDateFilterMode === 'exact') {
+                    movementFilterDateInput.value = movementDateRangeStart;
+                }
+                setQuickRangeButtonState(movementDateFilterMode === 'exact' ? 'today' : 'all');
                 applyMovementFilters();
             });
         }
 
+        movementInitializationDone = true;
         applyMovementFilters();
     }
 
@@ -842,9 +1341,19 @@
 
         if (typeof window.jQuery.fn.DataTable === 'function') {
             window.jQuery('.js-data-table').each(function () {
+                var tableElement = this;
+                var tableNode = window.jQuery(tableElement);
                 var pageLength = parseInt(window.jQuery(this).data('page-length'), 10);
                 if (!pageLength || pageLength < 1) {
                     pageLength = 20;
+                }
+
+                var tablePreferenceKey = String(tableNode.data('preference-key') || '').trim();
+                if (tablePreferenceKey !== '') {
+                    var storedPageLength = parseInt(getUserPreference(tablePreferenceKey, pageLength), 10);
+                    if (storedPageLength && storedPageLength >= 1) {
+                        pageLength = storedPageLength;
+                    }
                 }
 
                 var isIndexedTable = window.jQuery(this).hasClass('js-indexed-table');
@@ -986,11 +1495,20 @@
                     ];
                 }
 
-                var dataTable = window.jQuery(this).DataTable(dataTableOptions);
+                var dataTable = tableNode.DataTable(dataTableOptions);
+
+                if (tablePreferenceKey !== '') {
+                    dataTable.on('length.dt', function (event, settings, lengthValue) {
+                        setUserPreference(tablePreferenceKey, parseInt(lengthValue, 10));
+                    });
+                }
 
                 if (window.jQuery(this).hasClass('js-movimientos-table')) {
                     movementTableDataTable = dataTable;
                     ensureMovementDataTableFilter();
+                    dataTable.on('draw.dt', function () {
+                        trySelectFirstVisibleMovementRow();
+                    });
                 }
 
                 if (isIndexedTable) {
@@ -1009,9 +1527,31 @@
 
     initializeMovementFilters();
 
-    var supportsModal = document.getElementById('supports-modal');
-    var supportsModalBody = document.getElementById('supports-modal-body');
-    var supportsModalTitle = document.getElementById('supports-modal-title');
+    if (movementTableElement) {
+        movementTableElement.addEventListener('click', function (event) {
+            var target = event.target;
+            if (!target || typeof target.closest !== 'function') {
+                return;
+            }
+
+            if (target.closest('a,button,form,input,summary,details,.dt-control')) {
+                return;
+            }
+
+            var row = target.closest('tr.js-movement-row-summary');
+            if (!row) {
+                return;
+            }
+
+            var movementJson = row.getAttribute('data-movement-json') || '{}';
+            var movementData = readSafeJson(movementJson);
+            setActiveMovementRow(row);
+            renderMovementSummary(movementData);
+        });
+
+        trySelectFirstVisibleMovementRow();
+    }
+
     var movementSaveModal = document.getElementById('movement-save-modal');
     var movementMobileModal = document.getElementById('movement-mobile-modal');
     var movementMobileModalTitle = document.getElementById('movement-mobile-modal-title');
@@ -1103,61 +1643,6 @@
         ];
     }
 
-    function closeSupportsModal() {
-        if (!supportsModal) {
-            return;
-        }
-
-        supportsModal.classList.add('hidden');
-        supportsModal.setAttribute('aria-hidden', 'true');
-        if (supportsModalBody) {
-            supportsModalBody.innerHTML = '<p class="muted">No hay soportes para mostrar.</p>';
-        }
-    }
-
-    function openSupportsModal(buttonElement) {
-        if (!supportsModal || !buttonElement) {
-            return;
-        }
-
-        var titleText = buttonElement.getAttribute('data-supports-title') || 'Soportes';
-        var supportsJson = buttonElement.getAttribute('data-supports-json') || '';
-        var supportsList = readSafeJson(supportsJson);
-        var sourceId = buttonElement.getAttribute('data-supports-target') || '';
-        var sourceNode = sourceId !== '' ? document.getElementById(sourceId) : null;
-
-        if (supportsModalTitle) {
-            supportsModalTitle.innerHTML = '<i class="bi bi-paperclip"></i> ' + escapeHtml(titleText);
-        }
-
-        if (supportsModalBody) {
-            if (supportsList && supportsList.length > 0) {
-                var modalHtml = '<ul class="supports-modal-list">';
-                for (var supportIndex = 0; supportIndex < supportsList.length; supportIndex += 1) {
-                    var supportItem = supportsList[supportIndex] || {};
-                    var supportName = escapeHtml(supportItem.name || ('Soporte ' + (supportIndex + 1)));
-                    var supportUrl = escapeHtml(supportItem.url || '#');
-
-                    modalHtml += '<li class="supports-modal-item">';
-                    modalHtml += '<span class="supports-modal-name"><i class="bi bi-file-earmark-text"></i>' + supportName + '</span>';
-                    modalHtml += '<span class="supports-modal-actions">';
-                    modalHtml += '<a class="btn btn-ghost btn-inline btn-mini btn-icon-only" href="' + supportUrl + '" target="_blank" title="Ver soporte" aria-label="Ver soporte"><i class="bi bi-eye"></i></a>';
-                    modalHtml += '<a class="btn btn-ghost btn-inline btn-mini btn-icon-only" href="' + supportUrl + '" target="_blank" download title="Descargar soporte" aria-label="Descargar soporte"><i class="bi bi-download"></i></a>';
-                    modalHtml += '</span>';
-                    modalHtml += '</li>';
-                }
-                modalHtml += '</ul>';
-
-                supportsModalBody.innerHTML = modalHtml;
-            } else {
-                supportsModalBody.innerHTML = sourceNode ? sourceNode.innerHTML : '<p class="muted">No hay soportes para mostrar.</p>';
-            }
-        }
-
-        supportsModal.classList.remove('hidden');
-        supportsModal.setAttribute('aria-hidden', 'false');
-    }
-
     function closeMovementSaveModal() {
         if (!movementSaveModal) {
             return;
@@ -1246,6 +1731,37 @@
         }
         html += '</div>';
 
+        var supportsItems = movementData.support_items && movementData.support_items.length ? movementData.support_items : [];
+        if (supportsItems.length > 0) {
+            html += '<div class="movement-mobile-supports-box"><h4><i class="bi bi-paperclip"></i> Soportes</h4><ul class="movement-mobile-supports-list">';
+            for (var supportIndex = 0; supportIndex < supportsItems.length; supportIndex += 1) {
+                var supportItem = supportsItems[supportIndex] || {};
+                var supportName = escapeHtml(supportItem.name || ('Soporte ' + String(supportIndex + 1)));
+                var supportUrl = escapeHtml(supportItem.url || '#');
+                html += '<li>';
+                html += '<span>' + supportName + '</span>';
+                html += '<span class="movement-mobile-support-actions">';
+                html += '<a href="' + supportUrl + '" target="_blank" class="btn btn-ghost btn-inline btn-mini btn-icon-only" aria-label="Ver soporte"><i class="bi bi-eye"></i></a>';
+                html += '<a href="' + supportUrl + '" target="_blank" download class="btn btn-ghost btn-inline btn-mini btn-icon-only" aria-label="Descargar soporte"><i class="bi bi-download"></i></a>';
+                html += '</span>';
+                html += '</li>';
+            }
+            html += '</ul></div>';
+        }
+
+        var editUrl = movementData.urls && movementData.urls.editar ? escapeHtml(movementData.urls.editar) : '';
+        var ticketUrl = movementData.urls && movementData.urls.ticket ? escapeHtml(movementData.urls.ticket) : '';
+        if (editUrl !== '' || ticketUrl !== '') {
+            html += '<div class="movement-mobile-detail-actions">';
+            if (editUrl !== '') {
+                html += '<a href="' + editUrl + '" class="btn btn-secondary btn-inline btn-mini"><i class="bi bi-pencil-square"></i> Editar</a>';
+            }
+            if (ticketUrl !== '') {
+                html += '<a href="' + ticketUrl + '" target="_blank" class="btn btn-ghost btn-inline btn-mini"><i class="bi bi-receipt"></i> Ticket</a>';
+            }
+            html += '</div>';
+        }
+
         movementMobileModalBody.innerHTML = html;
         movementMobileModal.classList.remove('hidden');
         movementMobileModal.setAttribute('aria-hidden', 'false');
@@ -1254,6 +1770,13 @@
     document.addEventListener('click', function (event) {
         if (!event.target || typeof event.target.closest !== 'function') {
             return;
+        }
+
+        if (!event.target.closest('.supports-inline-dropdown')) {
+            var openSupportDropdowns = document.querySelectorAll('.supports-inline-dropdown[open]');
+            for (var dropdownIndex = 0; dropdownIndex < openSupportDropdowns.length; dropdownIndex += 1) {
+                openSupportDropdowns[dropdownIndex].removeAttribute('open');
+            }
         }
 
         if (movementSaveModal && event.target === movementSaveModal) {
@@ -1340,25 +1863,6 @@
             return;
         }
 
-        var openButton = event.target.closest('.js-open-supports-modal');
-        if (openButton) {
-            event.preventDefault();
-            openSupportsModal(openButton);
-            return;
-        }
-
-        var closeButton = event.target.closest('.js-close-supports-modal');
-        if (closeButton) {
-            event.preventDefault();
-            closeSupportsModal();
-            return;
-        }
-
-        if (supportsModal && event.target === supportsModal) {
-            closeSupportsModal();
-            return;
-        }
-
         if (movementMobileModal && event.target === movementMobileModal) {
             closeMovementMobileModal();
             return;
@@ -1377,12 +1881,66 @@
 
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
-            closeSupportsModal();
             closeMovementSaveModal();
             closeMovementMobileModal();
             pendingConfirmForm = null;
             closeConfirmActionModal();
             closePwaInstallModal();
+            var openSupportDropdowns = document.querySelectorAll('.supports-inline-dropdown[open]');
+            for (var dropdownIndex = 0; dropdownIndex < openSupportDropdowns.length; dropdownIndex += 1) {
+                openSupportDropdowns[dropdownIndex].removeAttribute('open');
+            }
+            return;
+        }
+
+        if (event.ctrlKey || event.altKey || event.metaKey) {
+            return;
+        }
+
+        if (isTypingContext(event.target)) {
+            return;
+        }
+
+        var pressedKey = String(event.key || '').toLowerCase();
+        if (pressedKey === 'n' && authenticatedUser !== '') {
+            event.preventDefault();
+            window.location.href = baseUrl + '/index.php?route=movimientos/nuevo';
+            return;
+        }
+
+        if (pressedKey === 'f' && authenticatedUser !== '') {
+            event.preventDefault();
+            if (activeMenu === 'movimientos' && movementTableElement) {
+                var wrapper = movementTableElement.closest('.dataTables_wrapper');
+                var tableSearchInput = wrapper ? wrapper.querySelector('.dataTables_filter input') : null;
+                if (tableSearchInput) {
+                    tableSearchInput.focus();
+                    tableSearchInput.select();
+                    return;
+                }
+            }
+
+            if (quickSearchInput) {
+                quickSearchInput.focus();
+                quickSearchInput.select();
+            }
+            return;
+        }
+
+        if (pressedKey === 'e' && authenticatedUser !== '' && activeMenu === 'movimientos' && movementTableElement) {
+            event.preventDefault();
+            var movementWrapper = movementTableElement.closest('.dataTables_wrapper');
+            if (!movementWrapper) {
+                return;
+            }
+
+            var excelButton = movementWrapper.querySelector('.buttons-excel');
+            if (!excelButton) {
+                excelButton = movementWrapper.querySelector('.dt-export-button');
+            }
+            if (excelButton && typeof excelButton.click === 'function') {
+                excelButton.click();
+            }
         }
     });
 

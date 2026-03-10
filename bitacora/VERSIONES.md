@@ -1,4 +1,15 @@
-﻿# Versiones
+# Versiones
+
+## v0.7.0 - 2026-03-09
+- Movimientos: barra de filtros sticky con rangos rapidos Hoy/Semana/Mes/Todo y persistencia por usuario.
+- Movimientos escritorio: panel lateral de resumen rapido por seleccion de fila.
+- Soportes: se reemplaza modal invasivo por panel contextual inline en la columna de soportes.
+- Movimientos movil: lista con 3 acciones primarias visibles (ver, editar, eliminar) y detalle ampliado con soportes/ticket.
+- Formulario de movimientos: nuevo modo de captura rapida con campos avanzados plegables y botones de seleccion rapida.
+- Atajos de teclado habilitados para productividad diaria: N (nuevo), F (buscar), E (exportar Excel en movimientos).
+- Preferencias de cantidad de registros por tabla persistidas por usuario en catalogos, dashboard y movimientos.
+## v0.6.12 - 2026-03-09
+- Catalogos de Clasificaciones y Medios de pago: columna numerica # con ancho compacto para mejor aprovechamiento horizontal.
 
 ## v0.6.11 - 2026-03-09
 - Dashboard movil: seccion de movimientos recientes mejorada con tarjetas legibles y sin desbordes.
@@ -131,6 +142,7 @@
 - `MAJOR`: cambios incompatibles.
 - `MINOR`: funcionalidades nuevas compatibles.
 - `PATCH`: correcciones y ajustes sin romper API funcional.
+
 
 
 

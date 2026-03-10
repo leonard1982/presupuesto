@@ -20,6 +20,7 @@ $isAuthenticated = !empty($currentUser) && is_array($currentUser);
 $currentUserLabel = $isAuthenticated
     ? ($currentUser['name'] !== '' ? (string) $currentUser['name'] : (string) $currentUser['login'])
     : '';
+$currentUserLogin = $isAuthenticated && isset($currentUser['login']) ? (string) $currentUser['login'] : '';
 ?>
 <!doctype html>
 <html lang="es">
@@ -42,7 +43,7 @@ $currentUserLabel = $isAuthenticated
     <?php endif; ?>
     <link rel="stylesheet" href="<?php echo escape_html($baseUrlSafe); ?>/public/assets/css/app.css?v=<?php echo escape_html($assetVersionSafe); ?>">
 </head>
-<body class="<?php echo escape_html($pageBodyClassSafe); ?>" data-base-url="<?php echo escape_html($baseUrlSafe); ?>" data-enable-pwa="<?php echo escape_html($enablePwaSafe); ?>" data-asset-version="<?php echo escape_html($assetVersionSafe); ?>">
+<body class="<?php echo escape_html($pageBodyClassSafe); ?>" data-base-url="<?php echo escape_html($baseUrlSafe); ?>" data-enable-pwa="<?php echo escape_html($enablePwaSafe); ?>" data-asset-version="<?php echo escape_html($assetVersionSafe); ?>" data-auth-user="<?php echo escape_html($currentUserLogin); ?>" data-active-menu="<?php echo escape_html($activeMenuSafe); ?>">
 <?php if ($isAuthenticated) : ?>
     <div class="app-shell">
         <aside class="app-sidebar" id="app-sidebar">

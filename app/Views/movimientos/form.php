@@ -56,6 +56,7 @@ $selectedClasificacion = isset($formData['id_clasificacion']) ? (int) $formData[
 $selectedPresupuesto = isset($formData['id_presupuesto']) ? (int) $formData['id_presupuesto'] : 0;
 $selectedSaldoTipo = isset($formData['por_pagar_cobrar']) ? (string) $formData['por_pagar_cobrar'] : 'NINGUNO';
 $fechaActual = date('Y-m-d\TH:i');
+$quickModeRequested = isset($_GET['modo']) && trim((string) $_GET['modo']) === 'rapido';
 
 $isEdit = !empty($isEditMode);
 $movementIdValue = isset($movementId) ? (int) $movementId : 0;
@@ -86,9 +87,17 @@ $saldoInput = mov_form_currency_input(isset($formData['saldo']) ? $formData['sal
 <div id="movimiento-client-error" class="alert alert-error hidden"></div>
 
 <section class="card form-card">
-    <form id="movimiento-form" method="post" action="<?php echo mov_form_escape($baseUrl); ?>/index.php?route=<?php echo mov_form_escape($actionRoute); ?>" enctype="multipart/form-data" novalidate>
+    <div class="movement-form-toolbar">
+        <button type="button" id="toggle-quick-capture" class="btn btn-ghost btn-inline btn-mini" aria-pressed="<?php echo $quickModeRequested ? 'true' : 'false'; ?>">
+            <i class="bi bi-lightning-charge"></i> Modo rapido
+        </button>
+        <span class="muted">Oculta campos avanzados para registrar mas rapido.</span>
+    </div>
+
+    <form id="movimiento-form" method="post" action="<?php echo mov_form_escape($baseUrl); ?>/index.php?route=<?php echo mov_form_escape($actionRoute); ?>" enctype="multipart/form-data" novalidate data-quick-mode-default="<?php echo $quickModeRequested ? '1' : '0'; ?>">
         <input type="hidden" name="<?php echo mov_form_escape($csrfTokenName); ?>" value="<?php echo mov_form_escape($csrfToken); ?>">
         <input type="hidden" id="soportes_clipboard_json" name="soportes_clipboard_json" value="">
+        <input type="hidden" id="modo_captura" name="modo_captura" value="<?php echo $quickModeRequested ? 'rapido' : 'completo'; ?>">
         <?php if ($isEdit) : ?>
             <input type="hidden" name="movement_id" value="<?php echo $movementIdValue; ?>">
         <?php endif; ?>
@@ -105,6 +114,10 @@ $saldoInput = mov_form_currency_input(isset($formData['saldo']) ? $formData['sal
                     <option value="Gasto" <?php echo $selectedGastoCosto === 'Gasto' ? 'selected' : ''; ?>>Gasto</option>
                     <option value="Costo" <?php echo $selectedGastoCosto === 'Costo' ? 'selected' : ''; ?>>Costo</option>
                 </select>
+                <div class="quick-pills">
+                    <button type="button" class="quick-pill js-field-quick-select" data-target="gasto_costo" data-value="Gasto">Gasto</button>
+                    <button type="button" class="quick-pill js-field-quick-select" data-target="gasto_costo" data-value="Costo">Costo</button>
+                </div>
             </div>
 
             <div class="form-field">
@@ -135,9 +148,14 @@ $saldoInput = mov_form_currency_input(isset($formData['saldo']) ? $formData['sal
                         </option>
                     <?php endforeach; ?>
                 </select>
+                <div class="quick-pills">
+                    <button type="button" class="quick-pill js-field-quick-select" data-target="tipo" data-value="Compra">Compra</button>
+                    <button type="button" class="quick-pill js-field-quick-select" data-target="tipo" data-value="Transferencia">Transferencia</button>
+                    <button type="button" class="quick-pill js-field-quick-select" data-target="tipo" data-value="Efectivo">Efectivo</button>
+                </div>
             </div>
 
-            <div class="form-field">
+            <div class="form-field js-quick-capture-optional">
                 <label for="id_presupuesto">Presupuesto asociado</label>
                 <select id="id_presupuesto" name="id_presupuesto" class="js-searchable-select" data-placeholder="Opcional">
                     <option value="0">Sin presupuesto asociado</option>
@@ -149,7 +167,7 @@ $saldoInput = mov_form_currency_input(isset($formData['saldo']) ? $formData['sal
                 </select>
             </div>
 
-            <div class="form-field">
+            <div class="form-field js-quick-capture-optional">
                 <label for="por_pagar_cobrar">Estado de saldo</label>
                 <select id="por_pagar_cobrar" name="por_pagar_cobrar" required>
                     <option value="NINGUNO" <?php echo $selectedSaldoTipo === 'NINGUNO' ? 'selected' : ''; ?>>Ninguno</option>
@@ -163,12 +181,12 @@ $saldoInput = mov_form_currency_input(isset($formData['saldo']) ? $formData['sal
                 <input id="valor" name="valor" class="js-money-input" type="text" inputmode="numeric" value="<?php echo mov_form_escape($valorInput); ?>" placeholder="Ejemplo: 1.250.000" required>
             </div>
 
-            <div class="form-field">
+            <div class="form-field js-quick-capture-optional">
                 <label for="valor_neto">Valor neto</label>
                 <input id="valor_neto" name="valor_neto" class="js-money-input" data-empty-allowed="1" type="text" inputmode="numeric" value="<?php echo mov_form_escape($valorNetoInput); ?>" placeholder="Si lo dejas vacio, toma el valor">
             </div>
 
-            <div class="form-field">
+            <div class="form-field js-quick-capture-optional">
                 <label for="saldo">Saldo</label>
                 <input id="saldo" name="saldo" class="js-money-input" type="text" inputmode="numeric" value="<?php echo mov_form_escape($saldoInput); ?>">
             </div>

@@ -80,6 +80,13 @@ if (!function_exists('mov_register_option')) {
     }
 }
 
+if (!function_exists('mov_date_only')) {
+    function mov_date_only($value)
+    {
+        return substr(trim((string) $value), 0, 10);
+    }
+}
+
 $movementTypesBase = array(
     'Compra',
     'Transferencia',
@@ -153,7 +160,7 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
     <div class="alert alert-error"><?php echo mov_escape($errorMessage); ?></div>
 <?php endif; ?>
 
-<section class="card movement-filters-card">
+<section class="card movement-filters-card movement-filters-sticky">
     <div class="movement-filters-grid">
         <div class="form-field">
             <label for="movement-filter-date">Fecha</label>
@@ -187,6 +194,26 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
         </div>
     </div>
     <div class="movement-filters-actions">
+        <div class="movement-quick-date-buttons">
+            <button type="button" class="btn btn-ghost btn-inline btn-mini js-movement-quick-date" data-range="today">
+                <i class="bi bi-calendar-day"></i> Hoy
+            </button>
+            <button type="button" class="btn btn-ghost btn-inline btn-mini js-movement-quick-date" data-range="week">
+                <i class="bi bi-calendar-week"></i> Semana
+            </button>
+            <button type="button" class="btn btn-ghost btn-inline btn-mini js-movement-quick-date" data-range="month">
+                <i class="bi bi-calendar3"></i> Mes
+            </button>
+            <button type="button" class="btn btn-ghost btn-inline btn-mini js-movement-quick-date" data-range="all">
+                <i class="bi bi-collection"></i> Todo
+            </button>
+        </div>
+        <div class="movement-filters-actions-right">
+            <a class="btn btn-primary btn-inline btn-mini" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/nuevo&modo=rapido">
+                <i class="bi bi-lightning-charge"></i> Carga rapida
+            </a>
+            <span class="shortcut-chip"><i class="bi bi-keyboard"></i> Atajos: N, F, E</span>
+        </div>
         <button type="button" id="movement-filter-reset" class="btn btn-secondary btn-inline btn-mini">
             <i class="bi bi-arrow-counterclockwise"></i> Limpiar filtros
         </button>
@@ -194,156 +221,203 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
     </div>
 </section>
 
-<section class="card table-card movement-list-card">
-    <div class="table-wrapper movement-table-wrapper">
-        <table class="table-professional js-data-table js-indexed-table js-exportable js-movimientos-table" data-page-length="20" data-export-name="movimientos_registro_operativo">
-            <thead>
-            <tr>
-                <th class="no-export">#</th>
-                <th>ID</th>
-                <th>Fecha</th>
-                <th>Clasificacion</th>
-                <th>Detalle</th>
-                <th>Categoria</th>
-                <th>Tipo</th>
-                <th>Valor</th>
-                <th class="no-export">Soportes</th>
-                <th>Usuario</th>
-                <th class="no-export">Acciones</th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php if (empty($movimientos)) : ?>
+<section class="movement-workspace">
+    <div class="card table-card movement-list-card">
+        <div class="table-wrapper movement-table-wrapper">
+            <table class="table-professional js-data-table js-indexed-table js-exportable js-movimientos-table" data-page-length="20" data-export-name="movimientos_registro_operativo" data-preference-key="movimientos_table_length">
+                <thead>
                 <tr>
-                    <td colspan="11" class="muted">No hay movimientos registrados.</td>
+                    <th class="no-export">#</th>
+                    <th>ID</th>
+                    <th>Fecha</th>
+                    <th>Clasificacion</th>
+                    <th>Detalle</th>
+                    <th>Categoria</th>
+                    <th>Tipo</th>
+                    <th>Valor</th>
+                    <th class="no-export">Soportes</th>
+                    <th>Usuario</th>
+                    <th class="no-export">Acciones</th>
                 </tr>
+                </thead>
+                <tbody>
+                <?php if (empty($movimientos)) : ?>
+                    <tr>
+                        <td colspan="11" class="muted">No hay movimientos registrados.</td>
+                    </tr>
+                <?php else : ?>
+                    <?php foreach ($movimientos as $movement) : ?>
+                        <?php
+                        $movementId = isset($movement['id']) ? (int) $movement['id'] : 0;
+                        $supports = isset($movement['supports']) && is_array($movement['supports']) ? $movement['supports'] : array();
+                        $supportsPayload = mov_build_supports_payload($supports, $baseUrl, $movementId);
+                        $ticketUrl = rtrim((string) $baseUrl, '/') . '/index.php?route=movimientos/ticket&id=' . $movementId;
+                        $editUrl = rtrim((string) $baseUrl, '/') . '/index.php?route=movimientos/editar&id=' . $movementId;
+                        $movementDetailPayload = array(
+                            'id' => $movementId,
+                            'fecha' => isset($movement['fecha']) ? (string) $movement['fecha'] : '',
+                            'clasificacion' => isset($movement['clasificacion']) && $movement['clasificacion'] !== null ? (string) $movement['clasificacion'] : 'Sin clasificacion',
+                            'detalle' => isset($movement['detalle']) ? (string) $movement['detalle'] : '',
+                            'categoria' => isset($movement['gasto_costo']) ? (string) $movement['gasto_costo'] : '',
+                            'tipo' => isset($movement['tipo']) ? (string) $movement['tipo'] : '',
+                            'valor' => mov_money(isset($movement['valor']) ? $movement['valor'] : 0),
+                            'usuario' => isset($movement['usuario']) ? (string) $movement['usuario'] : '',
+                            'soportes' => count($supportsPayload),
+                            'support_items' => $supportsPayload,
+                            'urls' => array(
+                                'ticket' => $ticketUrl,
+                                'editar' => $editUrl,
+                            ),
+                        );
+                        $movementDetailPayloadJson = mov_encode_json($movementDetailPayload);
+                        ?>
+                        <tr class="js-movement-row-summary" data-movement-json="<?php echo mov_escape($movementDetailPayloadJson); ?>">
+                            <td></td>
+                            <td><?php echo $movementId; ?></td>
+                            <td><?php echo mov_escape($movement['fecha']); ?></td>
+                            <td><?php echo mov_escape($movement['clasificacion'] !== null ? $movement['clasificacion'] : 'Sin clasificacion'); ?></td>
+                            <td><?php echo mov_escape($movement['detalle']); ?></td>
+                            <td><?php echo mov_escape($movement['gasto_costo']); ?></td>
+                            <td><?php echo mov_escape($movement['tipo']); ?></td>
+                            <td><?php echo mov_money($movement['valor']); ?></td>
+                            <td>
+                                <?php if (empty($supportsPayload)) : ?>
+                                    <span class="supports-indicator supports-indicator-empty" title="Sin soportes">-</span>
+                                <?php else : ?>
+                                    <details class="supports-inline-dropdown">
+                                        <summary class="btn btn-ghost btn-inline btn-mini btn-icon-only supports-trigger" title="Ver soportes" aria-label="Ver soportes">
+                                            <i class="bi bi-paperclip"></i>
+                                            <span class="supports-count-badge"><?php echo (int) count($supportsPayload); ?></span>
+                                        </summary>
+                                        <div class="supports-inline-panel">
+                                            <ul class="supports-inline-list">
+                                                <?php foreach ($supportsPayload as $supportItem) : ?>
+                                                    <li class="supports-inline-item">
+                                                        <span class="supports-inline-name"><?php echo mov_escape(isset($supportItem['name']) ? $supportItem['name'] : 'Soporte'); ?></span>
+                                                        <span class="supports-inline-actions">
+                                                            <a class="btn btn-ghost btn-inline btn-mini btn-icon-only" href="<?php echo mov_escape(isset($supportItem['url']) ? $supportItem['url'] : '#'); ?>" target="_blank" title="Ver soporte" aria-label="Ver soporte">
+                                                                <i class="bi bi-eye"></i>
+                                                            </a>
+                                                            <a class="btn btn-ghost btn-inline btn-mini btn-icon-only" href="<?php echo mov_escape(isset($supportItem['url']) ? $supportItem['url'] : '#'); ?>" target="_blank" download title="Descargar soporte" aria-label="Descargar soporte">
+                                                                <i class="bi bi-download"></i>
+                                                            </a>
+                                                        </span>
+                                                    </li>
+                                                <?php endforeach; ?>
+                                            </ul>
+                                        </div>
+                                    </details>
+                                <?php endif; ?>
+                            </td>
+                            <td><?php echo mov_escape($movement['usuario']); ?></td>
+                            <td>
+                                <div class="table-actions-stack">
+                                    <a class="btn btn-ghost btn-inline btn-mini btn-icon-only" title="Ver ticket" aria-label="Ver ticket" href="<?php echo mov_escape($ticketUrl); ?>" target="_blank">
+                                        <i class="bi bi-receipt"></i>
+                                    </a>
+                                    <a class="btn btn-secondary btn-inline btn-mini btn-icon-only" title="Editar movimiento" aria-label="Editar movimiento" href="<?php echo mov_escape($editUrl); ?>">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/eliminar" class="inline-form js-confirm-delete" data-confirm-title="Confirmar eliminacion" data-confirm-message="Se eliminara este movimiento y sus soportes. Esta accion no se puede deshacer." data-confirm-accept="Si, eliminar">
+                                        <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
+                                        <input type="hidden" name="movement_id" value="<?php echo $movementId; ?>">
+                                        <button type="submit" class="btn btn-danger btn-inline btn-mini btn-icon-only" title="Eliminar movimiento" aria-label="Eliminar movimiento">
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mobile-movement-list">
+            <?php if (empty($movimientos)) : ?>
+                <div class="mobile-movement-empty muted">No hay movimientos registrados.</div>
             <?php else : ?>
                 <?php foreach ($movimientos as $movement) : ?>
-                    <?php $supports = isset($movement['supports']) && is_array($movement['supports']) ? $movement['supports'] : array(); ?>
-                    <?php $supportsPayload = mov_build_supports_payload($supports, $baseUrl, (int) $movement['id']); ?>
-                    <?php $supportsPayloadJson = mov_encode_json($supportsPayload); ?>
-                    <tr>
-                        <td></td>
-                        <td><?php echo (int) $movement['id']; ?></td>
-                        <td><?php echo mov_escape($movement['fecha']); ?></td>
-                        <td><?php echo mov_escape($movement['clasificacion'] !== null ? $movement['clasificacion'] : 'Sin clasificacion'); ?></td>
-                        <td><?php echo mov_escape($movement['detalle']); ?></td>
-                        <td><?php echo mov_escape($movement['gasto_costo']); ?></td>
-                        <td><?php echo mov_escape($movement['tipo']); ?></td>
-                        <td><?php echo mov_money($movement['valor']); ?></td>
-                        <td>
-                            <?php if (empty($supportsPayload)) : ?>
-                                <span class="muted">Sin soporte</span>
-                            <?php else : ?>
-                                <button
-                                    type="button"
-                                    class="btn btn-ghost btn-inline btn-mini btn-icon-only supports-trigger js-open-supports-modal"
-                                    title="Ver soportes"
-                                    aria-label="Ver soportes"
-                                    data-supports-json="<?php echo mov_escape($supportsPayloadJson); ?>"
-                                    data-supports-title="Soportes del movimiento #<?php echo (int) $movement['id']; ?>">
-                                    <i class="bi bi-paperclip"></i>
-                                    <span class="supports-count-badge"><?php echo (int) count($supportsPayload); ?></span>
-                                </button>
+                    <?php
+                    $movementId = isset($movement['id']) ? (int) $movement['id'] : 0;
+                    $supports = isset($movement['supports']) && is_array($movement['supports']) ? $movement['supports'] : array();
+                    $supportsPayload = mov_build_supports_payload($supports, $baseUrl, $movementId);
+                    $ticketUrl = rtrim((string) $baseUrl, '/') . '/index.php?route=movimientos/ticket&id=' . $movementId;
+                    $editUrl = rtrim((string) $baseUrl, '/') . '/index.php?route=movimientos/editar&id=' . $movementId;
+                    $movementDetailPayload = array(
+                        'id' => $movementId,
+                        'fecha' => isset($movement['fecha']) ? (string) $movement['fecha'] : '',
+                        'clasificacion' => isset($movement['clasificacion']) && $movement['clasificacion'] !== null ? (string) $movement['clasificacion'] : 'Sin clasificacion',
+                        'detalle' => isset($movement['detalle']) ? (string) $movement['detalle'] : '',
+                        'categoria' => isset($movement['gasto_costo']) ? (string) $movement['gasto_costo'] : '',
+                        'tipo' => isset($movement['tipo']) ? (string) $movement['tipo'] : '',
+                        'valor' => mov_money(isset($movement['valor']) ? $movement['valor'] : 0),
+                        'usuario' => isset($movement['usuario']) ? (string) $movement['usuario'] : '',
+                        'soportes' => count($supportsPayload),
+                        'support_items' => $supportsPayload,
+                        'urls' => array(
+                            'ticket' => $ticketUrl,
+                            'editar' => $editUrl,
+                        ),
+                    );
+                    $movementDetailPayloadJson = mov_encode_json($movementDetailPayload);
+                    $movementDateOnly = mov_date_only($movementDetailPayload['fecha']);
+                    ?>
+                    <article
+                        class="mobile-movement-card"
+                        data-filter-fecha="<?php echo mov_escape($movementDateOnly); ?>"
+                        data-filter-clasificacion="<?php echo mov_escape(mov_filter_key($movementDetailPayload['clasificacion'])); ?>"
+                        data-filter-categoria="<?php echo mov_escape(mov_filter_key($movementDetailPayload['categoria'])); ?>"
+                        data-filter-tipo="<?php echo mov_escape(mov_filter_key($movementDetailPayload['tipo'])); ?>">
+                        <div class="mobile-movement-head">
+                            <span class="mobile-movement-date"><i class="bi bi-calendar-event"></i> <?php echo mov_escape($movementDetailPayload['fecha']); ?></span>
+                            <span class="mobile-movement-id">#<?php echo $movementId; ?></span>
+                        </div>
+                        <div class="mobile-movement-summary">
+                            <strong><?php echo mov_escape($movementDetailPayload['clasificacion']); ?></strong>
+                            <span><?php echo mov_escape($movementDetailPayload['valor']); ?></span>
+                        </div>
+                        <div class="mobile-movement-meta">
+                            <span class="mobile-movement-tag"><?php echo mov_escape($movementDetailPayload['categoria']); ?></span>
+                            <span class="mobile-movement-tag"><?php echo mov_escape($movementDetailPayload['tipo']); ?></span>
+                            <?php if (!empty($supportsPayload)) : ?>
+                                <span class="mobile-movement-support-tag" title="Tiene soportes">
+                                    <i class="bi bi-paperclip"></i> <?php echo (int) count($supportsPayload); ?>
+                                </span>
                             <?php endif; ?>
-                        </td>
-                        <td><?php echo mov_escape($movement['usuario']); ?></td>
-                        <td>
-                            <div class="table-actions-stack">
-                                <a class="btn btn-ghost btn-inline btn-mini btn-icon-only" title="Ver ticket" aria-label="Ver ticket" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/ticket&id=<?php echo (int) $movement['id']; ?>" target="_blank">
-                                    <i class="bi bi-receipt"></i>
-                                </a>
-                                <a class="btn btn-secondary btn-inline btn-mini btn-icon-only" title="Editar movimiento" aria-label="Editar movimiento" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/editar&id=<?php echo (int) $movement['id']; ?>">
-                                    <i class="bi bi-pencil-square"></i>
-                                </a>
-                                <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/eliminar" class="inline-form js-confirm-delete" data-confirm-title="Confirmar eliminacion" data-confirm-message="Se eliminara este movimiento y sus soportes. Esta accion no se puede deshacer." data-confirm-accept="Si, eliminar">
-                                    <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
-                                    <input type="hidden" name="movement_id" value="<?php echo (int) $movement['id']; ?>">
-                                    <button type="submit" class="btn btn-danger btn-inline btn-mini btn-icon-only" title="Eliminar movimiento" aria-label="Eliminar movimiento">
-                                        <i class="bi bi-trash3"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
+                        </div>
+                        <div class="mobile-movement-actions mobile-movement-actions-primary">
+                            <button type="button" class="btn btn-ghost btn-inline btn-mini btn-icon-only js-open-movement-mobile-modal" title="Ver detalle" aria-label="Ver detalle" data-movement-json="<?php echo mov_escape($movementDetailPayloadJson); ?>">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <a class="btn btn-secondary btn-inline btn-mini btn-icon-only" title="Editar movimiento" aria-label="Editar movimiento" href="<?php echo mov_escape($editUrl); ?>">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/eliminar" class="inline-form js-confirm-delete" data-confirm-title="Confirmar eliminacion" data-confirm-message="Se eliminara este movimiento y sus soportes. Esta accion no se puede deshacer." data-confirm-accept="Si, eliminar">
+                                <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
+                                <input type="hidden" name="movement_id" value="<?php echo $movementId; ?>">
+                                <button type="submit" class="btn btn-danger btn-inline btn-mini btn-icon-only" title="Eliminar movimiento" aria-label="Eliminar movimiento">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </article>
                 <?php endforeach; ?>
+                <div id="movement-mobile-empty-filter" class="mobile-movement-empty muted hidden">No hay movimientos para el filtro seleccionado.</div>
             <?php endif; ?>
-            </tbody>
-        </table>
+        </div>
     </div>
 
-    <div class="mobile-movement-list">
-        <?php if (empty($movimientos)) : ?>
-            <div class="mobile-movement-empty muted">No hay movimientos registrados.</div>
-        <?php else : ?>
-            <?php foreach ($movimientos as $movement) : ?>
-                <?php $supports = isset($movement['supports']) && is_array($movement['supports']) ? $movement['supports'] : array(); ?>
-                <?php $supportsPayload = mov_build_supports_payload($supports, $baseUrl, (int) $movement['id']); ?>
-                <?php $supportsPayloadJson = mov_encode_json($supportsPayload); ?>
-                <?php
-                $movementDetailPayload = array(
-                    'id' => isset($movement['id']) ? (int) $movement['id'] : 0,
-                    'fecha' => isset($movement['fecha']) ? (string) $movement['fecha'] : '',
-                    'clasificacion' => isset($movement['clasificacion']) && $movement['clasificacion'] !== null ? (string) $movement['clasificacion'] : 'Sin clasificacion',
-                    'detalle' => isset($movement['detalle']) ? (string) $movement['detalle'] : '',
-                    'categoria' => isset($movement['gasto_costo']) ? (string) $movement['gasto_costo'] : '',
-                    'tipo' => isset($movement['tipo']) ? (string) $movement['tipo'] : '',
-                    'valor' => mov_money(isset($movement['valor']) ? $movement['valor'] : 0),
-                    'usuario' => isset($movement['usuario']) ? (string) $movement['usuario'] : '',
-                    'soportes' => count($supportsPayload),
-                );
-                $movementDetailPayloadJson = mov_encode_json($movementDetailPayload);
-                $movementDateOnly = substr((string) $movementDetailPayload['fecha'], 0, 10);
-                ?>
-                <article
-                    class="mobile-movement-card"
-                    data-filter-fecha="<?php echo mov_escape($movementDateOnly); ?>"
-                    data-filter-clasificacion="<?php echo mov_escape(mov_filter_key($movementDetailPayload['clasificacion'])); ?>"
-                    data-filter-categoria="<?php echo mov_escape(mov_filter_key($movementDetailPayload['categoria'])); ?>"
-                    data-filter-tipo="<?php echo mov_escape(mov_filter_key($movementDetailPayload['tipo'])); ?>">
-                    <div class="mobile-movement-head">
-                        <span class="mobile-movement-date"><i class="bi bi-calendar-event"></i> <?php echo mov_escape($movementDetailPayload['fecha']); ?></span>
-                        <span class="mobile-movement-id">#<?php echo (int) $movementDetailPayload['id']; ?></span>
-                    </div>
-                    <div class="mobile-movement-summary">
-                        <strong><?php echo mov_escape($movementDetailPayload['clasificacion']); ?></strong>
-                        <span><?php echo mov_escape($movementDetailPayload['valor']); ?></span>
-                    </div>
-                    <div class="mobile-movement-actions">
-                        <button type="button" class="btn btn-ghost btn-inline btn-mini btn-icon-only js-open-movement-mobile-modal" title="Ver detalle" aria-label="Ver detalle" data-movement-json="<?php echo mov_escape($movementDetailPayloadJson); ?>">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                        <?php if (!empty($supportsPayload)) : ?>
-                            <button
-                                type="button"
-                                class="btn btn-ghost btn-inline btn-mini btn-icon-only supports-trigger js-open-supports-modal"
-                                title="Ver soportes"
-                                aria-label="Ver soportes"
-                                data-supports-json="<?php echo mov_escape($supportsPayloadJson); ?>"
-                                data-supports-title="Soportes del movimiento #<?php echo (int) $movement['id']; ?>">
-                                <i class="bi bi-paperclip"></i>
-                                <span class="supports-count-badge"><?php echo (int) count($supportsPayload); ?></span>
-                            </button>
-                        <?php endif; ?>
-                        <a class="btn btn-ghost btn-inline btn-mini btn-icon-only" title="Ver ticket" aria-label="Ver ticket" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/ticket&id=<?php echo (int) $movement['id']; ?>" target="_blank">
-                            <i class="bi bi-receipt"></i>
-                        </a>
-                        <a class="btn btn-secondary btn-inline btn-mini btn-icon-only" title="Editar movimiento" aria-label="Editar movimiento" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/editar&id=<?php echo (int) $movement['id']; ?>">
-                            <i class="bi bi-pencil-square"></i>
-                        </a>
-                        <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/eliminar" class="inline-form js-confirm-delete" data-confirm-title="Confirmar eliminacion" data-confirm-message="Se eliminara este movimiento y sus soportes. Esta accion no se puede deshacer." data-confirm-accept="Si, eliminar">
-                            <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
-                            <input type="hidden" name="movement_id" value="<?php echo (int) $movement['id']; ?>">
-                            <button type="submit" class="btn btn-danger btn-inline btn-mini btn-icon-only" title="Eliminar movimiento" aria-label="Eliminar movimiento">
-                                <i class="bi bi-trash3"></i>
-                            </button>
-                        </form>
-                    </div>
-                </article>
-            <?php endforeach; ?>
-            <div id="movement-mobile-empty-filter" class="mobile-movement-empty muted hidden">No hay movimientos para el filtro seleccionado.</div>
-        <?php endif; ?>
-    </div>
+    <aside class="card movement-summary-card" id="movement-summary-card">
+        <div class="movement-summary-head">
+            <h3><i class="bi bi-card-checklist"></i> Resumen rapido</h3>
+            <span class="muted">Selecciona un movimiento</span>
+        </div>
+        <div id="movement-summary-body" class="movement-summary-body">
+            <p class="muted">Haz clic en un registro del listado para ver detalle completo y accesos directos.</p>
+        </div>
+    </aside>
 </section>
 
 <div id="movement-mobile-modal" class="modal-overlay hidden" aria-hidden="true">
@@ -356,20 +430,6 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
         </div>
         <div id="movement-mobile-modal-body" class="modal-body">
             <p class="muted">Selecciona un registro para ver su detalle.</p>
-        </div>
-    </div>
-</div>
-
-<div id="supports-modal" class="modal-overlay hidden" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="supports-modal-title">
-        <div class="modal-header">
-            <h3 id="supports-modal-title"><i class="bi bi-paperclip"></i> Soportes</h3>
-            <button type="button" class="btn btn-secondary btn-inline btn-mini btn-icon-only js-close-supports-modal" title="Cerrar" aria-label="Cerrar">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        </div>
-        <div id="supports-modal-body" class="modal-body">
-            <p class="muted">No hay soportes para mostrar.</p>
         </div>
     </div>
 </div>
