@@ -1,5 +1,10 @@
 ﻿# Versiones
 
+## v0.6.4 - 2026-03-09
+- Nuevo listado movil de movimientos con fecha visible y acciones rapidas por registro.
+- Boton "Ver detalle" en mobile con popup completo del movimiento.
+- Acciones en lista movil: soportes, ticket, editar y eliminar con confirmacion.
+
 ## v0.6.3 - 2026-03-09
 - Opcion visible de "Instalar app" en login y panel principal.
 - Flujo de instalacion PWA con prompt nativo cuando aplica y guia simple para iPhone/iPad.
@@ -94,6 +99,7 @@
 - `MAJOR`: cambios incompatibles.
 - `MINOR`: funcionalidades nuevas compatibles.
 - `PATCH`: correcciones y ajustes sin romper API funcional.
+
 
 
 

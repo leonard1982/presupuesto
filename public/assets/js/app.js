@@ -743,6 +743,9 @@
     var supportsModalBody = document.getElementById('supports-modal-body');
     var supportsModalTitle = document.getElementById('supports-modal-title');
     var movementSaveModal = document.getElementById('movement-save-modal');
+    var movementMobileModal = document.getElementById('movement-mobile-modal');
+    var movementMobileModalTitle = document.getElementById('movement-mobile-modal-title');
+    var movementMobileModalBody = document.getElementById('movement-mobile-modal-body');
     var installButtons = document.querySelectorAll('.js-app-install-button');
     var pwaInstallModal = document.getElementById('pwa-install-modal');
     var pwaInstallModalText = document.getElementById('pwa-install-modal-text');
@@ -889,6 +892,57 @@
         movementSaveModal.setAttribute('aria-hidden', 'true');
     }
 
+    function closeMovementMobileModal() {
+        if (!movementMobileModal) {
+            return;
+        }
+
+        movementMobileModal.classList.add('hidden');
+        movementMobileModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function openMovementMobileModal(buttonElement) {
+        if (!movementMobileModal || !movementMobileModalBody || !buttonElement) {
+            return;
+        }
+
+        var movementJson = buttonElement.getAttribute('data-movement-json') || '{}';
+        var movementData = readSafeJson(movementJson);
+        if (!movementData || typeof movementData !== 'object') {
+            return;
+        }
+
+        var movementId = movementData.id ? String(movementData.id) : '';
+        if (movementMobileModalTitle) {
+            movementMobileModalTitle.innerHTML = '<i class="bi bi-card-text"></i> Detalle del movimiento' + (movementId !== '' ? ' #' + escapeHtml(movementId) : '');
+        }
+
+        var detailRows = [
+            { label: 'Fecha', value: movementData.fecha || '' },
+            { label: 'Clasificacion', value: movementData.clasificacion || '' },
+            { label: 'Detalle', value: movementData.detalle || '' },
+            { label: 'Categoria', value: movementData.categoria || '' },
+            { label: 'Tipo', value: movementData.tipo || '' },
+            { label: 'Valor', value: movementData.valor || '' },
+            { label: 'Usuario', value: movementData.usuario || '' },
+            { label: 'Soportes', value: String(movementData.soportes || 0) }
+        ];
+
+        var html = '<div class="movement-detail-grid">';
+        for (var rowIndex = 0; rowIndex < detailRows.length; rowIndex += 1) {
+            var row = detailRows[rowIndex];
+            html += '<div class="movement-detail-item">';
+            html += '<span>' + escapeHtml(row.label) + '</span>';
+            html += '<strong>' + escapeHtml(row.value) + '</strong>';
+            html += '</div>';
+        }
+        html += '</div>';
+
+        movementMobileModalBody.innerHTML = html;
+        movementMobileModal.classList.remove('hidden');
+        movementMobileModal.setAttribute('aria-hidden', 'false');
+    }
+
     document.addEventListener('click', function (event) {
         if (!event.target || typeof event.target.closest !== 'function') {
             return;
@@ -942,6 +996,20 @@
             return;
         }
 
+        var openMovementDetailButton = event.target.closest('.js-open-movement-mobile-modal');
+        if (openMovementDetailButton) {
+            event.preventDefault();
+            openMovementMobileModal(openMovementDetailButton);
+            return;
+        }
+
+        var closeMovementDetailButton = event.target.closest('.js-close-movement-mobile-modal');
+        if (closeMovementDetailButton) {
+            event.preventDefault();
+            closeMovementMobileModal();
+            return;
+        }
+
         var openButton = event.target.closest('.js-open-supports-modal');
         if (openButton) {
             event.preventDefault();
@@ -961,6 +1029,11 @@
             return;
         }
 
+        if (movementMobileModal && event.target === movementMobileModal) {
+            closeMovementMobileModal();
+            return;
+        }
+
         if (pwaInstallModal && event.target === pwaInstallModal) {
             closePwaInstallModal();
         }
@@ -970,6 +1043,7 @@
         if (event.key === 'Escape') {
             closeSupportsModal();
             closeMovementSaveModal();
+            closeMovementMobileModal();
             closePwaInstallModal();
         }
     });

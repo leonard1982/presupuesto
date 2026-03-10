@@ -650,6 +650,106 @@ textarea {
     letter-spacing: 0.03em;
 }
 
+.mobile-movement-list {
+    display: none;
+}
+
+.mobile-movement-card {
+    border: 1px solid #d8e4f1;
+    border-radius: 12px;
+    background: #fbfdff;
+    padding: 0.72rem;
+    margin-bottom: 0.65rem;
+}
+
+.mobile-movement-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+}
+
+.mobile-movement-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.34rem;
+    color: #25496f;
+    font-weight: 700;
+    font-size: 0.84rem;
+}
+
+.mobile-movement-id {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid #c6d8ec;
+    background: #edf5ff;
+    color: #104774;
+    font-weight: 700;
+    font-size: 0.76rem;
+}
+
+.mobile-movement-summary {
+    margin-top: 0.55rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.mobile-movement-summary strong {
+    font-size: 0.92rem;
+}
+
+.mobile-movement-summary span {
+    font-weight: 700;
+    color: #0f4c81;
+}
+
+.mobile-movement-actions {
+    margin-top: 0.62rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.38rem;
+}
+
+.mobile-movement-empty {
+    border: 1px dashed #d8e4f1;
+    border-radius: 12px;
+    padding: 0.9rem;
+    text-align: center;
+}
+
+.movement-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.52rem;
+}
+
+.movement-detail-item {
+    border: 1px solid #dbe6f2;
+    border-radius: 10px;
+    background: #fbfdff;
+    padding: 0.52rem 0.58rem;
+}
+
+.movement-detail-item span {
+    display: block;
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #456688;
+}
+
+.movement-detail-item strong {
+    display: block;
+    margin-top: 0.24rem;
+    color: #0f2742;
+    word-break: break-word;
+}
+
 .form-card {
     padding: 1.2rem;
 }
@@ -1506,6 +1606,42 @@ body.theme-dark .muted {
     color: #c4d4e8;
 }
 
+body.theme-dark .mobile-movement-card {
+    background: #102032;
+    border-color: #355070;
+}
+
+body.theme-dark .mobile-movement-date {
+    color: #d7e7fa;
+}
+
+body.theme-dark .mobile-movement-id {
+    background: #1a324b;
+    border-color: #375473;
+    color: #d8ebff;
+}
+
+body.theme-dark .mobile-movement-summary span {
+    color: #9eceff;
+}
+
+body.theme-dark .mobile-movement-empty {
+    border-color: #355070;
+}
+
+body.theme-dark .movement-detail-item {
+    background: #102032;
+    border-color: #314965;
+}
+
+body.theme-dark .movement-detail-item span {
+    color: #9bb4cf;
+}
+
+body.theme-dark .movement-detail-item strong {
+    color: #e6f0fc;
+}
+
 body.theme-dark .text-danger {
     color: #ff9e9e !important;
 }
@@ -1809,6 +1945,14 @@ body.theme-dark .dataTables_wrapper .dt-tools .dt-button.dt-export-button:hover 
         justify-content: space-between;
         width: 100%;
         margin-left: 0;
+    }
+
+    .movement-table-wrapper {
+        display: none;
+    }
+
+    .mobile-movement-list {
+        display: block;
     }
 
     .ticket-grid {

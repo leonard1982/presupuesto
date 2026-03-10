@@ -16,6 +16,36 @@ if (!function_exists('mov_money')) {
         return '$ ' . number_format((float) $value, 0, ',', '.');
     }
 }
+
+if (!function_exists('mov_build_supports_payload')) {
+    function mov_build_supports_payload(array $supports, $baseUrl, $movementId)
+    {
+        $supportsPayload = array();
+        foreach ($supports as $support) {
+            $supportId = isset($support['support_id']) ? (int) $support['support_id'] : 0;
+            if ($supportId <= 0) {
+                continue;
+            }
+
+            $originalName = isset($support['original_name']) ? (string) $support['original_name'] : '';
+            $supportsPayload[] = array(
+                'id' => $supportId,
+                'name' => $originalName,
+                'url' => rtrim((string) $baseUrl, '/') . '/index.php?route=movimientos/soporte&id=' . (int) $movementId . '&sid=' . $supportId,
+            );
+        }
+
+        return $supportsPayload;
+    }
+}
+
+if (!function_exists('mov_encode_json')) {
+    function mov_encode_json($payload)
+    {
+        $jsonText = json_encode($payload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        return $jsonText === false ? '[]' : $jsonText;
+    }
+}
 ?>
 <section class="page-header card">
     <div>
@@ -55,8 +85,8 @@ if (!function_exists('mov_money')) {
     <div class="alert alert-error"><?php echo mov_escape($errorMessage); ?></div>
 <?php endif; ?>
 
-<section class="card table-card">
-    <div class="table-wrapper">
+<section class="card table-card movement-list-card">
+    <div class="table-wrapper movement-table-wrapper">
         <table class="table-professional js-data-table js-indexed-table js-exportable" data-page-length="20" data-export-name="movimientos_registro_operativo">
             <thead>
             <tr>
@@ -81,6 +111,8 @@ if (!function_exists('mov_money')) {
             <?php else : ?>
                 <?php foreach ($movimientos as $movement) : ?>
                     <?php $supports = isset($movement['supports']) && is_array($movement['supports']) ? $movement['supports'] : array(); ?>
+                    <?php $supportsPayload = mov_build_supports_payload($supports, $baseUrl, (int) $movement['id']); ?>
+                    <?php $supportsPayloadJson = mov_encode_json($supportsPayload); ?>
                     <tr>
                         <td></td>
                         <td><?php echo (int) $movement['id']; ?></td>
@@ -91,26 +123,6 @@ if (!function_exists('mov_money')) {
                         <td><?php echo mov_escape($movement['tipo']); ?></td>
                         <td><?php echo mov_money($movement['valor']); ?></td>
                         <td>
-                            <?php
-                            $supportsPayload = array();
-                            foreach ($supports as $support) {
-                                $supportId = isset($support['support_id']) ? (int) $support['support_id'] : 0;
-                                if ($supportId <= 0) {
-                                    continue;
-                                }
-
-                                $originalName = isset($support['original_name']) ? (string) $support['original_name'] : '';
-                                $supportsPayload[] = array(
-                                    'id' => $supportId,
-                                    'name' => $originalName,
-                                    'url' => rtrim((string) $baseUrl, '/') . '/index.php?route=movimientos/soporte&id=' . (int) $movement['id'] . '&sid=' . $supportId,
-                                );
-                            }
-                            $supportsPayloadJson = json_encode($supportsPayload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-                            if ($supportsPayloadJson === false) {
-                                $supportsPayloadJson = '[]';
-                            }
-                            ?>
                             <?php if (empty($supportsPayload)) : ?>
                                 <span class="muted">Sin soporte</span>
                             <?php else : ?>
@@ -150,7 +162,87 @@ if (!function_exists('mov_money')) {
             </tbody>
         </table>
     </div>
+
+    <div class="mobile-movement-list">
+        <?php if (empty($movimientos)) : ?>
+            <div class="mobile-movement-empty muted">No hay movimientos registrados.</div>
+        <?php else : ?>
+            <?php foreach ($movimientos as $movement) : ?>
+                <?php $supports = isset($movement['supports']) && is_array($movement['supports']) ? $movement['supports'] : array(); ?>
+                <?php $supportsPayload = mov_build_supports_payload($supports, $baseUrl, (int) $movement['id']); ?>
+                <?php $supportsPayloadJson = mov_encode_json($supportsPayload); ?>
+                <?php
+                $movementDetailPayload = array(
+                    'id' => isset($movement['id']) ? (int) $movement['id'] : 0,
+                    'fecha' => isset($movement['fecha']) ? (string) $movement['fecha'] : '',
+                    'clasificacion' => isset($movement['clasificacion']) && $movement['clasificacion'] !== null ? (string) $movement['clasificacion'] : 'Sin clasificacion',
+                    'detalle' => isset($movement['detalle']) ? (string) $movement['detalle'] : '',
+                    'categoria' => isset($movement['gasto_costo']) ? (string) $movement['gasto_costo'] : '',
+                    'tipo' => isset($movement['tipo']) ? (string) $movement['tipo'] : '',
+                    'valor' => mov_money(isset($movement['valor']) ? $movement['valor'] : 0),
+                    'usuario' => isset($movement['usuario']) ? (string) $movement['usuario'] : '',
+                    'soportes' => count($supportsPayload),
+                );
+                $movementDetailPayloadJson = mov_encode_json($movementDetailPayload);
+                ?>
+                <article class="mobile-movement-card">
+                    <div class="mobile-movement-head">
+                        <span class="mobile-movement-date"><i class="bi bi-calendar-event"></i> <?php echo mov_escape($movementDetailPayload['fecha']); ?></span>
+                        <span class="mobile-movement-id">#<?php echo (int) $movementDetailPayload['id']; ?></span>
+                    </div>
+                    <div class="mobile-movement-summary">
+                        <strong><?php echo mov_escape($movementDetailPayload['clasificacion']); ?></strong>
+                        <span><?php echo mov_escape($movementDetailPayload['valor']); ?></span>
+                    </div>
+                    <div class="mobile-movement-actions">
+                        <button type="button" class="btn btn-ghost btn-inline btn-mini btn-icon-only js-open-movement-mobile-modal" title="Ver detalle" aria-label="Ver detalle" data-movement-json="<?php echo mov_escape($movementDetailPayloadJson); ?>">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <?php if (!empty($supportsPayload)) : ?>
+                            <button
+                                type="button"
+                                class="btn btn-ghost btn-inline btn-mini btn-icon-only supports-trigger js-open-supports-modal"
+                                title="Ver soportes"
+                                aria-label="Ver soportes"
+                                data-supports-json="<?php echo mov_escape($supportsPayloadJson); ?>"
+                                data-supports-title="Soportes del movimiento #<?php echo (int) $movement['id']; ?>">
+                                <i class="bi bi-paperclip"></i>
+                                <span class="supports-count-badge"><?php echo (int) count($supportsPayload); ?></span>
+                            </button>
+                        <?php endif; ?>
+                        <a class="btn btn-ghost btn-inline btn-mini btn-icon-only" title="Ver ticket" aria-label="Ver ticket" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/ticket&id=<?php echo (int) $movement['id']; ?>" target="_blank">
+                            <i class="bi bi-receipt"></i>
+                        </a>
+                        <a class="btn btn-secondary btn-inline btn-mini btn-icon-only" title="Editar movimiento" aria-label="Editar movimiento" href="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/editar&id=<?php echo (int) $movement['id']; ?>">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/eliminar" class="inline-form js-confirm-delete" data-confirm-message="Se eliminara este movimiento y sus soportes. Deseas continuar?">
+                            <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
+                            <input type="hidden" name="movement_id" value="<?php echo (int) $movement['id']; ?>">
+                            <button type="submit" class="btn btn-danger btn-inline btn-mini btn-icon-only" title="Eliminar movimiento" aria-label="Eliminar movimiento">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </form>
+                    </div>
+                </article>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
 </section>
+
+<div id="movement-mobile-modal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="movement-mobile-modal-title">
+        <div class="modal-header">
+            <h3 id="movement-mobile-modal-title"><i class="bi bi-card-text"></i> Detalle del movimiento</h3>
+            <button type="button" class="btn btn-secondary btn-inline btn-mini btn-icon-only js-close-movement-mobile-modal" title="Cerrar" aria-label="Cerrar">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div id="movement-mobile-modal-body" class="modal-body">
+            <p class="muted">Selecciona un registro para ver su detalle.</p>
+        </div>
+    </div>
+</div>
 
 <div id="supports-modal" class="modal-overlay hidden" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="supports-modal-title">

@@ -180,3 +180,14 @@
   - `public/assets/pwa/apple-touch-icon.png`
 - Se mejora `sw.js` con cache ligera de recursos estaticos y limpieza de versiones antiguas.
 - Se activa PWA por defecto en configuracion (`APP_ENABLE_PWA` con valor default `true`, configurable por `.env`).
+
+## 2026-03-09 - Vista movil de movimientos con popup de detalle
+- Se agrega listado movil dedicado para movimientos, evitando render incomodo de tabla en pantallas pequenas.
+- Cada registro movil muestra fecha, identificador, clasificacion y valor en formato compacto.
+- Se agrega boton de `Ver detalle` por registro que abre popup con todos los datos del movimiento.
+- Se mantienen acciones operativas directas en la lista movil:
+  - ver soportes
+  - ver ticket
+  - editar
+  - eliminar con confirmacion.
+- La tabla DataTables se conserva para escritorio y el nuevo listado se activa solo en mobile por CSS responsive.
