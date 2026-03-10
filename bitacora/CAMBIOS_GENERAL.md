@@ -77,3 +77,21 @@
 - Se mejora presentacion de formularios y encabezados de modulo con estilo visual unificado.
 - Se integra Chart.js para dashboard con graficos de tendencia mensual y distribucion por clasificacion.
 - Se integra DataTables responsive para tablas con filtro, ordenamiento, paginacion y control de cantidad de filas por pagina.
+
+## 2026-03-09 - Edicion, eliminacion y soportes de movimientos
+- Se agrega edicion de movimientos (`movimientos/editar`) con formulario reutilizable.
+- Se agrega eliminacion de movimientos (`movimientos/eliminar`) con confirmacion obligatoria desde interfaz.
+- Se agrega carga de soportes multiples en movimientos con validacion frontend y backend:
+  - extension permitida
+  - MIME permitido
+  - tamano maximo por archivo
+- Los soportes se guardan en almacenamiento privado (`storage/uploads/soportes`).
+- Se agrega descarga segura de soportes por endpoint autenticado (`movimientos/soporte`).
+- Se agrega columna de acciones en listado para editar/eliminar y enlaces de descarga de soportes.
+
+## 2026-03-09 - Tablas sin scroll horizontal y paginacion centrada
+- Se ajusta DataTables para evitar scroll horizontal forzado y mejorar adaptacion responsive.
+- Se centraliza paginacion con iconos de navegacion y sin textos largos.
+- Se habilita selector de cantidad de registros: 10, 20, 30, 50, 100, 200, 300, 500, 1000 y Todos.
+- Se numeran registros en todas las tablas visibles por pagina.
+- Se ajusta formato monetario sin decimales en dashboard y movimientos.

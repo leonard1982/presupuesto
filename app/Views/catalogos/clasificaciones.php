@@ -53,9 +53,10 @@ if (!function_exists('cat_escape')) {
 
 <section class="card table-card">
     <div class="table-wrapper">
-        <table class="table-professional js-data-table" data-page-length="10">
+        <table class="table-professional js-data-table js-indexed-table" data-page-length="20">
             <thead>
             <tr>
+                <th>#</th>
                 <th>ID</th>
                 <th>Descripcion</th>
             </tr>
@@ -63,11 +64,12 @@ if (!function_exists('cat_escape')) {
             <tbody>
             <?php if (empty($records)) : ?>
                 <tr>
-                    <td colspan="2" class="muted">No hay registros para mostrar.</td>
+                    <td colspan="3" class="muted">No hay registros para mostrar.</td>
                 </tr>
             <?php else : ?>
                 <?php foreach ($records as $record) : ?>
                     <tr>
+                        <td></td>
                         <td><?php echo (int) $record['id']; ?></td>
                         <td><?php echo cat_escape($record['descripcion']); ?></td>
                     </tr>

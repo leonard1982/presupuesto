@@ -27,12 +27,20 @@ $selectedClasificacion = isset($formData['id_clasificacion']) ? (int) $formData[
 $selectedPresupuesto = isset($formData['id_presupuesto']) ? (int) $formData['id_presupuesto'] : 0;
 $selectedSaldoTipo = isset($formData['por_pagar_cobrar']) ? (string) $formData['por_pagar_cobrar'] : 'NINGUNO';
 $fechaActual = date('Y-m-d\TH:i');
+
+$isEdit = !empty($isEditMode);
+$movementIdValue = isset($movementId) ? (int) $movementId : 0;
+$actionRoute = isset($formActionRoute) ? (string) $formActionRoute : 'movimientos';
+$supportsList = isset($existingSupports) && is_array($existingSupports) ? $existingSupports : array();
+$maxUploadMb = isset($filesConfig['maxMb']) ? (int) $filesConfig['maxMb'] : 10;
+$allowedExtensions = isset($filesConfig['allowedExtensions']) && is_array($filesConfig['allowedExtensions']) ? $filesConfig['allowedExtensions'] : array('jpg', 'jpeg', 'png', 'webp', 'pdf');
+$allowedExtensionsCsv = implode(',', $allowedExtensions);
 ?>
 <section class="page-header card">
     <div>
         <span class="title-chip"><i class="bi bi-plus-circle"></i> Captura rapida</span>
-        <h2>Nuevo movimiento</h2>
-        <p class="muted">Registra gastos, costos o compras con clasificacion y medio de pago.</p>
+        <h2><?php echo $isEdit ? 'Editar movimiento' : 'Nuevo movimiento'; ?></h2>
+        <p class="muted">Registra gastos, costos o compras con clasificacion, medios y soportes.</p>
     </div>
     <a class="btn btn-secondary btn-inline" href="<?php echo mov_form_escape($baseUrl); ?>/index.php?route=movimientos">
         <i class="bi bi-arrow-left-circle"></i> Volver al listado
@@ -45,8 +53,11 @@ $fechaActual = date('Y-m-d\TH:i');
 <div id="movimiento-client-error" class="alert alert-error hidden"></div>
 
 <section class="card form-card">
-    <form id="movimiento-form" method="post" action="<?php echo mov_form_escape($baseUrl); ?>/index.php?route=movimientos" novalidate>
+    <form id="movimiento-form" method="post" action="<?php echo mov_form_escape($baseUrl); ?>/index.php?route=<?php echo mov_form_escape($actionRoute); ?>" enctype="multipart/form-data" novalidate>
         <input type="hidden" name="<?php echo mov_form_escape($csrfTokenName); ?>" value="<?php echo mov_form_escape($csrfToken); ?>">
+        <?php if ($isEdit) : ?>
+            <input type="hidden" name="movement_id" value="<?php echo $movementIdValue; ?>">
+        <?php endif; ?>
 
         <div class="form-grid">
             <div class="form-field">
@@ -115,27 +126,50 @@ $fechaActual = date('Y-m-d\TH:i');
 
             <div class="form-field">
                 <label for="valor">Valor</label>
-                <input id="valor" name="valor" type="text" inputmode="decimal" value="<?php echo mov_form_escape(isset($formData['valor']) ? $formData['valor'] : ''); ?>" placeholder="Ejemplo: 1250000.00" required>
+                <input id="valor" name="valor" type="text" inputmode="numeric" value="<?php echo mov_form_escape(isset($formData['valor']) ? $formData['valor'] : ''); ?>" placeholder="Ejemplo: 1250000" required>
             </div>
 
             <div class="form-field">
                 <label for="valor_neto">Valor neto</label>
-                <input id="valor_neto" name="valor_neto" type="text" inputmode="decimal" value="<?php echo mov_form_escape(isset($formData['valor_neto']) ? $formData['valor_neto'] : '0'); ?>">
+                <input id="valor_neto" name="valor_neto" type="text" inputmode="numeric" value="<?php echo mov_form_escape(isset($formData['valor_neto']) ? $formData['valor_neto'] : '0'); ?>">
             </div>
 
             <div class="form-field">
                 <label for="saldo">Saldo</label>
-                <input id="saldo" name="saldo" type="text" inputmode="decimal" value="<?php echo mov_form_escape(isset($formData['saldo']) ? $formData['saldo'] : '0'); ?>">
+                <input id="saldo" name="saldo" type="text" inputmode="numeric" value="<?php echo mov_form_escape(isset($formData['saldo']) ? $formData['saldo'] : '0'); ?>">
             </div>
 
             <div class="form-field form-field-wide">
                 <label for="detalle">Detalle</label>
                 <textarea id="detalle" name="detalle" rows="4" maxlength="4000" placeholder="Describe la compra, gasto o costo..." required><?php echo mov_form_escape(isset($formData['detalle']) ? $formData['detalle'] : ''); ?></textarea>
             </div>
+
+            <div class="form-field form-field-wide">
+                <label for="soportes">Soportes (imagenes o PDF)</label>
+                <input id="soportes" name="soportes[]" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.pdf" data-max-mb="<?php echo $maxUploadMb; ?>" data-allowed-extensions="<?php echo mov_form_escape($allowedExtensionsCsv); ?>">
+                <p class="muted">Puedes seleccionar varios archivos. Extensiones permitidas: <?php echo mov_form_escape($allowedExtensionsCsv); ?>. Maximo por archivo: <?php echo $maxUploadMb; ?> MB.</p>
+            </div>
         </div>
 
+        <?php if ($isEdit && !empty($supportsList)) : ?>
+            <div class="supports-panel">
+                <h3><i class="bi bi-paperclip"></i> Soportes existentes</h3>
+                <div class="table-actions-stack">
+                    <?php foreach ($supportsList as $support) : ?>
+                        <?php
+                        $storedName = isset($support['stored_name']) ? (string) $support['stored_name'] : '';
+                        $originalName = isset($support['original_name']) ? (string) $support['original_name'] : $storedName;
+                        ?>
+                        <a class="btn btn-ghost btn-inline btn-mini" href="<?php echo mov_form_escape($baseUrl); ?>/index.php?route=movimientos/soporte&id=<?php echo $movementIdValue; ?>&file=<?php echo rawurlencode($storedName); ?>" target="_blank">
+                            <i class="bi bi-download"></i> <?php echo mov_form_escape($originalName); ?>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary btn-inline"><i class="bi bi-check2-circle"></i> Guardar movimiento</button>
+            <button type="submit" class="btn btn-primary btn-inline"><i class="bi bi-check2-circle"></i> <?php echo $isEdit ? 'Actualizar movimiento' : 'Guardar movimiento'; ?></button>
             <a class="btn btn-secondary btn-inline" href="<?php echo mov_form_escape($baseUrl); ?>/index.php?route=movimientos"><i class="bi bi-x-circle"></i> Cancelar</a>
         </div>
     </form>

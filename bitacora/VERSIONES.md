@@ -1,5 +1,12 @@
 ﻿# Versiones
 
+## v0.4.0 - 2026-03-09
+- Paginacion de tablas centrada con iconos y selector de cantidad configurable hasta 1000 o Todos.
+- Listados sin scroll horizontal, con filas numeradas por pagina y valores sin decimales.
+- Movimientos con acciones de editar y eliminar (eliminacion con confirmacion).
+- Soportes multiples en movimientos con validacion de extension, MIME y tamano.
+- Descarga segura de soportes desde ruta protegida (`movimientos/soporte`).
+
 ## v0.3.0 - 2026-03-09
 - Sidebar izquierdo colapsable en escritorio y menu lateral desplegable en movil.
 - Iconografia profesional en titulos, botones y navegacion.

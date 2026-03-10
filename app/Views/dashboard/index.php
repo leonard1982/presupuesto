@@ -13,7 +13,7 @@ if (!function_exists('dashboard_escape')) {
 if (!function_exists('dashboard_money')) {
     function dashboard_money($value)
     {
-        return '$ ' . number_format((float) $value, 2, ',', '.');
+        return '$ ' . number_format((float) $value, 0, ',', '.');
     }
 }
 
@@ -121,9 +121,10 @@ $chartPayload = array(
         </a>
     </div>
     <div class="table-wrapper">
-        <table class="table-professional js-data-table" data-page-length="8">
+        <table class="table-professional js-data-table js-indexed-table" data-page-length="10">
             <thead>
             <tr>
+                <th>#</th>
                 <th>Fecha</th>
                 <th>Clasificacion</th>
                 <th>Detalle</th>
@@ -135,11 +136,12 @@ $chartPayload = array(
             <tbody>
             <?php if (empty($recentMovements)) : ?>
                 <tr>
-                    <td colspan="6" class="muted">Sin movimientos recientes.</td>
+                    <td colspan="7" class="muted">Sin movimientos recientes.</td>
                 </tr>
             <?php else : ?>
                 <?php foreach ($recentMovements as $movement) : ?>
                     <tr>
+                        <td></td>
                         <td><?php echo dashboard_escape($movement['fecha']); ?></td>
                         <td><?php echo dashboard_escape($movement['clasificacion'] !== null ? $movement['clasificacion'] : 'Sin clasificacion'); ?></td>
                         <td><?php echo dashboard_escape($movement['detalle']); ?></td>

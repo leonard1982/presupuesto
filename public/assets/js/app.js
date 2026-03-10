@@ -63,6 +63,7 @@
     var movementForm = document.getElementById('movimiento-form');
     if (movementForm) {
         var movementErrorId = 'movimiento-client-error';
+        var supportsInput = document.getElementById('soportes');
         movementForm.addEventListener('submit', function (event) {
             var requiredFields = ['fecha', 'id_clasificacion', 'detalle', 'valor', 'gasto_costo', 'tipo'];
             var invalidField = null;
@@ -80,6 +81,34 @@
                 invalidField.focus();
                 showInlineError(movementErrorId, 'Completa los campos obligatorios del movimiento.');
                 return;
+            }
+
+            if (supportsInput && supportsInput.files && supportsInput.files.length > 0) {
+                var maxMb = parseInt(supportsInput.getAttribute('data-max-mb') || '10', 10);
+                var maxBytes = maxMb * 1024 * 1024;
+                var allowedExtensions = String(supportsInput.getAttribute('data-allowed-extensions') || '').toLowerCase().split(',');
+
+                for (var fileIndex = 0; fileIndex < supportsInput.files.length; fileIndex += 1) {
+                    var supportFile = supportsInput.files[fileIndex];
+                    var fileName = String(supportFile.name || '').toLowerCase();
+                    var extension = '';
+                    var dotIndex = fileName.lastIndexOf('.');
+                    if (dotIndex !== -1) {
+                        extension = fileName.substring(dotIndex + 1);
+                    }
+
+                    if (allowedExtensions.indexOf(extension) === -1) {
+                        event.preventDefault();
+                        showInlineError(movementErrorId, 'Hay archivos con extension no permitida.');
+                        return;
+                    }
+
+                    if (supportFile.size > maxBytes) {
+                        event.preventDefault();
+                        showInlineError(movementErrorId, 'Hay archivos que superan el tamano maximo permitido.');
+                        return;
+                    }
+                }
             }
 
             hideInlineError(movementErrorId);
@@ -213,25 +242,54 @@
             window.jQuery('.js-data-table').each(function () {
                 var pageLength = parseInt(window.jQuery(this).data('page-length'), 10);
                 if (!pageLength || pageLength < 1) {
-                    pageLength = 10;
+                    pageLength = 20;
                 }
 
-                window.jQuery(this).DataTable({
+                var isIndexedTable = window.jQuery(this).hasClass('js-indexed-table');
+
+                var dataTable = window.jQuery(this).DataTable({
                     responsive: true,
+                    autoWidth: false,
                     pageLength: pageLength,
-                    lengthMenu: [[10, 25, 50], [10, 25, 50]],
+                    lengthMenu: [[10, 20, 30, 50, 100, 200, 300, 500, 1000, -1], [10, 20, 30, 50, 100, 200, 300, 500, 1000, 'Todos']],
+                    dom: '<"dt-top"lf>t<"dt-bottom"p>',
+                    info: false,
+                    columnDefs: isIndexedTable ? [{ targets: 0, orderable: false, searchable: false }] : [],
                     language: {
-                        search: 'Buscar:',
-                        lengthMenu: 'Mostrar _MENU_',
-                        info: 'Mostrando _START_ a _END_ de _TOTAL_',
-                        infoEmpty: 'Sin datos para mostrar',
-                        zeroRecords: 'No se encontraron resultados',
+                        search: '',
+                        searchPlaceholder: 'Buscar...',
+                        lengthMenu: '_MENU_',
+                        emptyTable: 'Sin registros',
+                        zeroRecords: 'Sin coincidencias',
                         paginate: {
-                            previous: 'Anterior',
-                            next: 'Siguiente'
+                            previous: '<i class="bi bi-chevron-left"></i>',
+                            next: '<i class="bi bi-chevron-right"></i>'
                         }
                     }
                 });
+
+                if (isIndexedTable) {
+                    dataTable.on('order.dt search.dt draw.dt', function () {
+                        var info = dataTable.page.info();
+                        dataTable.column(0, { search: 'applied', order: 'applied', page: 'current' })
+                            .nodes()
+                            .each(function (cell, index) {
+                                cell.innerHTML = String(info.start + index + 1);
+                            });
+                    }).draw();
+                }
+            });
+        }
+    }
+
+    var confirmDeleteForms = document.querySelectorAll('.js-confirm-delete');
+    if (confirmDeleteForms && confirmDeleteForms.length > 0) {
+        for (var formIndex = 0; formIndex < confirmDeleteForms.length; formIndex += 1) {
+            confirmDeleteForms[formIndex].addEventListener('submit', function (event) {
+                var message = this.getAttribute('data-confirm-message') || 'Deseas continuar con esta accion?';
+                if (!window.confirm(message)) {
+                    event.preventDefault();
+                }
             });
         }
     }

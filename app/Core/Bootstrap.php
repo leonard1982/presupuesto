@@ -153,12 +153,48 @@ class Bootstrap
                 return;
             }
 
+            if ($routePath === '/movimientos/editar' && $method === 'GET') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $movimientoController->editForm();
+                return;
+            }
+
+            if ($routePath === '/movimientos/soporte' && $method === 'GET') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $movimientoController->downloadSupport();
+                return;
+            }
+
             if ($routePath === '/movimientos' && $method === 'POST') {
                 if (!$this->authService->isAuthenticated()) {
                     Response::redirect($this->buildUrl('/login'));
                 }
 
                 $movimientoController->store();
+                return;
+            }
+
+            if ($routePath === '/movimientos/actualizar' && $method === 'POST') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $movimientoController->update();
+                return;
+            }
+
+            if ($routePath === '/movimientos/eliminar' && $method === 'POST') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $movimientoController->delete();
                 return;
             }
 
@@ -349,6 +385,10 @@ class Bootstrap
             $directory = substr($directory, 0, -12);
         } elseif (substr($directory, -18) === '/movimientos/nuevo') {
             $directory = substr($directory, 0, -18);
+        } elseif (substr($directory, -18) === '/movimientos/editar') {
+            $directory = substr($directory, 0, -18);
+        } elseif (substr($directory, -20) === '/movimientos/soporte') {
+            $directory = substr($directory, 0, -20);
         } elseif (substr($directory, -16) === '/clasificaciones') {
             $directory = substr($directory, 0, -16);
         } elseif (substr($directory, -12) === '/medios-pago') {

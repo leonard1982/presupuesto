@@ -42,3 +42,11 @@
 ### Decision: Sidebar lateral colapsable
 - Motivo: reducir ruido visual y priorizar espacio de trabajo en pantallas pequenas y medianas.
 - Impacto: navegacion mas profesional y mejor productividad en escritorio/movil.
+
+### Decision: Soportes en almacenamiento privado fuera de /public
+- Motivo: evitar descarga directa no autorizada por URL publica.
+- Impacto: los soportes se sirven por endpoint autenticado con control de permisos.
+
+### Decision: Paginacion centrada con iconos y filas numeradas
+- Motivo: mejorar rapidez visual y ergonomia en uso diario intensivo.
+- Impacto: tablas mas claras, compactas y consistentes en todos los modulos.

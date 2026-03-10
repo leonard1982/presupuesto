@@ -1,4 +1,4 @@
-# Pendientes Tecnicos
+﻿# Pendientes Tecnicos
 
 ## Seguridad
 - Implementar limite de intentos fallidos en login.
@@ -12,9 +12,9 @@
 - Definir politica de archivado de `sc_log`.
 
 ## Modulos funcionales
-- Implementar edicion y anulacion controlada de movimientos con auditoria.
-- Implementar modulo de soportes multiples con validacion extension/MIME/tamano y almacenamiento seguro.
-- Conectar dashboard con graficos de tendencia y comparativo contra presupuesto.
+- Agregar historial de cambios (auditoria) para edicion/eliminacion de movimientos.
+- Agregar gestion de soportes (eliminar soporte individual y vista previa de imagen/PDF).
+- Conectar dashboard con comparativo contra presupuesto en tiempo real.
 
 ## API y automatizacion
 - Implementar API v1 con autenticacion de token.

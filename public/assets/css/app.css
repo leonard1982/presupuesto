@@ -557,13 +557,14 @@ textarea {
 
 .table-wrapper {
     width: 100%;
-    overflow-x: auto;
+    overflow-x: hidden;
 }
 
 .table-professional {
     width: 100%;
-    min-width: 720px;
+    min-width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 .table-professional th,
@@ -572,6 +573,8 @@ textarea {
     border-bottom: 1px solid #e2eaf4;
     padding: 0.64rem 0.5rem;
     vertical-align: top;
+    white-space: normal;
+    word-break: break-word;
 }
 
 .table-professional th {
@@ -600,6 +603,42 @@ textarea {
     flex-wrap: wrap;
     gap: 0.6rem;
     margin-top: 1rem;
+}
+
+.supports-panel {
+    margin-top: 1rem;
+    padding: 0.85rem;
+    border: 1px solid #d9e5f1;
+    border-radius: 12px;
+    background: #f9fcff;
+}
+
+.supports-panel h3 {
+    margin: 0 0 0.6rem;
+}
+
+.table-actions-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.inline-form {
+    margin: 0;
+}
+
+.btn-mini {
+    padding: 0.42rem 0.62rem;
+    font-size: 0.82rem;
+}
+
+.btn-danger {
+    color: #ffffff;
+    background: #c93b2d;
+}
+
+.btn-danger:hover {
+    filter: brightness(0.95);
 }
 
 .compact-form {
@@ -757,6 +796,19 @@ textarea {
     padding: 0.35rem 0.45rem;
 }
 
+.dataTables_wrapper .dt-top,
+.dataTables_wrapper .dt-bottom {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+}
+
+.dataTables_wrapper .dt-top {
+    justify-content: space-between;
+}
+
 .dataTables_wrapper .dataTables_paginate .paginate_button {
     border-radius: 8px !important;
     border: 1px solid #c8d8ea !important;
@@ -770,10 +822,13 @@ textarea {
     border-color: #0f4c81 !important;
 }
 
-.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    float: none !important;
+    text-align: center !important;
+}
+
 .dataTables_wrapper .dataTables_length,
 .dataTables_wrapper .dataTables_filter {
-    margin-bottom: 0.7rem;
     color: #274a6d;
     font-size: 0.86rem;
 }
@@ -893,6 +948,11 @@ textarea {
 
     .search-row {
         grid-template-columns: 1fr;
+    }
+
+    .dataTables_wrapper .dt-top {
+        flex-direction: column;
+        align-items: stretch;
     }
 
     .auth-visual {
