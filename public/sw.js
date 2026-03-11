@@ -1,6 +1,6 @@
 // Proyecto PRESUPUESTO - Service Worker de instalacion y cache ligera.
 var CACHE_PREFIX = 'presupuesto-static-v';
-var CACHE_VERSION = '0.6.2';
+var CACHE_VERSION = '0.6.3';
 var CURRENT_CACHE = CACHE_PREFIX + CACHE_VERSION;
 
 self.addEventListener('install', function (event) {
@@ -54,19 +54,15 @@ self.addEventListener('fetch', function (event) {
     }
 
     event.respondWith(
-        caches.match(event.request).then(function (cachedResponse) {
-            var fetchPromise = fetch(event.request).then(function (networkResponse) {
-                if (networkResponse && networkResponse.status === 200) {
-                    caches.open(CURRENT_CACHE).then(function (cache) {
-                        cache.put(event.request, networkResponse.clone());
-                    });
-                }
-                return networkResponse;
-            }).catch(function () {
-                return cachedResponse;
-            });
-
-            return cachedResponse || fetchPromise;
+        fetch(event.request).then(function (networkResponse) {
+            if (networkResponse && networkResponse.status === 200) {
+                caches.open(CURRENT_CACHE).then(function (cache) {
+                    cache.put(event.request, networkResponse.clone());
+                });
+            }
+            return networkResponse;
+        }).catch(function () {
+            return caches.match(event.request);
         })
     );
 });

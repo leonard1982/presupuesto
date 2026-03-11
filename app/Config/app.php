@@ -5,13 +5,22 @@
 
 use App\Core\Environment;
 
+$defaultAssetVersion = '0.1.0';
+$assetFile = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR . 'js' . DIRECTORY_SEPARATOR . 'app.js';
+if (is_file($assetFile)) {
+    $assetMTime = @filemtime($assetFile);
+    if ($assetMTime !== false) {
+        $defaultAssetVersion = (string) $assetMTime;
+    }
+}
+
 return array(
     'environment' => Environment::get('APP_ENV', 'production'),
     'debug' => Environment::getBoolean('APP_DEBUG', false),
     'base_url' => trim(Environment::get('APP_BASE_URL', 'AUTO')),
     'timezone' => Environment::get('APP_TIMEZONE', 'America/Bogota'),
     'enable_pwa' => Environment::getBoolean('APP_ENABLE_PWA', true),
-    'asset_version' => Environment::get('APP_ASSET_VERSION', '0.1.0'),
+    'asset_version' => Environment::get('APP_ASSET_VERSION', $defaultAssetVersion),
     'session_name' => Environment::get('APP_SESSION_NAME', 'presupuesto_session'),
     'session_lifetime_seconds' => Environment::getInteger('APP_SESSION_LIFETIME_SECONDS', 43200),
     'session_lifetime_min_seconds' => Environment::getInteger('APP_SESSION_LIFETIME_MIN_SECONDS', 28800),
