@@ -1841,6 +1841,13 @@
     };
     var deferredInstallPrompt = null;
 
+    function ensureEmailSelectedMap() {
+        if (!emailSelectedMap || typeof emailSelectedMap !== 'object') {
+            emailSelectedMap = {};
+        }
+        return emailSelectedMap;
+    }
+
     function buildEmailSelectionKey(uidValue, fingerprintValue) {
         var uid = String(uidValue || '').trim();
         var fingerprint = String(fingerprintValue || '').trim();
@@ -1869,10 +1876,11 @@
     }
 
     function updateEmailBulkSelectionUi() {
+        var selectionMap = ensureEmailSelectedMap();
         var selectedRows = [];
-        for (var mapKey in emailSelectedMap) {
-            if (Object.prototype.hasOwnProperty.call(emailSelectedMap, mapKey)) {
-                selectedRows.push(emailSelectedMap[mapKey]);
+        for (var mapKey in selectionMap) {
+            if (Object.prototype.hasOwnProperty.call(selectionMap, mapKey)) {
+                selectedRows.push(selectionMap[mapKey]);
             }
         }
 
@@ -1908,6 +1916,7 @@
     }
 
     function restoreEmailSelectionCheckboxes() {
+        var selectionMap = ensureEmailSelectedMap();
         var checkboxes = document.querySelectorAll('.js-email-select-checkbox');
         for (var index = 0; index < checkboxes.length; index += 1) {
             var checkbox = checkboxes[index];
@@ -1915,7 +1924,7 @@
                 checkbox.getAttribute('data-email-uid'),
                 checkbox.getAttribute('data-email-fingerprint')
             );
-            checkbox.checked = key !== '|' && Object.prototype.hasOwnProperty.call(emailSelectedMap, key);
+            checkbox.checked = key !== '|' && Object.prototype.hasOwnProperty.call(selectionMap, key);
         }
         updateEmailBulkSelectionUi();
     }
