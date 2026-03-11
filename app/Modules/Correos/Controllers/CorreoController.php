@@ -223,48 +223,90 @@ class CorreoController
             Response::redirect($this->buildUrl('/correos'));
         }
 
-        $authenticatedUser = $this->authService->getAuthenticatedUser();
-        $userLogin = isset($authenticatedUser['login']) ? trim((string) $authenticatedUser['login']) : '';
+        $userLogin = $this->resolveAuthenticatedInboxUser();
         if ($userLogin === '') {
             $this->setFlash('correos_error', 'Usuario no valido para ocultar correos.');
             Response::redirect($this->buildUrl('/correos'));
         }
 
-        $correoUid = isset($_POST['email_uid']) ? trim((string) $_POST['email_uid']) : '';
-        $correoHash = isset($_POST['email_fingerprint']) ? trim((string) $_POST['email_fingerprint']) : '';
-        $emailFrom = isset($_POST['email_from']) ? trim((string) $_POST['email_from']) : '';
-        $emailTo = isset($_POST['email_to']) ? trim((string) $_POST['email_to']) : '';
-        $emailSubject = isset($_POST['email_subject']) ? trim((string) $_POST['email_subject']) : '';
-        $emailDate = isset($_POST['email_date']) ? trim((string) $_POST['email_date']) : '';
-        if ($correoUid === '' && $correoHash === '') {
+        $emailRecord = $this->normalizeEmailRecordPayload($_POST);
+        if (!$this->isValidEmailRecordPayload($emailRecord)) {
             $this->setFlash('correos_error', 'Correo no valido para ocultar.');
             Response::redirect($this->buildUrl('/correos'));
         }
 
-        $hiddenHashes = $this->buildHiddenHashCandidates($correoHash, $emailFrom, $emailTo, $emailSubject, $emailDate);
-        if (empty($hiddenHashes)) {
-            $hiddenHashes = array('');
-        }
-
-        $hidden = false;
-        foreach ($hiddenHashes as $hashCandidate) {
-            $hiddenAttempt = $this->correoRepository->hideInboxMessage(array(
-                'usuario' => $userLogin,
-                'correo_uid' => $correoUid,
-                'correo_hash' => $hashCandidate,
-                'remitente' => $emailFrom,
-                'asunto' => $emailSubject,
-                'fecha_correo' => $emailDate,
-            ));
-            if ($hiddenAttempt) {
-                $hidden = true;
-            }
-        }
+        $hidden = $this->hideInboxRecord($userLogin, $emailRecord);
 
         if (!$hidden) {
             $this->setFlash('correos_error', 'No fue posible ocultar el correo. Revisa el log de aplicacion.');
         } else {
             $this->setFlash('correos_success', 'Correo ocultado de la bandeja.');
+        }
+
+        CsrfTokenManager::rotateToken($tokenName);
+        $redirectUrl = $this->buildUrl('/correos') . $this->buildCorreoFilterQueryFromPost($_POST);
+        Response::redirect($redirectUrl);
+    }
+
+    public function hideManyFromInbox()
+    {
+        $tokenName = $this->appConfig['csrf_token_name'];
+        $providedToken = isset($_POST[$tokenName]) ? (string) $_POST[$tokenName] : '';
+        if (!CsrfTokenManager::validateToken($tokenName, $providedToken)) {
+            $this->setFlash('correos_error', 'La sesion caduco. Intenta nuevamente.');
+            Response::redirect($this->buildUrl('/correos'));
+        }
+
+        $userLogin = $this->resolveAuthenticatedInboxUser();
+        if ($userLogin === '') {
+            $this->setFlash('correos_error', 'Usuario no valido para ocultar correos.');
+            Response::redirect($this->buildUrl('/correos'));
+        }
+
+        $bulkPayloadRaw = isset($_POST['bulk_items_json']) ? trim((string) $_POST['bulk_items_json']) : '';
+        if ($bulkPayloadRaw === '') {
+            $this->setFlash('correos_error', 'Selecciona al menos un correo para ocultar.');
+            Response::redirect($this->buildUrl('/correos') . $this->buildCorreoFilterQueryFromPost($_POST));
+        }
+
+        $decoded = json_decode($bulkPayloadRaw, true);
+        if (!is_array($decoded)) {
+            $this->setFlash('correos_error', 'El lote de correos a ocultar tiene formato invalido.');
+            Response::redirect($this->buildUrl('/correos') . $this->buildCorreoFilterQueryFromPost($_POST));
+        }
+
+        $hiddenCount = 0;
+        $total = 0;
+        $processed = 0;
+        foreach ($decoded as $row) {
+            $processed += 1;
+            if ($processed > 500) {
+                break;
+            }
+
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $normalizedRow = $this->normalizeEmailRecordPayload($row);
+            if (!$this->isValidEmailRecordPayload($normalizedRow)) {
+                continue;
+            }
+
+            $total += 1;
+            if ($this->hideInboxRecord($userLogin, $normalizedRow)) {
+                $hiddenCount += 1;
+            }
+        }
+
+        if ($total <= 0) {
+            $this->setFlash('correos_error', 'Selecciona al menos un correo valido para ocultar.');
+        } elseif ($hiddenCount <= 0) {
+            $this->setFlash('correos_error', 'No fue posible ocultar los correos seleccionados.');
+        } elseif ($hiddenCount < $total) {
+            $this->setFlash('correos_success', 'Se ocultaron ' . $hiddenCount . ' de ' . $total . ' correos seleccionados.');
+        } else {
+            $this->setFlash('correos_success', 'Se ocultaron ' . $hiddenCount . ' correos seleccionados.');
         }
 
         CsrfTokenManager::rotateToken($tokenName);
@@ -589,6 +631,63 @@ class CorreoController
         }
 
         return array_values(array_unique($hashCandidates));
+    }
+
+    private function resolveAuthenticatedInboxUser()
+    {
+        $authenticatedUser = $this->authService->getAuthenticatedUser();
+        return isset($authenticatedUser['login']) ? trim((string) $authenticatedUser['login']) : '';
+    }
+
+    private function normalizeEmailRecordPayload(array $payload)
+    {
+        return array(
+            'email_uid' => isset($payload['email_uid']) ? trim((string) $payload['email_uid']) : '',
+            'email_fingerprint' => isset($payload['email_fingerprint']) ? trim((string) $payload['email_fingerprint']) : '',
+            'email_from' => isset($payload['email_from']) ? trim((string) $payload['email_from']) : '',
+            'email_to' => isset($payload['email_to']) ? trim((string) $payload['email_to']) : '',
+            'email_subject' => isset($payload['email_subject']) ? trim((string) $payload['email_subject']) : '',
+            'email_date' => isset($payload['email_date']) ? trim((string) $payload['email_date']) : '',
+        );
+    }
+
+    private function isValidEmailRecordPayload(array $payload)
+    {
+        $uid = isset($payload['email_uid']) ? trim((string) $payload['email_uid']) : '';
+        $fingerprint = isset($payload['email_fingerprint']) ? trim((string) $payload['email_fingerprint']) : '';
+        return $uid !== '' || $fingerprint !== '';
+    }
+
+    private function hideInboxRecord($userLogin, array $record)
+    {
+        $correoUid = isset($record['email_uid']) ? trim((string) $record['email_uid']) : '';
+        $correoHash = isset($record['email_fingerprint']) ? trim((string) $record['email_fingerprint']) : '';
+        $emailFrom = isset($record['email_from']) ? trim((string) $record['email_from']) : '';
+        $emailTo = isset($record['email_to']) ? trim((string) $record['email_to']) : '';
+        $emailSubject = isset($record['email_subject']) ? trim((string) $record['email_subject']) : '';
+        $emailDate = isset($record['email_date']) ? trim((string) $record['email_date']) : '';
+
+        $hiddenHashes = $this->buildHiddenHashCandidates($correoHash, $emailFrom, $emailTo, $emailSubject, $emailDate);
+        if (empty($hiddenHashes)) {
+            $hiddenHashes = array('');
+        }
+
+        $hidden = false;
+        foreach ($hiddenHashes as $hashCandidate) {
+            $hiddenAttempt = $this->correoRepository->hideInboxMessage(array(
+                'usuario' => $userLogin,
+                'correo_uid' => $correoUid,
+                'correo_hash' => $hashCandidate,
+                'remitente' => $emailFrom,
+                'asunto' => $emailSubject,
+                'fecha_correo' => $emailDate,
+            ));
+            if ($hiddenAttempt) {
+                $hidden = true;
+            }
+        }
+
+        return $hidden;
     }
 
     private function normalizeSearchText($value)

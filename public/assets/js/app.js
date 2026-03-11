@@ -1736,6 +1736,12 @@
                     });
                 }
 
+                if (window.jQuery(this).hasClass('js-email-table')) {
+                    dataTable.on('draw.dt', function () {
+                        restoreEmailSelectionCheckboxes();
+                    });
+                }
+
                 if (isIndexedTable) {
                     dataTable.on('order.dt search.dt draw.dt', function () {
                         var info = dataTable.page.info();
@@ -1819,6 +1825,14 @@
     var confirmActionModalJustificationLabel = document.getElementById('confirm-action-modal-justification-label');
     var confirmActionModalJustificationInput = document.getElementById('confirm-action-modal-justification-input');
     var confirmActionModalJustificationError = document.getElementById('confirm-action-modal-justification-error');
+    var emailSelectAllCurrent = document.getElementById('email-select-all-current');
+    var emailSelectVisibleButton = document.getElementById('email-select-visible');
+    var emailClearSelectionButton = document.getElementById('email-clear-selection');
+    var emailBulkHideForm = document.getElementById('email-bulk-hide-form');
+    var emailBulkItemsJsonInput = document.getElementById('email-bulk-items-json');
+    var emailHideSelectedButton = document.getElementById('email-hide-selected-button');
+    var emailSelectedCountNode = document.getElementById('email-selected-count');
+    var emailSelectedMap = {};
     var pendingConfirmForm = null;
     var pendingConfirmOptions = {
         requiresJustification: false,
@@ -1826,6 +1840,85 @@
         minLength: 0
     };
     var deferredInstallPrompt = null;
+
+    function buildEmailSelectionKey(uidValue, fingerprintValue) {
+        var uid = String(uidValue || '').trim();
+        var fingerprint = String(fingerprintValue || '').trim();
+        return uid + '|' + fingerprint;
+    }
+
+    function extractEmailRecordFromCheckbox(checkboxElement) {
+        if (!checkboxElement) {
+            return null;
+        }
+
+        var uid = String(checkboxElement.getAttribute('data-email-uid') || '').trim();
+        var fingerprint = String(checkboxElement.getAttribute('data-email-fingerprint') || '').trim();
+        if (uid === '' && fingerprint === '') {
+            return null;
+        }
+
+        return {
+            email_uid: uid,
+            email_fingerprint: fingerprint,
+            email_from: String(checkboxElement.getAttribute('data-email-from') || '').trim(),
+            email_to: String(checkboxElement.getAttribute('data-email-to') || '').trim(),
+            email_subject: String(checkboxElement.getAttribute('data-email-subject') || '').trim(),
+            email_date: String(checkboxElement.getAttribute('data-email-date') || '').trim()
+        };
+    }
+
+    function updateEmailBulkSelectionUi() {
+        var selectedRows = [];
+        for (var mapKey in emailSelectedMap) {
+            if (Object.prototype.hasOwnProperty.call(emailSelectedMap, mapKey)) {
+                selectedRows.push(emailSelectedMap[mapKey]);
+            }
+        }
+
+        var selectedCount = selectedRows.length;
+        if (emailSelectedCountNode) {
+            emailSelectedCountNode.textContent = String(selectedCount);
+        }
+        if (emailHideSelectedButton) {
+            emailHideSelectedButton.disabled = selectedCount <= 0;
+        }
+        if (emailBulkItemsJsonInput) {
+            emailBulkItemsJsonInput.value = JSON.stringify(selectedRows);
+        }
+        if (emailBulkHideForm) {
+            var dynamicMessage = selectedCount <= 0
+                ? 'Selecciona al menos un correo para ocultar.'
+                : ('Se ocultaran ' + String(selectedCount) + ' correos seleccionados.');
+            emailBulkHideForm.setAttribute('data-confirm-message', dynamicMessage);
+        }
+
+        if (emailSelectAllCurrent) {
+            var visibleCheckboxes = document.querySelectorAll('.js-email-select-checkbox');
+            var visibleCount = visibleCheckboxes ? visibleCheckboxes.length : 0;
+            var visibleSelectedCount = 0;
+            for (var index = 0; index < visibleCount; index += 1) {
+                if (visibleCheckboxes[index].checked) {
+                    visibleSelectedCount += 1;
+                }
+            }
+            emailSelectAllCurrent.checked = visibleCount > 0 && visibleSelectedCount === visibleCount;
+            emailSelectAllCurrent.indeterminate = visibleSelectedCount > 0 && visibleSelectedCount < visibleCount;
+        }
+    }
+
+    function restoreEmailSelectionCheckboxes() {
+        var checkboxes = document.querySelectorAll('.js-email-select-checkbox');
+        for (var index = 0; index < checkboxes.length; index += 1) {
+            var checkbox = checkboxes[index];
+            var key = buildEmailSelectionKey(
+                checkbox.getAttribute('data-email-uid'),
+                checkbox.getAttribute('data-email-fingerprint')
+            );
+            checkbox.checked = key !== '|' && Object.prototype.hasOwnProperty.call(emailSelectedMap, key);
+        }
+        updateEmailBulkSelectionUi();
+    }
 
     function setInstallButtonsVisibility(isVisible) {
         if (!installButtons || installButtons.length === 0) {
@@ -2393,6 +2486,8 @@
                 pendingConfirmForm = null;
                 closeConfirmActionModal();
                 targetForm.setAttribute('data-confirm-approved', '1');
+                var formLoadingMessage = targetForm.getAttribute('data-loading-message');
+                showGlobalLoading(formLoadingMessage);
                 targetForm.submit();
             } else {
                 closeConfirmActionModal();
@@ -2605,6 +2700,92 @@
         });
     }
 
+    document.addEventListener('change', function (event) {
+        var target = event.target;
+        if (!target || !target.classList) {
+            return;
+        }
+
+        if (target.classList.contains('js-email-select-checkbox')) {
+            var record = extractEmailRecordFromCheckbox(target);
+            if (record) {
+                var recordKey = buildEmailSelectionKey(record.email_uid, record.email_fingerprint);
+                if (target.checked) {
+                    emailSelectedMap[recordKey] = record;
+                } else {
+                    delete emailSelectedMap[recordKey];
+                }
+            }
+            updateEmailBulkSelectionUi();
+            return;
+        }
+
+        if (target === emailSelectAllCurrent) {
+            var rowCheckboxes = document.querySelectorAll('.js-email-select-checkbox');
+            for (var checkboxIndex = 0; checkboxIndex < rowCheckboxes.length; checkboxIndex += 1) {
+                rowCheckboxes[checkboxIndex].checked = !!target.checked;
+                var rowRecord = extractEmailRecordFromCheckbox(rowCheckboxes[checkboxIndex]);
+                if (!rowRecord) {
+                    continue;
+                }
+                var rowKey = buildEmailSelectionKey(rowRecord.email_uid, rowRecord.email_fingerprint);
+                if (target.checked) {
+                    emailSelectedMap[rowKey] = rowRecord;
+                } else {
+                    delete emailSelectedMap[rowKey];
+                }
+            }
+            updateEmailBulkSelectionUi();
+        }
+    });
+
+    if (emailSelectVisibleButton) {
+        emailSelectVisibleButton.addEventListener('click', function () {
+            var rowCheckboxes = document.querySelectorAll('.js-email-select-checkbox');
+            for (var checkboxIndex = 0; checkboxIndex < rowCheckboxes.length; checkboxIndex += 1) {
+                rowCheckboxes[checkboxIndex].checked = true;
+                var rowRecord = extractEmailRecordFromCheckbox(rowCheckboxes[checkboxIndex]);
+                if (!rowRecord) {
+                    continue;
+                }
+                var rowKey = buildEmailSelectionKey(rowRecord.email_uid, rowRecord.email_fingerprint);
+                emailSelectedMap[rowKey] = rowRecord;
+            }
+            updateEmailBulkSelectionUi();
+        });
+    }
+
+    if (emailClearSelectionButton) {
+        emailClearSelectionButton.addEventListener('click', function () {
+            emailSelectedMap = {};
+            restoreEmailSelectionCheckboxes();
+        });
+    }
+
+    if (emailBulkHideForm) {
+        emailBulkHideForm.addEventListener('submit', function (event) {
+            updateEmailBulkSelectionUi();
+            var selectedRows = [];
+            for (var key in emailSelectedMap) {
+                if (Object.prototype.hasOwnProperty.call(emailSelectedMap, key)) {
+                    selectedRows.push(emailSelectedMap[key]);
+                }
+            }
+
+            if (selectedRows.length <= 0) {
+                event.preventDefault();
+                if (typeof window.alert === 'function') {
+                    window.alert('Selecciona al menos un correo para ocultar.');
+                }
+                return;
+            }
+
+            if (emailBulkItemsJsonInput) {
+                emailBulkItemsJsonInput.value = JSON.stringify(selectedRows);
+            }
+        });
+    }
+
     if (confirmActionModalJustificationInput) {
         confirmActionModalJustificationInput.addEventListener('input', function () {
             if (confirmActionModalJustificationError) {
@@ -2630,6 +2811,8 @@
         event.preventDefault();
         openConfirmActionModal(confirmForm);
     });
+
+    restoreEmailSelectionCheckboxes();
 
     window.addEventListener('pageshow', function () {
         hideGlobalLoading();

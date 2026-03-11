@@ -1229,6 +1229,14 @@ textarea {
     align-items: start;
 }
 
+.email-bulk-actions {
+    margin: 0.3rem 0 0.6rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    align-items: center;
+}
+
 .table-email-compact-index th:first-child,
 .table-email-compact-index td:first-child {
     width: 38px;
@@ -1238,6 +1246,22 @@ textarea {
     white-space: nowrap;
     padding-left: 0.18rem;
     padding-right: 0.18rem;
+}
+
+.table-email-compact-index th.email-select-column,
+.table-email-compact-index td.email-select-column {
+    width: 42px;
+    min-width: 42px;
+    max-width: 42px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.table-email-compact-index td.email-select-column input[type="checkbox"],
+.table-email-compact-index th.email-select-column input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
 }
 
 .email-row-selected td {
@@ -1731,6 +1755,23 @@ textarea {
     color: #1a3552;
 }
 
+.global-loading-progress {
+    width: min(260px, 75vw);
+    height: 8px;
+    border-radius: 999px;
+    background: #e5eef8;
+    overflow: hidden;
+}
+
+.global-loading-progress-bar {
+    display: block;
+    width: 38%;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #0f4c81 0%, #2d86cf 100%);
+    animation: global-loading-progress-slide 1.2s ease-in-out infinite;
+}
+
 body.global-loading-active {
     overflow: hidden;
 }
@@ -1741,6 +1782,15 @@ body.global-loading-active {
     }
     to {
         transform: rotate(360deg);
+    }
+}
+
+@keyframes global-loading-progress-slide {
+    0% {
+        transform: translateX(-120%);
+    }
+    100% {
+        transform: translateX(290%);
     }
 }
 
@@ -2682,6 +2732,10 @@ body.theme-dark .email-row-selected td {
     background: rgba(109, 181, 255, 0.14);
 }
 
+body.theme-dark .email-bulk-actions {
+    color: #dcecff;
+}
+
 body.theme-dark .email-preview-card {
     background: #112235;
     border-color: #314965;
@@ -2829,6 +2883,14 @@ body.theme-dark .global-loading-card p {
 body.theme-dark .global-loading-spinner {
     border-color: #355070;
     border-top-color: #6db5ff;
+}
+
+body.theme-dark .global-loading-progress {
+    background: #203a56;
+}
+
+body.theme-dark .global-loading-progress-bar {
+    background: linear-gradient(90deg, #6db5ff 0%, #b7dcff 100%);
 }
 
 body.theme-dark .modal-header {

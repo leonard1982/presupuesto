@@ -242,6 +242,9 @@ $currentUserLogin = $isAuthenticated && isset($currentUser['login']) ? (string) 
     <div class="global-loading-card">
         <div class="global-loading-spinner" aria-hidden="true"></div>
         <p id="global-loading-message">Espere por favor...</p>
+        <div class="global-loading-progress" aria-hidden="true">
+            <span class="global-loading-progress-bar"></span>
+        </div>
     </div>
 </div>
 

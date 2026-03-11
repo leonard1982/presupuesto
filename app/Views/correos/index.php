@@ -133,11 +133,32 @@ foreach ($mediosPago as $medioPagoItem) {
             <h3><i class="bi bi-inbox"></i> Correos recientes</h3>
             <span class="muted"><?php echo count($emails); ?> encontrados</span>
         </div>
+        <div class="email-bulk-actions">
+            <button type="button" id="email-select-visible" class="btn btn-ghost btn-inline btn-mini">
+                <i class="bi bi-check2-square"></i> Seleccionar visibles
+            </button>
+            <button type="button" id="email-clear-selection" class="btn btn-ghost btn-inline btn-mini">
+                <i class="bi bi-x-circle"></i> Limpiar seleccion
+            </button>
+            <form id="email-bulk-hide-form" method="post" action="<?php echo correo_escape($baseUrl); ?>/index.php?route=correos/ocultar-lote" class="inline-form js-confirm-action js-email-bulk-hide-form" data-confirm-title="Ocultar correos" data-confirm-message="Se ocultaran los correos seleccionados." data-confirm-accept="Si, ocultar" data-loading-message="Ocultando correos seleccionados...">
+                <input type="hidden" name="<?php echo correo_escape($csrfTokenName); ?>" value="<?php echo correo_escape($csrfToken); ?>">
+                <input type="hidden" name="bulk_items_json" id="email-bulk-items-json" value="[]">
+                <input type="hidden" name="q" value="<?php echo correo_escape($searchText); ?>">
+                <input type="hidden" name="fecha_desde" value="<?php echo correo_escape($filterDateFromValue); ?>">
+                <input type="hidden" name="fecha_hasta" value="<?php echo correo_escape($filterDateToValue); ?>">
+                <button type="submit" id="email-hide-selected-button" class="btn btn-secondary btn-inline btn-mini" disabled>
+                    <i class="bi bi-eye-slash"></i> Ocultar seleccionados (<span id="email-selected-count">0</span>)
+                </button>
+            </form>
+        </div>
         <div class="table-wrapper">
-            <table class="table-professional table-email-compact-index js-data-table js-indexed-table" data-page-length="20" data-export-name="bandeja_correos" data-preference-key="correos_table_length">
+            <table class="table-professional table-email-compact-index js-data-table js-indexed-table js-email-table" data-page-length="20" data-export-name="bandeja_correos" data-preference-key="correos_table_length">
                 <thead>
                 <tr>
                     <th class="no-export">#</th>
+                    <th class="no-export email-select-column">
+                        <input type="checkbox" id="email-select-all-current" title="Seleccionar visibles">
+                    </th>
                     <th>Fecha</th>
                     <th>Remitente</th>
                     <th>Asunto</th>
@@ -148,7 +169,7 @@ foreach ($mediosPago as $medioPagoItem) {
                 <tbody>
                 <?php if (empty($emails)) : ?>
                     <tr>
-                        <td colspan="6" class="muted"><?php echo correo_escape($inboxMessage); ?></td>
+                        <td colspan="7" class="muted"><?php echo correo_escape($inboxMessage); ?></td>
                     </tr>
                 <?php else : ?>
                     <?php foreach ($emails as $emailRow) : ?>
@@ -168,6 +189,17 @@ foreach ($mediosPago as $medioPagoItem) {
                         ?>
                         <tr class="<?php echo $isSelected ? 'email-row-selected' : ''; ?>">
                             <td></td>
+                            <td class="email-select-column">
+                                <input
+                                    type="checkbox"
+                                    class="js-email-select-checkbox"
+                                    data-email-uid="<?php echo $rowUid; ?>"
+                                    data-email-fingerprint="<?php echo correo_escape($emailFingerprint); ?>"
+                                    data-email-from="<?php echo correo_escape($extractFrom); ?>"
+                                    data-email-to="<?php echo correo_escape(isset($emailRow['to']) ? (string) $emailRow['to'] : ''); ?>"
+                                    data-email-subject="<?php echo correo_escape($extractSubject); ?>"
+                                    data-email-date="<?php echo correo_escape($extractDate); ?>">
+                            </td>
                             <td><?php echo correo_escape(isset($emailRow['date_sql']) ? $emailRow['date_sql'] : ''); ?></td>
                             <td><?php echo correo_escape(isset($emailRow['from']) ? $emailRow['from'] : ''); ?></td>
                             <td><?php echo correo_escape(isset($emailRow['subject']) ? $emailRow['subject'] : ''); ?></td>
@@ -198,7 +230,7 @@ foreach ($mediosPago as $medioPagoItem) {
                                             <i class="bi bi-magic"></i> Analizar
                                         </button>
                                     </form>
-                                    <form method="post" action="<?php echo correo_escape($baseUrl); ?>/index.php?route=correos/ocultar" class="inline-form js-confirm-action" data-confirm-title="Ocultar correo" data-confirm-message="Este correo ya no se mostrara en tu bandeja." data-confirm-accept="Si, ocultar">
+                                    <form method="post" action="<?php echo correo_escape($baseUrl); ?>/index.php?route=correos/ocultar" class="inline-form js-confirm-action" data-confirm-title="Ocultar correo" data-confirm-message="Este correo ya no se mostrara en tu bandeja." data-confirm-accept="Si, ocultar" data-loading-message="Ocultando correo...">
                                         <input type="hidden" name="<?php echo correo_escape($csrfTokenName); ?>" value="<?php echo correo_escape($csrfToken); ?>">
                                         <input type="hidden" name="email_uid" value="<?php echo $rowUid; ?>">
                                         <input type="hidden" name="email_fingerprint" value="<?php echo correo_escape($emailFingerprint); ?>">

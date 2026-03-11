@@ -372,6 +372,15 @@ class Bootstrap
                 return;
             }
 
+            if ($routePath === '/correos/ocultar-lote' && $method === 'POST') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $correoController->hideManyFromInbox();
+                return;
+            }
+
             if ($routePath === '/informes' && $method === 'GET') {
                 if (!$this->authService->isAuthenticated()) {
                     Response::redirect($this->buildUrl('/login'));
