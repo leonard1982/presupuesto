@@ -27,6 +27,7 @@ $movementValue = isset($movement['valor']) ? (float) $movement['valor'] : 0;
 $movementNet = isset($movement['valor_neto']) ? (float) $movement['valor_neto'] : 0;
 $movementSaldo = isset($movement['saldo']) ? (float) $movement['saldo'] : 0;
 $movementEstado = isset($movement['por_pagar_cobrar']) ? (string) $movement['por_pagar_cobrar'] : 'NINGUNO';
+$movementOperationalStatus = isset($movement['estado_operativo']) ? (string) $movement['estado_operativo'] : 'ABIERTO';
 $movementUser = isset($movement['usuario']) ? (string) $movement['usuario'] : '';
 ?>
 <section class="ticket-sheet">
@@ -69,6 +70,10 @@ $movementUser = isset($movement['usuario']) ? (string) $movement['usuario'] : ''
         <article class="ticket-item">
             <span>Estado saldo</span>
             <strong><?php echo ticket_escape($movementEstado); ?></strong>
+        </article>
+        <article class="ticket-item">
+            <span>Estado operativo</span>
+            <strong><?php echo ticket_escape($movementOperationalStatus); ?></strong>
         </article>
         <article class="ticket-item ticket-item-wide">
             <span>Detalle</span>

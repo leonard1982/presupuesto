@@ -255,6 +255,51 @@ class Bootstrap
                 return;
             }
 
+            if ($routePath === '/movimientos/adjuntar-soportes' && $method === 'POST') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $movimientoController->attachSupports();
+                return;
+            }
+
+            if ($routePath === '/movimientos/copiar' && $method === 'POST') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $movimientoController->copy();
+                return;
+            }
+
+            if ($routePath === '/movimientos/cerrar' && $method === 'POST') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $movimientoController->close();
+                return;
+            }
+
+            if ($routePath === '/movimientos/asentar' && $method === 'POST') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $movimientoController->settle();
+                return;
+            }
+
+            if ($routePath === '/movimientos/reversar' && $method === 'POST') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $movimientoController->reverse();
+                return;
+            }
+
             if ($routePath === '/movimientos/eliminar' && $method === 'POST') {
                 if (!$this->authService->isAuthenticated()) {
                     Response::redirect($this->buildUrl('/login'));
@@ -315,6 +360,15 @@ class Bootstrap
                 }
 
                 $correoController->storeFromEmail();
+                return;
+            }
+
+            if ($routePath === '/correos/ocultar' && $method === 'POST') {
+                if (!$this->authService->isAuthenticated()) {
+                    Response::redirect($this->buildUrl('/login'));
+                }
+
+                $correoController->hideFromInbox();
                 return;
             }
 

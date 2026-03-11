@@ -61,6 +61,8 @@ if (!function_exists('correo_substr')) {
 
 $selectedEmailSafe = is_array($selectedEmail) ? $selectedEmail : null;
 $sugerencia = is_array($suggestedData) ? $suggestedData : array();
+$filterDateFromValue = isset($filterDateFrom) ? trim((string) $filterDateFrom) : '';
+$filterDateToValue = isset($filterDateTo) ? trim((string) $filterDateTo) : '';
 $confidenceValue = isset($sugerencia['confidence']) ? (float) $sugerencia['confidence'] : 0.0;
 $confidencePercent = (int) round($confidenceValue * 100);
 $suggestionSource = isset($sugerencia['source']) ? trim((string) $sugerencia['source']) : '';
@@ -104,10 +106,23 @@ foreach ($mediosPago as $medioPagoItem) {
 <section class="card">
     <form method="get" action="<?php echo correo_escape($baseUrl); ?>/index.php" class="compact-form">
         <input type="hidden" name="route" value="correos">
-        <label for="q">Buscar en correos</label>
+        <div class="form-grid">
+            <div class="form-field">
+                <label for="q">Buscar en correos</label>
+                <input id="q" name="q" type="text" value="<?php echo correo_escape($searchText); ?>" placeholder="Ejemplo: transferencia, banco, proveedor">
+            </div>
+            <div class="form-field">
+                <label for="fecha_desde">Fecha desde</label>
+                <input id="fecha_desde" name="fecha_desde" type="date" value="<?php echo correo_escape($filterDateFromValue); ?>">
+            </div>
+            <div class="form-field">
+                <label for="fecha_hasta">Fecha hasta</label>
+                <input id="fecha_hasta" name="fecha_hasta" type="date" value="<?php echo correo_escape($filterDateToValue); ?>">
+            </div>
+        </div>
         <div class="search-row">
-            <input id="q" name="q" type="text" value="<?php echo correo_escape($searchText); ?>" placeholder="Ejemplo: compraste, transferencia, banco">
-            <button class="btn btn-secondary btn-inline" type="submit"><i class="bi bi-search"></i> Buscar</button>
+            <button class="btn btn-secondary btn-inline" type="submit"><i class="bi bi-search"></i> Filtrar</button>
+            <a class="btn btn-ghost btn-inline" href="<?php echo correo_escape($baseUrl); ?>/index.php?route=correos"><i class="bi bi-arrow-counterclockwise"></i> Limpiar</a>
         </div>
     </form>
 </section>
@@ -152,6 +167,13 @@ foreach ($mediosPago as $medioPagoItem) {
                         if (trim((string) $searchText) !== '') {
                             $selectUrl .= '&q=' . rawurlencode((string) $searchText);
                         }
+                        if ($filterDateFromValue !== '') {
+                            $selectUrl .= '&fecha_desde=' . rawurlencode($filterDateFromValue);
+                        }
+                        if ($filterDateToValue !== '') {
+                            $selectUrl .= '&fecha_hasta=' . rawurlencode($filterDateToValue);
+                        }
+                        $emailFingerprint = isset($emailRow['fingerprint']) ? (string) $emailRow['fingerprint'] : '';
                         ?>
                         <tr class="<?php echo $isSelected ? 'email-row-selected' : ''; ?>">
                             <td></td>
@@ -173,9 +195,25 @@ foreach ($mediosPago as $medioPagoItem) {
                                 <span class="movement-detail-hidden-text"><?php echo correo_escape(isset($emailRow['snippet']) ? correo_substr($emailRow['snippet'], 220) : ''); ?></span>
                             </td>
                             <td>
-                                <a class="btn btn-ghost btn-inline btn-mini <?php echo $isSelected ? 'btn-primary' : ''; ?>" href="<?php echo $selectUrl; ?>">
-                                    <i class="bi bi-magic"></i> Analizar
-                                </a>
+                                <div class="table-actions-stack">
+                                    <a class="btn btn-ghost btn-inline btn-mini <?php echo $isSelected ? 'btn-primary' : ''; ?>" href="<?php echo $selectUrl; ?>">
+                                        <i class="bi bi-magic"></i> Analizar
+                                    </a>
+                                    <form method="post" action="<?php echo correo_escape($baseUrl); ?>/index.php?route=correos/ocultar" class="inline-form js-confirm-action" data-confirm-title="Ocultar correo" data-confirm-message="Este correo ya no se mostrara en tu bandeja." data-confirm-accept="Si, ocultar">
+                                        <input type="hidden" name="<?php echo correo_escape($csrfTokenName); ?>" value="<?php echo correo_escape($csrfToken); ?>">
+                                        <input type="hidden" name="email_uid" value="<?php echo $rowUid; ?>">
+                                        <input type="hidden" name="email_fingerprint" value="<?php echo correo_escape($emailFingerprint); ?>">
+                                        <input type="hidden" name="email_from" value="<?php echo correo_escape($extractFrom); ?>">
+                                        <input type="hidden" name="email_subject" value="<?php echo correo_escape($extractSubject); ?>">
+                                        <input type="hidden" name="email_date" value="<?php echo correo_escape($extractDate); ?>">
+                                        <input type="hidden" name="q" value="<?php echo correo_escape($searchText); ?>">
+                                        <input type="hidden" name="fecha_desde" value="<?php echo correo_escape($filterDateFromValue); ?>">
+                                        <input type="hidden" name="fecha_hasta" value="<?php echo correo_escape($filterDateToValue); ?>">
+                                        <button type="submit" class="btn btn-ghost btn-inline btn-mini" title="Ocultar correo">
+                                            <i class="bi bi-eye-slash"></i> Ocultar
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>

@@ -50,6 +50,9 @@ class MovimientoController
             $supportsRaw = isset($supportsByMovement[$movementId]) ? $supportsByMovement[$movementId] : array();
             $movement['supports'] = $this->normalizeSupportRows($supportsRaw);
             $movement['supports_count'] = count($movement['supports']);
+            $movement['estado_operativo'] = $this->normalizeOperationalStatus(isset($movement['estado_operativo']) ? $movement['estado_operativo'] : '');
+            $movement['justificacion_reversa'] = isset($movement['justificacion_reversa']) ? trim((string) $movement['justificacion_reversa']) : '';
+            $movement['fecha_estado'] = isset($movement['fecha_estado']) ? (string) $movement['fecha_estado'] : '';
         }
         unset($movement);
 
@@ -357,6 +360,186 @@ class MovimientoController
         Response::redirect($this->buildUrl('/movimientos'));
     }
 
+    public function attachSupports()
+    {
+        $tokenName = $this->appConfig['csrf_token_name'];
+        $providedToken = isset($_POST[$tokenName]) ? (string) $_POST[$tokenName] : '';
+        if (!CsrfTokenManager::validateToken($tokenName, $providedToken)) {
+            $this->setFlash('movimientos_error', 'La sesion de formulario caduco. Intenta nuevamente.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $movementId = isset($_POST['movement_id']) ? (int) $_POST['movement_id'] : 0;
+        if ($movementId <= 0) {
+            $this->setFlash('movimientos_error', 'Movimiento no valido para adjuntar soportes.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $movement = $this->movimientoRepository->findMovimientoById($movementId);
+        if (!$movement) {
+            $this->setFlash('movimientos_error', 'No se encontro el movimiento solicitado.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        if (!$this->hasSupportPayloadInRequest()) {
+            $this->setFlash('movimientos_error', 'Selecciona al menos un soporte para adjuntar.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $fileValidation = $this->validateUploadBatch();
+        if (!$fileValidation['valid']) {
+            $this->setFlash('movimientos_error', $fileValidation['message']);
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $userLogin = $this->resolveAuthenticatedUserLogin();
+        $storedSupports = $this->storeSupportsForMovement($movementId, $userLogin);
+        if (!$storedSupports['ok']) {
+            $this->deleteSupportFiles($storedSupports['files']);
+            $this->setFlash('movimientos_error', $storedSupports['message']);
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $storedClipboardSupports = $this->storeClipboardSupportsForMovement($movementId, $userLogin);
+        if (!$storedClipboardSupports['ok']) {
+            if (!empty($storedSupports['support_ids'])) {
+                $this->movimientoRepository->deleteSupportsByIds($storedSupports['support_ids']);
+            }
+            if (!empty($storedClipboardSupports['support_ids'])) {
+                $this->movimientoRepository->deleteSupportsByIds($storedClipboardSupports['support_ids']);
+            }
+
+            $this->deleteSupportFiles(array_merge($storedSupports['files'], $storedClipboardSupports['files']));
+            $this->setFlash('movimientos_error', $storedClipboardSupports['message']);
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        CsrfTokenManager::rotateToken($tokenName);
+        $this->setFlash('movimientos_success', 'Soportes adjuntados correctamente al movimiento #' . $movementId . '.');
+        Response::redirect($this->buildUrl('/movimientos'));
+    }
+
+    public function copy()
+    {
+        $tokenName = $this->appConfig['csrf_token_name'];
+        $providedToken = isset($_POST[$tokenName]) ? (string) $_POST[$tokenName] : '';
+        if (!CsrfTokenManager::validateToken($tokenName, $providedToken)) {
+            $this->setFlash('movimientos_error', 'La sesion de formulario caduco. Intenta nuevamente.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $movementId = isset($_POST['movement_id']) ? (int) $_POST['movement_id'] : 0;
+        if ($movementId <= 0) {
+            $this->setFlash('movimientos_error', 'Movimiento no valido para copiar.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $sourceMovement = $this->movimientoRepository->findMovimientoById($movementId);
+        if (!$sourceMovement) {
+            $this->setFlash('movimientos_error', 'No se encontro el movimiento que deseas copiar.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $userLogin = $this->resolveAuthenticatedUserLogin();
+        $newDateTime = date('Y-m-d H:i:s');
+        $sourceDetail = isset($sourceMovement['detalle']) ? trim((string) $sourceMovement['detalle']) : '';
+        $copiedDetail = $sourceDetail !== '' ? $sourceDetail . ' (Copia)' : 'Copia de movimiento #' . $movementId;
+
+        $movementToPersist = array(
+            'fecha' => $newDateTime,
+            'id_clasificacion' => isset($sourceMovement['id_clasificacion']) ? (int) $sourceMovement['id_clasificacion'] : 0,
+            'detalle' => $copiedDetail,
+            'valor' => isset($sourceMovement['valor']) ? (float) $sourceMovement['valor'] : 0.0,
+            'fecha_periodo' => substr($newDateTime, 0, 10),
+            'id_presupuesto' => isset($sourceMovement['id_presupuesto']) ? (int) $sourceMovement['id_presupuesto'] : 0,
+            'soporte' => '',
+            'gasto_costo' => isset($sourceMovement['gasto_costo']) ? (string) $sourceMovement['gasto_costo'] : 'Gasto',
+            'tipo' => isset($sourceMovement['tipo']) ? (string) $sourceMovement['tipo'] : 'Efectivo',
+            'por_pagar_cobrar' => isset($sourceMovement['por_pagar_cobrar']) ? (string) $sourceMovement['por_pagar_cobrar'] : 'NINGUNO',
+            'valor_neto' => isset($sourceMovement['valor_neto']) ? (float) $sourceMovement['valor_neto'] : 0.0,
+            'saldo' => isset($sourceMovement['saldo']) ? (float) $sourceMovement['saldo'] : 0.0,
+            'id_costo' => isset($sourceMovement['id_costo']) ? (int) $sourceMovement['id_costo'] : 0,
+            'usuario' => $userLogin,
+        );
+
+        $newMovementId = $this->movimientoRepository->createMovimiento($movementToPersist);
+        if ($newMovementId === false) {
+            $this->setFlash('movimientos_error', 'No fue posible copiar el movimiento.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $clonedSupports = $this->cloneSupportsBetweenMovements($movementId, (int) $newMovementId, $userLogin);
+        if (!$clonedSupports['ok']) {
+            if (!empty($clonedSupports['support_ids'])) {
+                $this->movimientoRepository->deleteSupportsByIds($clonedSupports['support_ids']);
+            }
+            $this->deleteSupportFiles($clonedSupports['files']);
+            $this->movimientoRepository->deleteMovimiento((int) $newMovementId);
+
+            $this->setFlash('movimientos_error', $clonedSupports['message']);
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        CsrfTokenManager::rotateToken($tokenName);
+        $this->setFlash('movimientos_success', 'Movimiento copiado correctamente como #' . (int) $newMovementId . '.');
+        Response::redirect($this->buildUrl('/movimientos'));
+    }
+
+    public function close()
+    {
+        $this->applyOperationalStatusChange('CERRADO', 'Movimiento cerrado correctamente.');
+    }
+
+    public function settle()
+    {
+        $this->applyOperationalStatusChange('ASENTADO', 'Movimiento asentado correctamente.');
+    }
+
+    public function reverse()
+    {
+        $tokenName = $this->appConfig['csrf_token_name'];
+        $providedToken = isset($_POST[$tokenName]) ? (string) $_POST[$tokenName] : '';
+        if (!CsrfTokenManager::validateToken($tokenName, $providedToken)) {
+            $this->setFlash('movimientos_error', 'La sesion de formulario caduco. Intenta nuevamente.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $movementId = isset($_POST['movement_id']) ? (int) $_POST['movement_id'] : 0;
+        if ($movementId <= 0) {
+            $this->setFlash('movimientos_error', 'Movimiento no valido para reversar.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $movement = $this->movimientoRepository->findMovimientoById($movementId);
+        if (!$movement) {
+            $this->setFlash('movimientos_error', 'No se encontro el movimiento solicitado.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $currentStatus = $this->normalizeOperationalStatus(isset($movement['estado_operativo']) ? $movement['estado_operativo'] : '');
+        if ($currentStatus === 'ABIERTO') {
+            $this->setFlash('movimientos_error', 'El movimiento ya se encuentra abierto.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $justification = trim((string) (isset($_POST['justificacion_reversa']) ? $_POST['justificacion_reversa'] : ''));
+        if (mb_strlen($justification) < 10) {
+            $this->setFlash('movimientos_error', 'La justificacion de reversa debe tener al menos 10 caracteres.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $userLogin = $this->resolveAuthenticatedUserLogin();
+        $updated = $this->movimientoRepository->updateOperationalStatus($movementId, 'ABIERTO', $userLogin, $justification);
+        if (!$updated) {
+            $this->setFlash('movimientos_error', 'No fue posible reversar el estado del movimiento.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        CsrfTokenManager::rotateToken($tokenName);
+        $this->setFlash('movimientos_success', 'El movimiento #' . $movementId . ' se reverso y quedo en estado ABIERTO.');
+        Response::redirect($this->buildUrl('/movimientos'));
+    }
+
     public function downloadSupport()
     {
         $movementId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
@@ -557,6 +740,59 @@ class MovimientoController
             }
 
             $supportIds[] = (int) $supportId;
+        }
+
+        return array('ok' => true, 'message' => '', 'files' => $storedFiles, 'support_ids' => $supportIds);
+    }
+
+    private function cloneSupportsBetweenMovements($sourceMovementId, $targetMovementId, $username)
+    {
+        $sourceSupports = $this->movimientoRepository->getSupportsByMovementId($sourceMovementId);
+        if (empty($sourceSupports)) {
+            return array('ok' => true, 'message' => '', 'files' => array(), 'support_ids' => array());
+        }
+
+        $storedFiles = array();
+        $supportIds = array();
+        $targetDirectory = $this->ensureMovementSupportDirectory($targetMovementId);
+        if ($targetDirectory === '') {
+            return array('ok' => false, 'message' => 'No fue posible preparar el directorio de soportes para la copia.', 'files' => array(), 'support_ids' => array());
+        }
+
+        foreach ($sourceSupports as $sourceSupport) {
+            $normalizedSourceSupport = $this->normalizeSupportRow($sourceSupport);
+            $sourceStoredName = isset($normalizedSourceSupport['stored_name']) ? (string) $normalizedSourceSupport['stored_name'] : '';
+            if ($sourceStoredName === '') {
+                continue;
+            }
+
+            $sourceAbsolutePath = $this->resolveSupportAbsolutePath($sourceMovementId, $sourceStoredName);
+            if ($sourceAbsolutePath === '' || !is_file($sourceAbsolutePath)) {
+                return array('ok' => false, 'message' => 'No fue posible encontrar uno de los soportes del movimiento origen.', 'files' => $storedFiles, 'support_ids' => $supportIds);
+            }
+
+            $originalName = isset($normalizedSourceSupport['original_name']) ? (string) $normalizedSourceSupport['original_name'] : '';
+            if ($originalName === '') {
+                $originalName = basename($sourceStoredName);
+            }
+
+            $newStoredName = $this->buildStoredSupportFileName($originalName);
+            $targetAbsolutePath = $targetDirectory . DIRECTORY_SEPARATOR . $newStoredName;
+            if (!@copy($sourceAbsolutePath, $targetAbsolutePath)) {
+                return array('ok' => false, 'message' => 'No fue posible copiar uno de los soportes del movimiento.', 'files' => $storedFiles, 'support_ids' => $supportIds);
+            }
+
+            $storedFiles[] = array(
+                'movement_id' => (int) $targetMovementId,
+                'stored_name' => $newStoredName,
+            );
+
+            $newSupportId = $this->movimientoRepository->createSupportRecord($targetMovementId, $newStoredName, $username);
+            if ($newSupportId === false) {
+                return array('ok' => false, 'message' => 'No fue posible registrar los soportes de la copia.', 'files' => $storedFiles, 'support_ids' => $supportIds);
+            }
+
+            $supportIds[] = (int) $newSupportId;
         }
 
         return array('ok' => true, 'message' => '', 'files' => $storedFiles, 'support_ids' => $supportIds);
@@ -1037,6 +1273,78 @@ class MovimientoController
 
         $amount = (float) $normalizedDigits;
         return $isNegative ? (-1 * $amount) : $amount;
+    }
+
+    private function applyOperationalStatusChange($targetStatus, $successMessage)
+    {
+        $tokenName = $this->appConfig['csrf_token_name'];
+        $providedToken = isset($_POST[$tokenName]) ? (string) $_POST[$tokenName] : '';
+        if (!CsrfTokenManager::validateToken($tokenName, $providedToken)) {
+            $this->setFlash('movimientos_error', 'La sesion de formulario caduco. Intenta nuevamente.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $movementId = isset($_POST['movement_id']) ? (int) $_POST['movement_id'] : 0;
+        if ($movementId <= 0) {
+            $this->setFlash('movimientos_error', 'Movimiento no valido para actualizar estado.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $movement = $this->movimientoRepository->findMovimientoById($movementId);
+        if (!$movement) {
+            $this->setFlash('movimientos_error', 'No se encontro el movimiento solicitado.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $currentStatus = $this->normalizeOperationalStatus(isset($movement['estado_operativo']) ? $movement['estado_operativo'] : '');
+        $safeTargetStatus = $this->normalizeOperationalStatus($targetStatus);
+        if ($currentStatus === $safeTargetStatus) {
+            $this->setFlash('movimientos_success', 'El movimiento #' . $movementId . ' ya estaba en estado ' . $safeTargetStatus . '.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        $userLogin = $this->resolveAuthenticatedUserLogin();
+        $updated = $this->movimientoRepository->updateOperationalStatus($movementId, $safeTargetStatus, $userLogin, '');
+        if (!$updated) {
+            $this->setFlash('movimientos_error', 'No fue posible actualizar el estado operativo del movimiento.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+
+        CsrfTokenManager::rotateToken($tokenName);
+        $this->setFlash('movimientos_success', $successMessage);
+        Response::redirect($this->buildUrl('/movimientos'));
+    }
+
+    private function hasSupportPayloadInRequest()
+    {
+        if (isset($_FILES['soportes']) && is_array($_FILES['soportes'])) {
+            $files = $this->normalizeFilesArray($_FILES['soportes']);
+            foreach ($files as $file) {
+                if (isset($file['error']) && (int) $file['error'] !== UPLOAD_ERR_NO_FILE) {
+                    return true;
+                }
+            }
+        }
+
+        $rawClipboardPayload = isset($_POST['soportes_clipboard_json']) ? trim((string) $_POST['soportes_clipboard_json']) : '';
+        return $rawClipboardPayload !== '';
+    }
+
+    private function resolveAuthenticatedUserLogin()
+    {
+        $authenticatedUser = $this->authService->getAuthenticatedUser();
+        return isset($authenticatedUser['login']) ? (string) $authenticatedUser['login'] : 'sistema';
+    }
+
+    private function normalizeOperationalStatus($status)
+    {
+        $statusSafe = strtoupper(trim((string) $status));
+        $allowed = array('ABIERTO', 'CERRADO', 'ASENTADO');
+        if (!in_array($statusSafe, $allowed, true)) {
+            return 'ABIERTO';
+        }
+
+        return $statusSafe;
     }
 
     private function isDateTimeString($dateTimeString)

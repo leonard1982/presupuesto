@@ -221,6 +221,11 @@ $currentUserLogin = $isAuthenticated && isset($currentUser['login']) ? (string) 
         </div>
         <div class="modal-body">
             <p id="confirm-action-modal-text" class="confirm-modal-text">Deseas continuar con esta accion?</p>
+            <div id="confirm-action-modal-justification-wrap" class="confirm-modal-justification hidden">
+                <label for="confirm-action-modal-justification-input" id="confirm-action-modal-justification-label">Justificacion</label>
+                <textarea id="confirm-action-modal-justification-input" rows="4" maxlength="1200" placeholder="Escribe una justificacion"></textarea>
+                <p id="confirm-action-modal-justification-error" class="confirm-modal-justification-error hidden">Debes ingresar una justificacion valida.</p>
+            </div>
             <div class="notification-actions">
                 <button type="button" id="confirm-action-modal-accept" class="btn btn-danger btn-inline">
                     <i class="bi bi-trash3"></i> Si, eliminar

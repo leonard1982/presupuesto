@@ -79,7 +79,7 @@ class MovimientoRepository
 
     public function getRecentMovimientos($limit)
     {
-        $query = 'SELECT gc.id, gc.fecha, gc.detalle, gc.valor, gc.gasto_costo, gc.tipo, gc.usuario, c.descripcion AS clasificacion, COALESCE(s.total_soportes, 0) AS soportes_count
+        $query = 'SELECT gc.id, gc.fecha, gc.detalle, gc.valor, gc.gasto_costo, gc.tipo, gc.usuario, gc.estado_operativo, gc.justificacion_reversa, gc.fecha_estado, c.descripcion AS clasificacion, COALESCE(s.total_soportes, 0) AS soportes_count
                   FROM gastos_costos gc
                   LEFT JOIN clasificaciones c ON c.id = gc.id_clasificacion
                   LEFT JOIN (
@@ -91,6 +91,20 @@ class MovimientoRepository
                   LIMIT ?';
 
         $statement = $this->connection->prepare($query);
+        if (!$statement instanceof mysqli_stmt) {
+            $fallbackQuery = 'SELECT gc.id, gc.fecha, gc.detalle, gc.valor, gc.gasto_costo, gc.tipo, gc.usuario, \'ABIERTO\' AS estado_operativo, \'\' AS justificacion_reversa, NULL AS fecha_estado, c.descripcion AS clasificacion, COALESCE(s.total_soportes, 0) AS soportes_count
+                              FROM gastos_costos gc
+                              LEFT JOIN clasificaciones c ON c.id = gc.id_clasificacion
+                              LEFT JOIN (
+                                SELECT id_ingreso, COUNT(*) AS total_soportes
+                                FROM ingresos_detalle
+                                GROUP BY id_ingreso
+                              ) s ON s.id_ingreso = gc.id
+                              ORDER BY gc.fecha DESC
+                              LIMIT ?';
+            $statement = $this->connection->prepare($fallbackQuery);
+        }
+
         if (!$statement instanceof mysqli_stmt) {
             $this->logger->error('app', 'No fue posible preparar consulta de listado de movimientos.', array(
                 'error' => $this->connection->error,
@@ -118,12 +132,21 @@ class MovimientoRepository
 
     public function findMovimientoById($movementId)
     {
-        $query = 'SELECT gc.id, gc.fecha, gc.id_clasificacion, gc.detalle, gc.valor, gc.fecha_periodo, gc.id_presupuesto, gc.soporte, gc.gasto_costo, gc.tipo, gc.por_pagar_cobrar, gc.valor_neto, gc.saldo, gc.id_costo, gc.usuario, c.descripcion AS clasificacion
+        $query = 'SELECT gc.id, gc.fecha, gc.id_clasificacion, gc.detalle, gc.valor, gc.fecha_periodo, gc.id_presupuesto, gc.soporte, gc.gasto_costo, gc.tipo, gc.por_pagar_cobrar, gc.valor_neto, gc.saldo, gc.id_costo, gc.usuario, gc.estado_operativo, gc.justificacion_reversa, gc.fecha_estado, c.descripcion AS clasificacion
                   FROM gastos_costos gc
                   LEFT JOIN clasificaciones c ON c.id = gc.id_clasificacion
                   WHERE gc.id = ?
                   LIMIT 1';
         $statement = $this->connection->prepare($query);
+        if (!$statement instanceof mysqli_stmt) {
+            $fallbackQuery = 'SELECT gc.id, gc.fecha, gc.id_clasificacion, gc.detalle, gc.valor, gc.fecha_periodo, gc.id_presupuesto, gc.soporte, gc.gasto_costo, gc.tipo, gc.por_pagar_cobrar, gc.valor_neto, gc.saldo, gc.id_costo, gc.usuario, \'ABIERTO\' AS estado_operativo, \'\' AS justificacion_reversa, NULL AS fecha_estado, c.descripcion AS clasificacion
+                              FROM gastos_costos gc
+                              LEFT JOIN clasificaciones c ON c.id = gc.id_clasificacion
+                              WHERE gc.id = ?
+                              LIMIT 1';
+            $statement = $this->connection->prepare($fallbackQuery);
+        }
+
         if (!$statement instanceof mysqli_stmt) {
             $this->logger->error('app', 'No fue posible preparar consulta de movimiento por ID.', array(
                 'error' => $this->connection->error,
@@ -238,6 +261,52 @@ class MovimientoRepository
             $this->logger->error('app', 'Error al actualizar movimiento.', array(
                 'error' => $statement->error,
                 'movement_id' => $movementIdInt,
+            ));
+        }
+
+        $statement->close();
+        return $ok;
+    }
+
+    public function updateOperationalStatus($movementId, $status, $username, $reversalJustification)
+    {
+        $allowedStatuses = array('ABIERTO', 'CERRADO', 'ASENTADO');
+        $statusSafe = strtoupper(trim((string) $status));
+        if (!in_array($statusSafe, $allowedStatuses, true)) {
+            $this->logger->warning('app', 'Estado operativo invalido al actualizar movimiento.', array(
+                'status' => $statusSafe,
+                'movement_id' => (int) $movementId,
+            ));
+            return false;
+        }
+
+        $justification = trim((string) $reversalJustification);
+        if ($statusSafe !== 'ABIERTO') {
+            $justification = '';
+        }
+
+        $query = 'UPDATE gastos_costos
+                  SET estado_operativo = ?, justificacion_reversa = ?, fecha_estado = NOW(), usuario = ?
+                  WHERE id = ?
+                  LIMIT 1';
+        $statement = $this->connection->prepare($query);
+        if (!$statement instanceof mysqli_stmt) {
+            $this->logger->error('app', 'No fue posible preparar actualizacion de estado operativo de movimiento.', array(
+                'error' => $this->connection->error,
+            ));
+            return false;
+        }
+
+        $movementIdInt = (int) $movementId;
+        $userSafe = trim((string) $username);
+        $statement->bind_param('sssi', $statusSafe, $justification, $userSafe, $movementIdInt);
+        $ok = $statement->execute();
+
+        if (!$ok) {
+            $this->logger->error('app', 'Error al actualizar estado operativo de movimiento.', array(
+                'error' => $statement->error,
+                'movement_id' => $movementIdInt,
+                'status' => $statusSafe,
             ));
         }
 

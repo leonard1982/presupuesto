@@ -39,9 +39,11 @@ return array(
         'username' => trim(Environment::get('MAIL_INBOX_USER', Environment::get('MAIL_USER', ''))),
         'password' => Environment::get('MAIL_INBOX_PASS', Environment::get('MAIL_PASS', '')),
         'folder' => trim(Environment::get('MAIL_INBOX_FOLDER', 'INBOX')),
+        'folders' => Environment::getCsv('MAIL_INBOX_FOLDERS', array(trim(Environment::get('MAIL_INBOX_FOLDER', 'INBOX')), 'INBOX', '[Gmail]/All Mail')),
         'encryption' => strtolower(trim(Environment::get('MAIL_INBOX_ENCRYPTION', 'ssl'))),
         'novalidate_cert' => Environment::getBoolean('MAIL_INBOX_NOVALIDATE_CERT', true),
-        'max_messages' => Environment::getInteger('MAIL_INBOX_MAX_MESSAGES', 35),
+        'allow_all_folders' => Environment::getBoolean('MAIL_INBOX_ALLOW_ALL_FOLDERS', true),
+        'max_messages' => Environment::getInteger('MAIL_INBOX_MAX_MESSAGES', 250),
     ),
     'ai' => array(
         'openai_key' => trim(Environment::get('OPENAI_API_KEY_PRESUPUESTO_PERSONAL', '')),

@@ -920,6 +920,45 @@ textarea {
     display: none;
 }
 
+.movement-category-cell {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.24rem;
+}
+
+.movement-state-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    padding: 0.12rem 0.42rem;
+    border-radius: 999px;
+    border: 1px solid #c6d8ec;
+    background: #edf5ff;
+    color: #104774;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+.movement-state-open {
+    border-color: #93d2a6;
+    background: #ecfbf1;
+    color: #1e7a3f;
+}
+
+.movement-state-closed {
+    border-color: #f0be8b;
+    background: #fff5e8;
+    color: #9a4f0f;
+}
+
+.movement-state-settled {
+    border-color: #97bfdc;
+    background: #eaf3fb;
+    color: #1f4f7a;
+}
+
 .mobile-movement-list {
     display: none;
 }
@@ -1669,6 +1708,36 @@ body.global-loading-active {
     font-weight: 600;
 }
 
+.confirm-modal-justification {
+    margin-top: 0.72rem;
+    display: grid;
+    gap: 0.35rem;
+}
+
+.confirm-modal-justification label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #28486a;
+}
+
+.confirm-modal-justification textarea {
+    width: 100%;
+    min-height: 108px;
+    border: 1px solid #c7d8eb;
+    border-radius: 10px;
+    padding: 0.55rem 0.62rem;
+    background: #fbfdff;
+    color: #173452;
+    resize: vertical;
+}
+
+.confirm-modal-justification-error {
+    margin: 0;
+    color: #b91c1c;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
 .pwa-modal-card {
     width: min(520px, 100%);
 }
@@ -2342,6 +2411,30 @@ body.theme-dark .mobile-movement-support-tag {
     color: #d8ebff;
 }
 
+body.theme-dark .movement-state-chip {
+    background: #1a324b;
+    border-color: #375473;
+    color: #d8ebff;
+}
+
+body.theme-dark .movement-state-open {
+    background: #113524;
+    border-color: #2f7d50;
+    color: #a6e5c0;
+}
+
+body.theme-dark .movement-state-closed {
+    background: #3b2517;
+    border-color: #89552d;
+    color: #f2c398;
+}
+
+body.theme-dark .movement-state-settled {
+    background: #132d45;
+    border-color: #406b91;
+    color: #a9ceee;
+}
+
 body.theme-dark .quick-pill {
     background: #1a324b;
     border-color: #375473;
@@ -2647,6 +2740,20 @@ body.theme-dark .confirm-modal-header h3 i {
 
 body.theme-dark .confirm-modal-text {
     color: #e2eefc;
+}
+
+body.theme-dark .confirm-modal-justification label {
+    color: #d7e7fa;
+}
+
+body.theme-dark .confirm-modal-justification textarea {
+    background: #102032;
+    border-color: #355070;
+    color: #e2eefc;
+}
+
+body.theme-dark .confirm-modal-justification-error {
+    color: #ffb3b3;
 }
 
 body.theme-dark .btn-app-install {

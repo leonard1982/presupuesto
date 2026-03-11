@@ -18,7 +18,7 @@ class InboxReaderService
         $this->logger = $logger;
     }
 
-    public function fetchRecentMessages()
+    public function fetchRecentMessages(array $options = array())
     {
         if (!function_exists('imap_open')) {
             return array(
@@ -31,6 +31,21 @@ class InboxReaderService
         $username = isset($this->config['username']) ? trim((string) $this->config['username']) : '';
         $password = isset($this->config['password']) ? (string) $this->config['password'] : '';
         $mailboxCandidates = $this->buildMailboxCandidates();
+        $dateFrom = $this->normalizeDateOnly(isset($options['date_from']) ? $options['date_from'] : '');
+        $dateTo = $this->normalizeDateOnly(isset($options['date_to']) ? $options['date_to'] : '');
+        if ($dateFrom !== '' && $dateTo !== '' && $dateFrom > $dateTo) {
+            $tempDate = $dateFrom;
+            $dateFrom = $dateTo;
+            $dateTo = $tempDate;
+        }
+
+        $configuredLimit = isset($this->config['max_messages']) ? (int) $this->config['max_messages'] : 250;
+        if ($configuredLimit <= 0) {
+            $configuredLimit = 250;
+        }
+        $requestedLimit = isset($options['max_messages']) ? (int) $options['max_messages'] : $configuredLimit;
+        $maxMessages = $requestedLimit > 0 ? $requestedLimit : $configuredLimit;
+        $searchCriteria = $this->buildSearchCriteria($dateFrom, $dateTo);
 
         if (empty($mailboxCandidates) || $username === '' || $password === '') {
             return array(
@@ -40,18 +55,87 @@ class InboxReaderService
             );
         }
 
-        $stream = false;
         $openErrors = array();
         $attempts = array();
+        $messagesByFingerprint = array();
+        $openedFolders = array();
 
         foreach ($mailboxCandidates as $candidate) {
-            $attempts[] = isset($candidate['label']) ? (string) $candidate['label'] : 'imap';
+            $candidateLabel = isset($candidate['label']) ? (string) $candidate['label'] : 'imap';
+            $attempts[] = $candidateLabel;
+            $folderName = isset($candidate['folder']) ? strtolower(trim((string) $candidate['folder'])) : '';
+            if ($folderName !== '' && isset($openedFolders[$folderName])) {
+                continue;
+            }
+
             $warningText = '';
             $opened = $this->openMailboxStream($candidate, $username, $password, $warningText);
 
             if ($opened !== false) {
-                $stream = $opened;
-                break;
+                if ($folderName !== '') {
+                    $openedFolders[$folderName] = true;
+                }
+
+                $uids = imap_search($opened, $searchCriteria, SE_UID);
+                if (is_array($uids) && !empty($uids)) {
+                    rsort($uids, SORT_NUMERIC);
+                    $selectedUids = array_slice($uids, 0, $maxMessages);
+
+                    foreach ($selectedUids as $uid) {
+                        $messageNumber = imap_msgno($opened, (int) $uid);
+                        if ($messageNumber <= 0) {
+                            continue;
+                        }
+
+                        $overviewRows = imap_fetch_overview($opened, (string) $messageNumber, 0);
+                        $overview = (is_array($overviewRows) && isset($overviewRows[0])) ? $overviewRows[0] : null;
+                        if ($overview === null) {
+                            continue;
+                        }
+
+                        $subject = $this->decodeMimeHeader(isset($overview->subject) ? $overview->subject : '');
+                        $from = $this->decodeMimeHeader(isset($overview->from) ? $overview->from : '');
+                        $to = $this->decodeMimeHeader(isset($overview->to) ? $overview->to : '');
+                        $messageId = $this->decodeMimeHeader(isset($overview->message_id) ? $overview->message_id : '');
+                        $dateRaw = isset($overview->date) ? trim((string) $overview->date) : '';
+                        $dateSql = $this->normalizeMessageDate($dateRaw);
+                        $bodyPlain = $this->extractBodyAsPlainText($opened, $messageNumber);
+                        $snippet = $this->buildSnippet($bodyPlain);
+
+                        $fingerprintSource = $messageId !== ''
+                            ? $messageId
+                            : ($dateSql . '|' . $from . '|' . $to . '|' . $subject);
+                        $fingerprint = sha1(strtolower(trim($fingerprintSource)));
+
+                        $messageData = array(
+                            'uid' => (int) $uid,
+                            'subject' => $subject !== '' ? $subject : '(Sin asunto)',
+                            'from' => $from,
+                            'to' => $to,
+                            'message_id' => $messageId,
+                            'fingerprint' => $fingerprint,
+                            'date_raw' => $dateRaw,
+                            'date_sql' => $dateSql,
+                            'body_plain' => $bodyPlain,
+                            'snippet' => $snippet,
+                            'hash' => sha1((string) $uid . '|' . $dateRaw . '|' . $subject . '|' . $from),
+                        );
+
+                        if (!isset($messagesByFingerprint[$fingerprint])) {
+                            $messagesByFingerprint[$fingerprint] = $messageData;
+                            continue;
+                        }
+
+                        $existingTimestamp = strtotime(isset($messagesByFingerprint[$fingerprint]['date_sql']) ? $messagesByFingerprint[$fingerprint]['date_sql'] : '');
+                        $currentTimestamp = strtotime($dateSql);
+                        if ($existingTimestamp === false || ($currentTimestamp !== false && $currentTimestamp > $existingTimestamp)) {
+                            $messagesByFingerprint[$fingerprint] = $messageData;
+                        }
+                    }
+                }
+
+                imap_close($opened);
+                continue;
             }
 
             $imapError = imap_last_error();
@@ -68,7 +152,7 @@ class InboxReaderService
             }
         }
 
-        if ($stream === false) {
+        if (empty($openedFolders)) {
             $error = !empty($openErrors) ? implode(' || ', $openErrors) : (string) imap_last_error();
             $this->logger->warning('app', 'No fue posible abrir la bandeja IMAP.', array(
                 'error' => $error,
@@ -82,9 +166,7 @@ class InboxReaderService
             );
         }
 
-        $uids = imap_search($stream, 'ALL', SE_UID);
-        if (!is_array($uids) || empty($uids)) {
-            imap_close($stream);
+        if (empty($messagesByFingerprint)) {
             return array(
                 'ok' => true,
                 'message' => 'No hay correos disponibles en la bandeja.',
@@ -92,47 +174,19 @@ class InboxReaderService
             );
         }
 
-        rsort($uids, SORT_NUMERIC);
-        $limit = isset($this->config['max_messages']) ? (int) $this->config['max_messages'] : 35;
-        if ($limit <= 0) {
-            $limit = 35;
-        }
-
-        $selectedUids = array_slice($uids, 0, $limit);
-        $messages = array();
-
-        foreach ($selectedUids as $uid) {
-            $messageNumber = imap_msgno($stream, (int) $uid);
-            if ($messageNumber <= 0) {
-                continue;
+        $messages = array_values($messagesByFingerprint);
+        usort($messages, function ($left, $right) {
+            $leftDate = isset($left['date_sql']) ? (string) $left['date_sql'] : '';
+            $rightDate = isset($right['date_sql']) ? (string) $right['date_sql'] : '';
+            if ($leftDate === $rightDate) {
+                return 0;
             }
+            return $leftDate > $rightDate ? -1 : 1;
+        });
 
-            $overviewRows = imap_fetch_overview($stream, (string) $messageNumber, 0);
-            $overview = (is_array($overviewRows) && isset($overviewRows[0])) ? $overviewRows[0] : null;
-            if ($overview === null) {
-                continue;
-            }
-
-            $subject = $this->decodeMimeHeader(isset($overview->subject) ? $overview->subject : '');
-            $from = $this->decodeMimeHeader(isset($overview->from) ? $overview->from : '');
-            $dateRaw = isset($overview->date) ? trim((string) $overview->date) : '';
-            $dateSql = $this->normalizeMessageDate($dateRaw);
-            $bodyPlain = $this->extractBodyAsPlainText($stream, $messageNumber);
-            $snippet = $this->buildSnippet($bodyPlain);
-
-            $messages[] = array(
-                'uid' => (int) $uid,
-                'subject' => $subject !== '' ? $subject : '(Sin asunto)',
-                'from' => $from,
-                'date_raw' => $dateRaw,
-                'date_sql' => $dateSql,
-                'body_plain' => $bodyPlain,
-                'snippet' => $snippet,
-                'hash' => sha1((string) $uid . '|' . $dateRaw . '|' . $subject . '|' . $from),
-            );
+        if (count($messages) > $maxMessages) {
+            $messages = array_slice($messages, 0, $maxMessages);
         }
-
-        imap_close($stream);
 
         return array(
             'ok' => true,
@@ -146,6 +200,10 @@ class InboxReaderService
         $host = isset($this->config['host']) ? trim((string) $this->config['host']) : '';
         $port = isset($this->config['port']) ? (int) $this->config['port'] : 0;
         $folder = isset($this->config['folder']) ? trim((string) $this->config['folder']) : 'INBOX';
+        $foldersConfigured = isset($this->config['folders']) && is_array($this->config['folders'])
+            ? $this->config['folders']
+            : array();
+        $allowAllFolders = !empty($this->config['allow_all_folders']);
         $encryption = isset($this->config['encryption']) ? strtolower(trim((string) $this->config['encryption'])) : 'ssl';
         $novalidate = !empty($this->config['novalidate_cert']);
 
@@ -153,8 +211,23 @@ class InboxReaderService
             return array();
         }
 
-        if ($folder === '') {
-            $folder = 'INBOX';
+        $folderCandidates = array();
+        if ($folder !== '') {
+            $folderCandidates[] = $folder;
+        }
+        foreach ($foldersConfigured as $folderItem) {
+            $candidateFolder = trim((string) $folderItem);
+            if ($candidateFolder !== '') {
+                $folderCandidates[] = $candidateFolder;
+            }
+        }
+        $folderCandidates[] = 'INBOX';
+        $folderCandidates = array_values(array_unique($folderCandidates));
+        if (empty($folderCandidates)) {
+            $folderCandidates = array('INBOX');
+        }
+        if (!$allowAllFolders && !empty($folderCandidates)) {
+            $folderCandidates = array($folderCandidates[0]);
         }
 
         $candidates = array();
@@ -167,31 +240,34 @@ class InboxReaderService
             array('port' => 143, 'encryption' => 'none'),
         );
 
-        foreach ($candidateList as $candidateConfig) {
-            $candidatePort = isset($candidateConfig['port']) ? (int) $candidateConfig['port'] : 0;
-            $candidateEncryption = isset($candidateConfig['encryption']) ? strtolower(trim((string) $candidateConfig['encryption'])) : 'ssl';
-            if ($candidatePort <= 0) {
-                continue;
-            }
-            if (!in_array($candidateEncryption, array('ssl', 'tls', 'none'), true)) {
-                $candidateEncryption = 'ssl';
-            }
+        foreach ($folderCandidates as $folderName) {
+            foreach ($candidateList as $candidateConfig) {
+                $candidatePort = isset($candidateConfig['port']) ? (int) $candidateConfig['port'] : 0;
+                $candidateEncryption = isset($candidateConfig['encryption']) ? strtolower(trim((string) $candidateConfig['encryption'])) : 'ssl';
+                if ($candidatePort <= 0) {
+                    continue;
+                }
+                if (!in_array($candidateEncryption, array('ssl', 'tls', 'none'), true)) {
+                    $candidateEncryption = 'ssl';
+                }
 
-            $candidateKey = $candidatePort . '|' . $candidateEncryption;
-            if (isset($seen[$candidateKey])) {
-                continue;
-            }
-            $seen[$candidateKey] = true;
+                $candidateKey = strtolower(trim((string) $folderName)) . '|' . $candidatePort . '|' . $candidateEncryption;
+                if (isset($seen[$candidateKey])) {
+                    continue;
+                }
+                $seen[$candidateKey] = true;
 
-            $mailbox = $this->buildMailboxString($host, $candidatePort, $folder, $candidateEncryption, $novalidate);
-            if ($mailbox === '') {
-                continue;
-            }
+                $mailbox = $this->buildMailboxString($host, $candidatePort, $folderName, $candidateEncryption, $novalidate);
+                if ($mailbox === '') {
+                    continue;
+                }
 
-            $candidates[] = array(
-                'mailbox' => $mailbox,
-                'label' => $host . ':' . $candidatePort . ' (' . strtoupper($candidateEncryption) . ')',
-            );
+                $candidates[] = array(
+                    'mailbox' => $mailbox,
+                    'folder' => $folderName,
+                    'label' => $host . ':' . $candidatePort . '/' . $folderName . ' (' . strtoupper($candidateEncryption) . ')',
+                );
+            }
         }
 
         return $candidates;
@@ -631,6 +707,47 @@ class InboxReaderService
         }
 
         return trim($source);
+    }
+
+    private function buildSearchCriteria($dateFrom, $dateTo)
+    {
+        $criteria = array('ALL');
+        $fromDate = $this->normalizeDateOnly($dateFrom);
+        $toDate = $this->normalizeDateOnly($dateTo);
+
+        if ($fromDate !== '') {
+            $fromTimestamp = strtotime($fromDate . ' 00:00:00');
+            if ($fromTimestamp !== false) {
+                $criteria[] = 'SINCE "' . date('d-M-Y', $fromTimestamp) . '"';
+            }
+        }
+
+        if ($toDate !== '') {
+            $toTimestamp = strtotime($toDate . ' 00:00:00');
+            if ($toTimestamp !== false) {
+                $nextDayTimestamp = strtotime('+1 day', $toTimestamp);
+                if ($nextDayTimestamp !== false) {
+                    $criteria[] = 'BEFORE "' . date('d-M-Y', $nextDayTimestamp) . '"';
+                }
+            }
+        }
+
+        return implode(' ', $criteria);
+    }
+
+    private function normalizeDateOnly($value)
+    {
+        $text = trim((string) $value);
+        if ($text === '') {
+            return '';
+        }
+
+        $timestamp = strtotime($text);
+        if ($timestamp === false) {
+            return '';
+        }
+
+        return date('Y-m-d', $timestamp);
     }
 
     private function normalizeMessageDate($value)

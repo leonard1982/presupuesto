@@ -153,6 +153,9 @@ class SchemaSynchronizer
                 `saldo` decimal(15,2) NOT NULL DEFAULT '0.00',
                 `id_costo` int(11) NOT NULL DEFAULT '0',
                 `usuario` varchar(255) NOT NULL,
+                `estado_operativo` set('ABIERTO','CERRADO','ASENTADO') NOT NULL DEFAULT 'ABIERTO',
+                `justificacion_reversa` text DEFAULT NULL,
+                `fecha_estado` datetime DEFAULT NULL,
                 PRIMARY KEY (`id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
             $summary
@@ -211,6 +214,23 @@ class SchemaSynchronizer
         );
 
         $this->ensureTable(
+            'correo_inbox_hidden',
+            "CREATE TABLE `correo_inbox_hidden` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `usuario` varchar(120) NOT NULL,
+                `correo_uid` varchar(120) NOT NULL DEFAULT '',
+                `correo_hash` char(40) NOT NULL DEFAULT '',
+                `remitente` varchar(255) NOT NULL DEFAULT '',
+                `asunto` varchar(255) NOT NULL DEFAULT '',
+                `fecha_correo` datetime DEFAULT NULL,
+                `ocultado_en` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `uq_correo_inbox_hidden_usuario_uid_hash` (`usuario`,`correo_uid`,`correo_hash`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            $summary
+        );
+
+        $this->ensureTable(
             'sc_log',
             "CREATE TABLE `sc_log` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -229,6 +249,24 @@ class SchemaSynchronizer
 
     private function ensureCoreColumns(array &$summary)
     {
+        $this->ensureColumn(
+            'gastos_costos',
+            'estado_operativo',
+            "ALTER TABLE `gastos_costos` ADD COLUMN `estado_operativo` set('ABIERTO','CERRADO','ASENTADO') NOT NULL DEFAULT 'ABIERTO' AFTER `usuario`",
+            $summary
+        );
+        $this->ensureColumn(
+            'gastos_costos',
+            'justificacion_reversa',
+            "ALTER TABLE `gastos_costos` ADD COLUMN `justificacion_reversa` text DEFAULT NULL AFTER `estado_operativo`",
+            $summary
+        );
+        $this->ensureColumn(
+            'gastos_costos',
+            'fecha_estado',
+            "ALTER TABLE `gastos_costos` ADD COLUMN `fecha_estado` datetime DEFAULT NULL AFTER `justificacion_reversa`",
+            $summary
+        );
         $this->ensureColumn(
             'sec_users',
             'password_hash',
@@ -330,6 +368,12 @@ class SchemaSynchronizer
             $summary
         );
         $this->ensureIndex(
+            'gastos_costos',
+            'idx_gc_estado_operativo',
+            "ALTER TABLE `gastos_costos` ADD INDEX `idx_gc_estado_operativo` (`estado_operativo`, `fecha_estado`)",
+            $summary
+        );
+        $this->ensureIndex(
             'ingresos',
             'idx_ingresos_periodo_clasificacion_presupuesto',
             "ALTER TABLE `ingresos` ADD INDEX `idx_ingresos_periodo_clasificacion_presupuesto` (`fecha_periodo`, `id_clasificacion`, `id_presupuesto`)",
@@ -381,6 +425,18 @@ class SchemaSynchronizer
             'correo_importaciones_log',
             'idx_correo_importaciones_estado_fecha',
             "ALTER TABLE `correo_importaciones_log` ADD INDEX `idx_correo_importaciones_estado_fecha` (`estado`, `fecha_registro`)",
+            $summary
+        );
+        $this->ensureIndex(
+            'correo_inbox_hidden',
+            'idx_correo_inbox_hidden_usuario_ocultado',
+            "ALTER TABLE `correo_inbox_hidden` ADD INDEX `idx_correo_inbox_hidden_usuario_ocultado` (`usuario`, `ocultado_en`)",
+            $summary
+        );
+        $this->ensureIndex(
+            'correo_inbox_hidden',
+            'idx_correo_inbox_hidden_usuario_hash',
+            "ALTER TABLE `correo_inbox_hidden` ADD INDEX `idx_correo_inbox_hidden_usuario_hash` (`usuario`, `correo_hash`)",
             $summary
         );
         $this->ensureIndex(

@@ -50,17 +50,36 @@ class CorreoController
         $selectedUid = isset($_GET['uid']) ? (int) $_GET['uid'] : 0;
         $openSuggestionParam = isset($_GET['analizar']) ? trim((string) $_GET['analizar']) : '';
         $searchText = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
+        $dateFrom = $this->normalizeDateOnly(isset($_GET['fecha_desde']) ? $_GET['fecha_desde'] : '');
+        $dateTo = $this->normalizeDateOnly(isset($_GET['fecha_hasta']) ? $_GET['fecha_hasta'] : '');
+        if ($dateFrom !== '' && $dateTo !== '' && $dateFrom > $dateTo) {
+            $tempDate = $dateFrom;
+            $dateFrom = $dateTo;
+            $dateTo = $tempDate;
+        }
         $flashSuccess = $this->pullFlash('correos_success');
         $flashError = $this->pullFlash('correos_error');
         $flashForm = $this->pullFlash('correos_form');
         $shouldOpenSuggestionModal = ($openSuggestionParam === '1' && $selectedUid > 0);
+        $authenticatedUser = $this->authService->getAuthenticatedUser();
+        $userLogin = isset($authenticatedUser['login']) ? (string) $authenticatedUser['login'] : 'sistema';
 
-        $inboxResult = $this->inboxReaderService->fetchRecentMessages();
+        $inboxResult = $this->inboxReaderService->fetchRecentMessages(array(
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+        ));
         $emails = isset($inboxResult['messages']) && is_array($inboxResult['messages']) ? $inboxResult['messages'] : array();
+
+        if ($dateFrom !== '' || $dateTo !== '') {
+            $emails = $this->filterEmailsByDateRange($emails, $dateFrom, $dateTo);
+        }
 
         if ($searchText !== '') {
             $emails = $this->filterEmails($emails, $searchText);
         }
+
+        $hiddenKeys = $this->correoRepository->getHiddenInboxKeysByUser($userLogin);
+        $emails = $this->filterHiddenEmails($emails, $hiddenKeys);
 
         $selectedEmail = $this->findSelectedEmail($emails, $selectedUid);
         $clasificaciones = $this->movimientoRepository->getClasificaciones();
@@ -98,7 +117,7 @@ class CorreoController
             'baseUrl' => rtrim($this->appConfig['base_url'], '/'),
             'assetVersion' => $this->appConfig['asset_version'],
             'enablePwa' => $this->appConfig['enable_pwa'],
-            'currentUser' => $this->authService->getAuthenticatedUser(),
+            'currentUser' => $authenticatedUser,
             'activeMenu' => 'correos',
             'csrfTokenName' => $csrfTokenName,
             'csrfToken' => $csrfToken,
@@ -110,6 +129,8 @@ class CorreoController
             'mediosPago' => $mediosPago,
             'presupuestosActivos' => $presupuestosActivos,
             'searchText' => $searchText,
+            'filterDateFrom' => $dateFrom,
+            'filterDateTo' => $dateTo,
             'successMessage' => is_string($flashSuccess) ? $flashSuccess : '',
             'errorMessage' => is_string($flashError) ? $flashError : '',
             'inboxMessage' => $inboxMessage,
@@ -191,6 +212,49 @@ class CorreoController
         CsrfTokenManager::rotateToken($tokenName);
         $this->setFlash('movimientos_success', 'Movimiento creado desde correo con soporte adjunto.');
         Response::redirect($this->buildUrl('/movimientos'));
+    }
+
+    public function hideFromInbox()
+    {
+        $tokenName = $this->appConfig['csrf_token_name'];
+        $providedToken = isset($_POST[$tokenName]) ? (string) $_POST[$tokenName] : '';
+        if (!CsrfTokenManager::validateToken($tokenName, $providedToken)) {
+            $this->setFlash('correos_error', 'La sesion caduco. Intenta nuevamente.');
+            Response::redirect($this->buildUrl('/correos'));
+        }
+
+        $authenticatedUser = $this->authService->getAuthenticatedUser();
+        $userLogin = isset($authenticatedUser['login']) ? trim((string) $authenticatedUser['login']) : '';
+        if ($userLogin === '') {
+            $this->setFlash('correos_error', 'Usuario no valido para ocultar correos.');
+            Response::redirect($this->buildUrl('/correos'));
+        }
+
+        $correoUid = isset($_POST['email_uid']) ? trim((string) $_POST['email_uid']) : '';
+        $correoHash = isset($_POST['email_fingerprint']) ? trim((string) $_POST['email_fingerprint']) : '';
+        if ($correoUid === '' && $correoHash === '') {
+            $this->setFlash('correos_error', 'Correo no valido para ocultar.');
+            Response::redirect($this->buildUrl('/correos'));
+        }
+
+        $hidden = $this->correoRepository->hideInboxMessage(array(
+            'usuario' => $userLogin,
+            'correo_uid' => $correoUid,
+            'correo_hash' => $correoHash,
+            'remitente' => isset($_POST['email_from']) ? trim((string) $_POST['email_from']) : '',
+            'asunto' => isset($_POST['email_subject']) ? trim((string) $_POST['email_subject']) : '',
+            'fecha_correo' => isset($_POST['email_date']) ? trim((string) $_POST['email_date']) : '',
+        ));
+
+        if (!$hidden) {
+            $this->setFlash('correos_error', 'No fue posible ocultar el correo. Revisa el log de aplicacion.');
+        } else {
+            $this->setFlash('correos_success', 'Correo ocultado de la bandeja.');
+        }
+
+        CsrfTokenManager::rotateToken($tokenName);
+        $redirectUrl = $this->buildUrl('/correos') . $this->buildCorreoFilterQueryFromPost($_POST);
+        Response::redirect($redirectUrl);
     }
 
     private function createSnapshotSupportForEmail($movementId, array $correoData, array $formData)
@@ -348,26 +412,192 @@ class CorreoController
 
     private function filterEmails(array $emails, $searchText)
     {
-        $needle = function_exists('mb_strtolower')
-            ? mb_strtolower((string) $searchText, 'UTF-8')
-            : strtolower((string) $searchText);
+        $needleRaw = trim((string) $searchText);
+        if ($needleRaw === '') {
+            return $emails;
+        }
+
+        $tokens = preg_split('/\s+/', $needleRaw);
+        if (!is_array($tokens) || empty($tokens)) {
+            return $emails;
+        }
+
+        $normalizedTokens = array();
+        foreach ($tokens as $token) {
+            $tokenNormalized = $this->normalizeSearchText($token);
+            if ($tokenNormalized !== '') {
+                $normalizedTokens[] = $tokenNormalized;
+            }
+        }
+
+        if (empty($normalizedTokens)) {
+            return $emails;
+        }
 
         $filtered = array();
         foreach ($emails as $email) {
             $subject = isset($email['subject']) ? (string) $email['subject'] : '';
             $from = isset($email['from']) ? (string) $email['from'] : '';
+            $to = isset($email['to']) ? (string) $email['to'] : '';
             $snippet = isset($email['snippet']) ? (string) $email['snippet'] : '';
-            $haystack = $subject . ' ' . $from . ' ' . $snippet;
-            $haystackNormalized = function_exists('mb_strtolower')
-                ? mb_strtolower($haystack, 'UTF-8')
-                : strtolower($haystack);
+            $body = isset($email['body_plain']) ? (string) $email['body_plain'] : '';
+            $uid = isset($email['uid']) ? (string) $email['uid'] : '';
+            $dateSql = isset($email['date_sql']) ? (string) $email['date_sql'] : '';
+            $messageId = isset($email['message_id']) ? (string) $email['message_id'] : '';
+            $haystack = $subject . ' ' . $from . ' ' . $to . ' ' . $snippet . ' ' . $body . ' ' . $uid . ' ' . $dateSql . ' ' . $messageId;
+            $haystackNormalized = $this->normalizeSearchText($haystack);
 
-            if (strpos($haystackNormalized, $needle) !== false) {
+            $matches = true;
+            foreach ($normalizedTokens as $token) {
+                if (strpos($haystackNormalized, $token) === false) {
+                    $matches = false;
+                    break;
+                }
+            }
+
+            if ($matches) {
                 $filtered[] = $email;
             }
         }
 
         return $filtered;
+    }
+
+    private function filterEmailsByDateRange(array $emails, $dateFrom, $dateTo)
+    {
+        $from = $this->normalizeDateOnly($dateFrom);
+        $to = $this->normalizeDateOnly($dateTo);
+        if ($from === '' && $to === '') {
+            return $emails;
+        }
+
+        $filtered = array();
+        foreach ($emails as $email) {
+            $rowDate = isset($email['date_sql']) ? substr((string) $email['date_sql'], 0, 10) : '';
+            if ($rowDate === '') {
+                continue;
+            }
+
+            if ($from !== '' && $rowDate < $from) {
+                continue;
+            }
+            if ($to !== '' && $rowDate > $to) {
+                continue;
+            }
+
+            $filtered[] = $email;
+        }
+
+        return $filtered;
+    }
+
+    private function filterHiddenEmails(array $emails, array $hiddenKeys)
+    {
+        $hiddenUids = isset($hiddenKeys['uids']) && is_array($hiddenKeys['uids']) ? $hiddenKeys['uids'] : array();
+        $hiddenHashes = isset($hiddenKeys['hashes']) && is_array($hiddenKeys['hashes']) ? $hiddenKeys['hashes'] : array();
+        if (empty($hiddenUids) && empty($hiddenHashes)) {
+            return $emails;
+        }
+
+        $hiddenUidMap = array();
+        foreach ($hiddenUids as $uidValue) {
+            $uidSafe = trim((string) $uidValue);
+            if ($uidSafe !== '') {
+                $hiddenUidMap[$uidSafe] = true;
+            }
+        }
+
+        $hiddenHashMap = array();
+        foreach ($hiddenHashes as $hashValue) {
+            $hashSafe = trim((string) $hashValue);
+            if ($hashSafe !== '') {
+                $hiddenHashMap[$hashSafe] = true;
+            }
+        }
+
+        $visibleEmails = array();
+        foreach ($emails as $email) {
+            $uid = isset($email['uid']) ? trim((string) $email['uid']) : '';
+            $fingerprint = isset($email['fingerprint']) ? trim((string) $email['fingerprint']) : '';
+            if ($uid !== '' && isset($hiddenUidMap[$uid])) {
+                continue;
+            }
+            if ($fingerprint !== '' && isset($hiddenHashMap[$fingerprint])) {
+                continue;
+            }
+
+            $visibleEmails[] = $email;
+        }
+
+        return $visibleEmails;
+    }
+
+    private function normalizeSearchText($value)
+    {
+        $text = trim((string) $value);
+        if ($text === '') {
+            return '';
+        }
+
+        if (function_exists('mb_strtolower')) {
+            $text = mb_strtolower($text, 'UTF-8');
+        } else {
+            $text = strtolower($text);
+        }
+
+        if (function_exists('iconv')) {
+            $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
+            if (is_string($converted) && $converted !== '') {
+                $text = $converted;
+            }
+        }
+
+        $text = preg_replace('/[^a-z0-9@\._\-\/:\s]/i', ' ', $text);
+        if (!is_string($text)) {
+            return '';
+        }
+
+        $text = preg_replace('/\s+/', ' ', $text);
+        return trim((string) $text);
+    }
+
+    private function normalizeDateOnly($value)
+    {
+        $text = trim((string) $value);
+        if ($text === '') {
+            return '';
+        }
+
+        $timestamp = strtotime($text);
+        if ($timestamp === false) {
+            return '';
+        }
+
+        return date('Y-m-d', $timestamp);
+    }
+
+    private function buildCorreoFilterQueryFromPost(array $postData)
+    {
+        $query = array();
+        $searchText = isset($postData['q']) ? trim((string) $postData['q']) : '';
+        $dateFrom = $this->normalizeDateOnly(isset($postData['fecha_desde']) ? $postData['fecha_desde'] : '');
+        $dateTo = $this->normalizeDateOnly(isset($postData['fecha_hasta']) ? $postData['fecha_hasta'] : '');
+
+        if ($searchText !== '') {
+            $query['q'] = $searchText;
+        }
+        if ($dateFrom !== '') {
+            $query['fecha_desde'] = $dateFrom;
+        }
+        if ($dateTo !== '') {
+            $query['fecha_hasta'] = $dateTo;
+        }
+
+        if (empty($query)) {
+            return '';
+        }
+
+        return '&' . http_build_query($query);
     }
 
     private function findSelectedEmail(array $emails, $selectedUid)

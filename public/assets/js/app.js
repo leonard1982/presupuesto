@@ -826,7 +826,8 @@
         });
     }
 
-    var movementFilterDateInput = document.getElementById('movement-filter-date');
+    var movementFilterDateFromInput = document.getElementById('movement-filter-date-from');
+    var movementFilterDateToInput = document.getElementById('movement-filter-date-to');
     var movementFilterClasificacionInput = document.getElementById('movement-filter-clasificacion');
     var movementFilterCategoriaInput = document.getElementById('movement-filter-categoria');
     var movementFilterTipoInput = document.getElementById('movement-filter-tipo');
@@ -941,8 +942,11 @@
             movementDateFilterMode = 'exact';
             movementDateRangeStart = todayDate;
             movementDateRangeEnd = todayDate;
-            if (movementFilterDateInput) {
-                movementFilterDateInput.value = todayDate;
+            if (movementFilterDateFromInput) {
+                movementFilterDateFromInput.value = todayDate;
+            }
+            if (movementFilterDateToInput) {
+                movementFilterDateToInput.value = todayDate;
             }
             setQuickRangeButtonState('today');
             return;
@@ -953,8 +957,11 @@
             movementDateFilterMode = 'range';
             movementDateRangeStart = weekRange.start;
             movementDateRangeEnd = weekRange.end;
-            if (movementFilterDateInput) {
-                movementFilterDateInput.value = '';
+            if (movementFilterDateFromInput) {
+                movementFilterDateFromInput.value = weekRange.start;
+            }
+            if (movementFilterDateToInput) {
+                movementFilterDateToInput.value = weekRange.end;
             }
             setQuickRangeButtonState('week');
             return;
@@ -965,8 +972,11 @@
             movementDateFilterMode = 'range';
             movementDateRangeStart = monthRange.start;
             movementDateRangeEnd = monthRange.end;
-            if (movementFilterDateInput) {
-                movementFilterDateInput.value = '';
+            if (movementFilterDateFromInput) {
+                movementFilterDateFromInput.value = monthRange.start;
+            }
+            if (movementFilterDateToInput) {
+                movementFilterDateToInput.value = monthRange.end;
             }
             setQuickRangeButtonState('month');
             return;
@@ -975,8 +985,11 @@
         movementDateFilterMode = 'all';
         movementDateRangeStart = '';
         movementDateRangeEnd = '';
-        if (movementFilterDateInput) {
-            movementFilterDateInput.value = '';
+        if (movementFilterDateFromInput) {
+            movementFilterDateFromInput.value = '';
+        }
+        if (movementFilterDateToInput) {
+            movementFilterDateToInput.value = '';
         }
         setQuickRangeButtonState('all');
     }
@@ -999,7 +1012,8 @@
         }
 
         return {
-            date: String(raw.date || ''),
+            dateFrom: String(raw.dateFrom || raw.date || ''),
+            dateTo: String(raw.dateTo || raw.date || ''),
             clasificacion: String(raw.clasificacion || ''),
             categoria: String(raw.categoria || ''),
             tipo: String(raw.tipo || ''),
@@ -1016,7 +1030,8 @@
         }
 
         setUserPreference('movimientos_filters', {
-            date: filterState.date,
+            dateFrom: filterState.dateFrom,
+            dateTo: filterState.dateTo,
             clasificacion: movementFilterClasificacionInput ? String(movementFilterClasificacionInput.value || '') : '',
             categoria: movementFilterCategoriaInput ? String(movementFilterCategoriaInput.value || '') : '',
             tipo: movementFilterTipoInput ? String(movementFilterTipoInput.value || '') : '',
@@ -1038,17 +1053,27 @@
         }
 
         if (filterState.dateMode === 'range') {
-            if (filterState.dateRangeStart === '' || filterState.dateRangeEnd === '') {
-                return true;
+            if (filterState.dateRangeStart !== '' && rowDateSafe < filterState.dateRangeStart) {
+                return false;
             }
-            return rowDateSafe >= filterState.dateRangeStart && rowDateSafe <= filterState.dateRangeEnd;
-        }
-
-        if (filterState.date === '') {
+            if (filterState.dateRangeEnd !== '' && rowDateSafe > filterState.dateRangeEnd) {
+                return false;
+            }
             return true;
         }
 
-        return rowDateSafe === filterState.date;
+        if (filterState.dateFrom === '' && filterState.dateTo === '') {
+            return true;
+        }
+
+        if (filterState.dateFrom !== '' && rowDateSafe < filterState.dateFrom) {
+            return false;
+        }
+        if (filterState.dateTo !== '' && rowDateSafe > filterState.dateTo) {
+            return false;
+        }
+
+        return true;
     }
 
     function setMovementFiltersCollapsed(collapsed, persistState) {
@@ -1100,12 +1125,13 @@
             } else if (movementDateRangeStart === currentMonthRange.start && movementDateRangeEnd === currentMonthRange.end) {
                 quickRange = 'month';
             }
-        } else if (movementDateFilterMode === 'exact' && movementFilterDateInput && movementFilterDateInput.value === getTodayIsoDate()) {
+        } else if (movementDateFilterMode === 'exact' && movementFilterDateFromInput && movementFilterDateFromInput.value === getTodayIsoDate()) {
             quickRange = 'today';
         }
 
         return {
-            date: movementFilterDateInput ? String(movementFilterDateInput.value || '').trim() : '',
+            dateFrom: movementFilterDateFromInput ? String(movementFilterDateFromInput.value || '').trim() : '',
+            dateTo: movementFilterDateToInput ? String(movementFilterDateToInput.value || '').trim() : '',
             clasificacion: normalizeFilterText(movementFilterClasificacionInput ? movementFilterClasificacionInput.value : ''),
             categoria: normalizeFilterText(movementFilterCategoriaInput ? movementFilterCategoriaInput.value : ''),
             tipo: normalizeFilterText(movementFilterTipoInput ? movementFilterTipoInput.value : ''),
@@ -1231,11 +1257,15 @@
         summaryHtml += '<div><span>Clasificacion</span><strong>' + escapeHtml(movementData.clasificacion || '') + '</strong></div>';
         summaryHtml += '<div><span>Categoria</span><strong>' + escapeHtml(movementData.categoria || '') + '</strong></div>';
         summaryHtml += '<div><span>Tipo</span><strong>' + escapeHtml(movementData.tipo || '') + '</strong></div>';
+        summaryHtml += '<div><span>Estado</span><strong>' + escapeHtml(movementData.estado_operativo || 'ABIERTO') + '</strong></div>';
         summaryHtml += '<div><span>Valor</span><strong>' + escapeHtml(movementData.valor || '') + '</strong></div>';
         summaryHtml += '<div><span>Usuario</span><strong>' + escapeHtml(movementData.usuario || '') + '</strong></div>';
         summaryHtml += '<div><span>Soportes</span><strong>' + escapeHtml(movementData.soportes || 0) + '</strong></div>';
         summaryHtml += '</div>';
         summaryHtml += '<div class="movement-summary-detail"><span>Detalle</span><p>' + escapeHtml(movementData.detalle || '') + '</p></div>';
+        if (movementData.justificacion_reversa) {
+            summaryHtml += '<div class="movement-summary-detail"><span>Ultima justificacion de reversa</span><p>' + escapeHtml(movementData.justificacion_reversa) + '</p></div>';
+        }
         summaryHtml += '<div class="movement-summary-supports"><h4><i class="bi bi-paperclip"></i> Soportes</h4>' + supportsHtml + '</div>';
         summaryHtml += '<div class="movement-summary-actions">';
         if (editUrl !== '') {
@@ -1305,7 +1335,7 @@
     }
 
     function initializeMovementFilters() {
-        if (!movementFilterDateInput && !movementFilterClasificacionInput && !movementFilterCategoriaInput && !movementFilterTipoInput) {
+        if (!movementFilterDateFromInput && !movementFilterDateToInput && !movementFilterClasificacionInput && !movementFilterCategoriaInput && !movementFilterTipoInput) {
             return;
         }
 
@@ -1326,8 +1356,11 @@
 
         var storedFilterState = loadMovementFilterPreferences();
         if (storedFilterState) {
-            if (movementFilterDateInput) {
-                movementFilterDateInput.value = storedFilterState.date;
+            if (movementFilterDateFromInput) {
+                movementFilterDateFromInput.value = storedFilterState.dateFrom;
+            }
+            if (movementFilterDateToInput) {
+                movementFilterDateToInput.value = storedFilterState.dateTo;
             }
             if (movementFilterClasificacionInput) {
                 setSelectFieldValue(movementFilterClasificacionInput, storedFilterState.clasificacion);
@@ -1340,26 +1373,32 @@
             }
 
             movementDateFilterMode = storedFilterState.mode || 'exact';
-            movementDateRangeStart = storedFilterState.rangeStart || '';
-            movementDateRangeEnd = storedFilterState.rangeEnd || '';
+            movementDateRangeStart = storedFilterState.rangeStart || storedFilterState.dateFrom || '';
+            movementDateRangeEnd = storedFilterState.rangeEnd || storedFilterState.dateTo || '';
             if (storedFilterState.quickRange !== '') {
                 setQuickRangeButtonState(storedFilterState.quickRange);
             }
-        } else if (movementFilterDateInput && movementFilterDateInput.value === '' && window.innerWidth <= 760) {
+        } else if (movementFilterDateFromInput && movementFilterDateFromInput.value === '' && movementFilterDateToInput && movementFilterDateToInput.value === '' && window.innerWidth <= 760) {
             movementDateFilterMode = 'exact';
             movementDateRangeStart = getTodayIsoDate();
             movementDateRangeEnd = movementDateRangeStart;
-            movementFilterDateInput.value = movementDateRangeStart;
+            movementFilterDateFromInput.value = movementDateRangeStart;
+            if (movementFilterDateToInput) {
+                movementFilterDateToInput.value = movementDateRangeStart;
+            }
             setQuickRangeButtonState('today');
         } else {
-            movementDateFilterMode = movementFilterDateInput && movementFilterDateInput.value !== '' ? 'exact' : 'all';
-            movementDateRangeStart = movementFilterDateInput ? movementFilterDateInput.value : '';
-            movementDateRangeEnd = movementFilterDateInput ? movementFilterDateInput.value : '';
+            var fromValue = movementFilterDateFromInput ? String(movementFilterDateFromInput.value || '').trim() : '';
+            var toValue = movementFilterDateToInput ? String(movementFilterDateToInput.value || '').trim() : '';
+            movementDateFilterMode = fromValue === '' && toValue === '' ? 'all' : (fromValue !== '' && toValue !== '' && fromValue === toValue ? 'exact' : 'range');
+            movementDateRangeStart = fromValue;
+            movementDateRangeEnd = toValue;
             setQuickRangeButtonState('');
         }
 
         var changeHandlers = [
-            movementFilterDateInput,
+            movementFilterDateFromInput,
+            movementFilterDateToInput,
             movementFilterClasificacionInput,
             movementFilterCategoriaInput,
             movementFilterTipoInput
@@ -1368,10 +1407,30 @@
         for (var handlerIndex = 0; handlerIndex < changeHandlers.length; handlerIndex += 1) {
             if (changeHandlers[handlerIndex]) {
                 changeHandlers[handlerIndex].addEventListener('change', function () {
-                    if (this === movementFilterDateInput) {
-                        movementDateFilterMode = movementFilterDateInput.value === '' ? 'all' : 'exact';
-                        movementDateRangeStart = movementFilterDateInput.value;
-                        movementDateRangeEnd = movementFilterDateInput.value;
+                    if (this === movementFilterDateFromInput || this === movementFilterDateToInput) {
+                        var currentFromValue = movementFilterDateFromInput ? String(movementFilterDateFromInput.value || '').trim() : '';
+                        var currentToValue = movementFilterDateToInput ? String(movementFilterDateToInput.value || '').trim() : '';
+                        if (currentFromValue !== '' && currentToValue !== '' && currentFromValue > currentToValue) {
+                            var swapValue = currentFromValue;
+                            currentFromValue = currentToValue;
+                            currentToValue = swapValue;
+                            if (movementFilterDateFromInput) {
+                                movementFilterDateFromInput.value = currentFromValue;
+                            }
+                            if (movementFilterDateToInput) {
+                                movementFilterDateToInput.value = currentToValue;
+                            }
+                        }
+
+                        movementDateRangeStart = currentFromValue;
+                        movementDateRangeEnd = currentToValue;
+                        if (currentFromValue === '' && currentToValue === '') {
+                            movementDateFilterMode = 'all';
+                        } else if (currentFromValue !== '' && currentToValue !== '' && currentFromValue === currentToValue) {
+                            movementDateFilterMode = 'exact';
+                        } else {
+                            movementDateFilterMode = 'range';
+                        }
                         setQuickRangeButtonState('');
                     }
                     applyMovementFilters();
@@ -1395,8 +1454,11 @@
 
         if (movementFilterResetButton) {
             movementFilterResetButton.addEventListener('click', function () {
-                if (movementFilterDateInput) {
-                    movementFilterDateInput.value = '';
+                if (movementFilterDateFromInput) {
+                    movementFilterDateFromInput.value = '';
+                }
+                if (movementFilterDateToInput) {
+                    movementFilterDateToInput.value = '';
                 }
                 if (movementFilterClasificacionInput) {
                     setSelectFieldValue(movementFilterClasificacionInput, '');
@@ -1411,8 +1473,11 @@
                 movementDateFilterMode = window.innerWidth <= 760 ? 'exact' : 'all';
                 movementDateRangeStart = movementDateFilterMode === 'exact' ? getTodayIsoDate() : '';
                 movementDateRangeEnd = movementDateRangeStart;
-                if (movementFilterDateInput && movementDateFilterMode === 'exact') {
-                    movementFilterDateInput.value = movementDateRangeStart;
+                if (movementFilterDateFromInput && movementDateFilterMode === 'exact') {
+                    movementFilterDateFromInput.value = movementDateRangeStart;
+                }
+                if (movementFilterDateToInput && movementDateFilterMode === 'exact') {
+                    movementFilterDateToInput.value = movementDateRangeStart;
                 }
                 setQuickRangeButtonState(movementDateFilterMode === 'exact' ? 'today' : 'all');
                 applyMovementFilters();
@@ -1728,6 +1793,12 @@
     var movementMobileModal = document.getElementById('movement-mobile-modal');
     var movementMobileModalTitle = document.getElementById('movement-mobile-modal-title');
     var movementMobileModalBody = document.getElementById('movement-mobile-modal-body');
+    var movementAttachSupportModal = document.getElementById('movement-attach-support-modal');
+    var movementAttachSupportForm = document.getElementById('movement-attach-support-form');
+    var movementAttachSupportInput = document.getElementById('movement-attach-support-input');
+    var movementAttachSupportId = document.getElementById('movement-attach-support-id');
+    var movementAttachSupportLabel = document.getElementById('movement-attach-support-label');
+    var movementAttachSupportCount = document.getElementById('movement-attach-support-count');
     var emailExtractModal = document.getElementById('email-extract-modal');
     var emailExtractModalMeta = document.getElementById('email-extract-modal-meta');
     var emailExtractModalBody = document.getElementById('email-extract-modal-body');
@@ -1743,7 +1814,16 @@
     var confirmActionModalTitle = document.getElementById('confirm-action-modal-title');
     var confirmActionModalText = document.getElementById('confirm-action-modal-text');
     var confirmActionModalAccept = document.getElementById('confirm-action-modal-accept');
+    var confirmActionModalJustificationWrap = document.getElementById('confirm-action-modal-justification-wrap');
+    var confirmActionModalJustificationLabel = document.getElementById('confirm-action-modal-justification-label');
+    var confirmActionModalJustificationInput = document.getElementById('confirm-action-modal-justification-input');
+    var confirmActionModalJustificationError = document.getElementById('confirm-action-modal-justification-error');
     var pendingConfirmForm = null;
+    var pendingConfirmOptions = {
+        requiresJustification: false,
+        inputName: '',
+        minLength: 0
+    };
     var deferredInstallPrompt = null;
 
     function setInstallButtonsVisibility(isVisible) {
@@ -1939,7 +2019,7 @@
             return false;
         }
 
-        if (formElement.classList.contains('js-confirm-delete') && formElement.getAttribute('data-confirm-approved') !== '1') {
+        if ((formElement.classList.contains('js-confirm-delete') || formElement.classList.contains('js-confirm-action')) && formElement.getAttribute('data-confirm-approved') !== '1') {
             return false;
         }
 
@@ -1977,6 +2057,22 @@
             return;
         }
 
+        pendingConfirmOptions = {
+            requiresJustification: false,
+            inputName: '',
+            minLength: 0
+        };
+        if (confirmActionModalJustificationWrap) {
+            confirmActionModalJustificationWrap.classList.add('hidden');
+        }
+        if (confirmActionModalJustificationInput) {
+            confirmActionModalJustificationInput.value = '';
+        }
+        if (confirmActionModalJustificationError) {
+            confirmActionModalJustificationError.classList.add('hidden');
+            confirmActionModalJustificationError.textContent = 'Debes ingresar una justificacion valida.';
+        }
+
         confirmActionModal.classList.add('hidden');
         confirmActionModal.setAttribute('aria-hidden', 'true');
     }
@@ -1989,6 +2085,15 @@
         var titleText = formElement.getAttribute('data-confirm-title') || 'Confirmar accion';
         var messageText = formElement.getAttribute('data-confirm-message') || 'Deseas continuar con esta accion?';
         var acceptText = formElement.getAttribute('data-confirm-accept') || 'Si, continuar';
+        var requiresJustification = formElement.getAttribute('data-confirm-require-justification') === '1';
+        var justificationLabel = formElement.getAttribute('data-confirm-justification-label') || 'Justificacion';
+        var justificationPlaceholder = formElement.getAttribute('data-confirm-justification-placeholder') || 'Escribe una justificacion';
+        var justificationInputName = formElement.getAttribute('data-confirm-justification-input') || 'justificacion';
+        var justificationMinLength = parseInt(formElement.getAttribute('data-confirm-justification-min') || '10', 10);
+        var acceptIcon = formElement.classList.contains('js-confirm-delete') ? 'bi bi-trash3' : 'bi bi-check2-circle';
+        if (isNaN(justificationMinLength) || justificationMinLength < 1) {
+            justificationMinLength = 10;
+        }
 
         if (confirmActionModalTitle) {
             confirmActionModalTitle.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> ' + escapeHtml(titleText);
@@ -1997,12 +2102,97 @@
         confirmActionModalText.textContent = messageText;
 
         if (confirmActionModalAccept) {
-            confirmActionModalAccept.innerHTML = '<i class="bi bi-trash3"></i> ' + escapeHtml(acceptText);
+            confirmActionModalAccept.innerHTML = '<i class="' + acceptIcon + '"></i> ' + escapeHtml(acceptText);
         }
 
+        if (confirmActionModalJustificationWrap) {
+            confirmActionModalJustificationWrap.classList.toggle('hidden', !requiresJustification);
+        }
+        if (confirmActionModalJustificationLabel) {
+            confirmActionModalJustificationLabel.textContent = justificationLabel;
+        }
+        if (confirmActionModalJustificationInput) {
+            confirmActionModalJustificationInput.value = '';
+            confirmActionModalJustificationInput.setAttribute('placeholder', justificationPlaceholder);
+        }
+        if (confirmActionModalJustificationError) {
+            confirmActionModalJustificationError.classList.add('hidden');
+            confirmActionModalJustificationError.textContent = 'Debes ingresar al menos ' + String(justificationMinLength) + ' caracteres.';
+        }
+
+        pendingConfirmOptions = {
+            requiresJustification: requiresJustification,
+            inputName: justificationInputName,
+            minLength: justificationMinLength
+        };
         pendingConfirmForm = formElement;
         confirmActionModal.classList.remove('hidden');
         confirmActionModal.setAttribute('aria-hidden', 'false');
+
+        if (requiresJustification && confirmActionModalJustificationInput && typeof confirmActionModalJustificationInput.focus === 'function') {
+            confirmActionModalJustificationInput.focus();
+        }
+    }
+
+    function closeMovementAttachSupportModal() {
+        if (!movementAttachSupportModal) {
+            return;
+        }
+
+        movementAttachSupportModal.classList.add('hidden');
+        movementAttachSupportModal.setAttribute('aria-hidden', 'true');
+        if (movementAttachSupportInput) {
+            movementAttachSupportInput.value = '';
+        }
+        if (movementAttachSupportId) {
+            movementAttachSupportId.value = '';
+        }
+        if (movementAttachSupportLabel) {
+            movementAttachSupportLabel.textContent = '-';
+        }
+        if (movementAttachSupportCount) {
+            movementAttachSupportCount.textContent = 'Sin archivos seleccionados.';
+        }
+    }
+
+    function updateMovementAttachSupportCount() {
+        if (!movementAttachSupportInput || !movementAttachSupportCount) {
+            return;
+        }
+
+        var total = movementAttachSupportInput.files ? movementAttachSupportInput.files.length : 0;
+        movementAttachSupportCount.textContent = total <= 0
+            ? 'Sin archivos seleccionados.'
+            : (total === 1 ? '1 archivo seleccionado.' : String(total) + ' archivos seleccionados.');
+    }
+
+    function openMovementAttachSupportModal(buttonElement) {
+        if (!movementAttachSupportModal || !buttonElement) {
+            return;
+        }
+
+        var movementId = String(buttonElement.getAttribute('data-movement-id') || '').trim();
+        if (movementId === '') {
+            return;
+        }
+
+        var movementLabel = String(buttonElement.getAttribute('data-movement-label') || '').trim();
+        if (movementAttachSupportId) {
+            movementAttachSupportId.value = movementId;
+        }
+        if (movementAttachSupportLabel) {
+            movementAttachSupportLabel.textContent = movementLabel !== '' ? movementLabel : ('#' + movementId);
+        }
+        if (movementAttachSupportInput) {
+            movementAttachSupportInput.value = '';
+        }
+        updateMovementAttachSupportCount();
+
+        movementAttachSupportModal.classList.remove('hidden');
+        movementAttachSupportModal.setAttribute('aria-hidden', 'false');
+        if (movementAttachSupportInput && typeof movementAttachSupportInput.focus === 'function') {
+            movementAttachSupportInput.focus();
+        }
     }
 
     function closeMovementMobileModal() {
@@ -2035,6 +2225,7 @@
             { label: 'Detalle', value: movementData.detalle || '' },
             { label: 'Categoria', value: movementData.categoria || '' },
             { label: 'Tipo', value: movementData.tipo || '' },
+            { label: 'Estado', value: movementData.estado_operativo || 'ABIERTO' },
             { label: 'Valor', value: movementData.valor || '' },
             { label: 'Usuario', value: movementData.usuario || '' },
             { label: 'Soportes', value: String(movementData.soportes || 0) }
@@ -2049,6 +2240,13 @@
             html += '</div>';
         }
         html += '</div>';
+
+        if (movementData.justificacion_reversa) {
+            html += '<div class="movement-mobile-supports-box">';
+            html += '<h4><i class="bi bi-chat-left-text"></i> Ultima justificacion de reversa</h4>';
+            html += '<p>' + escapeHtml(movementData.justificacion_reversa) + '</p>';
+            html += '</div>';
+        }
 
         var supportsItems = movementData.support_items && movementData.support_items.length ? movementData.support_items : [];
         if (supportsItems.length > 0) {
@@ -2138,9 +2336,52 @@
             return;
         }
 
+        var openAttachSupportButton = event.target.closest('.js-open-attach-support-modal');
+        if (openAttachSupportButton) {
+            event.preventDefault();
+            openMovementAttachSupportModal(openAttachSupportButton);
+            return;
+        }
+
+        var closeAttachSupportButton = event.target.closest('.js-close-attach-support-modal');
+        if (closeAttachSupportButton) {
+            event.preventDefault();
+            closeMovementAttachSupportModal();
+            return;
+        }
+
         if (confirmActionModalAccept && event.target.closest('#confirm-action-modal-accept')) {
             event.preventDefault();
             if (pendingConfirmForm) {
+                if (pendingConfirmOptions.requiresJustification) {
+                    var enteredJustification = confirmActionModalJustificationInput
+                        ? String(confirmActionModalJustificationInput.value || '').trim()
+                        : '';
+                    if (enteredJustification.length < pendingConfirmOptions.minLength) {
+                        if (confirmActionModalJustificationError) {
+                            confirmActionModalJustificationError.classList.remove('hidden');
+                        }
+                        if (confirmActionModalJustificationInput && typeof confirmActionModalJustificationInput.focus === 'function') {
+                            confirmActionModalJustificationInput.focus();
+                        }
+                        return;
+                    }
+
+                    if (confirmActionModalJustificationError) {
+                        confirmActionModalJustificationError.classList.add('hidden');
+                    }
+
+                    var targetInputName = pendingConfirmOptions.inputName || 'justificacion';
+                    var hiddenJustificationInput = pendingConfirmForm.querySelector('input[name="' + targetInputName + '"]');
+                    if (!hiddenJustificationInput) {
+                        hiddenJustificationInput = document.createElement('input');
+                        hiddenJustificationInput.setAttribute('type', 'hidden');
+                        hiddenJustificationInput.setAttribute('name', targetInputName);
+                        pendingConfirmForm.appendChild(hiddenJustificationInput);
+                    }
+                    hiddenJustificationInput.value = enteredJustification;
+                }
+
                 var targetForm = pendingConfirmForm;
                 pendingConfirmForm = null;
                 closeConfirmActionModal();
@@ -2215,6 +2456,11 @@
             return;
         }
 
+        if (movementAttachSupportModal && event.target === movementAttachSupportModal) {
+            closeMovementAttachSupportModal();
+            return;
+        }
+
         if (emailExtractModal && event.target === emailExtractModal) {
             closeEmailExtractModal();
             return;
@@ -2272,6 +2518,7 @@
         if (event.key === 'Escape') {
             closeMovementSaveModal();
             closeMovementMobileModal();
+            closeMovementAttachSupportModal();
             closeEmailExtractModal();
             closeEmailSuggestionModal();
             pendingConfirmForm = null;
@@ -2336,10 +2583,33 @@
         }
     });
 
-    var confirmDeleteForms = document.querySelectorAll('.js-confirm-delete');
-    if (confirmDeleteForms && confirmDeleteForms.length > 0) {
-        for (var formIndex = 0; formIndex < confirmDeleteForms.length; formIndex += 1) {
-            confirmDeleteForms[formIndex].addEventListener('submit', function (event) {
+    if (movementAttachSupportInput) {
+        movementAttachSupportInput.addEventListener('change', updateMovementAttachSupportCount);
+    }
+
+    if (movementAttachSupportForm) {
+        movementAttachSupportForm.addEventListener('submit', function (event) {
+            if (!movementAttachSupportInput || !movementAttachSupportInput.files || movementAttachSupportInput.files.length <= 0) {
+                event.preventDefault();
+                if (movementAttachSupportCount) {
+                    movementAttachSupportCount.textContent = 'Debes seleccionar al menos un archivo.';
+                }
+            }
+        });
+    }
+
+    if (confirmActionModalJustificationInput) {
+        confirmActionModalJustificationInput.addEventListener('input', function () {
+            if (confirmActionModalJustificationError) {
+                confirmActionModalJustificationError.classList.add('hidden');
+            }
+        });
+    }
+
+    var confirmActionForms = document.querySelectorAll('.js-confirm-delete, .js-confirm-action');
+    if (confirmActionForms && confirmActionForms.length > 0) {
+        for (var formIndex = 0; formIndex < confirmActionForms.length; formIndex += 1) {
+            confirmActionForms[formIndex].addEventListener('submit', function (event) {
                 if (this.getAttribute('data-confirm-approved') === '1') {
                     this.removeAttribute('data-confirm-approved');
                     return;

@@ -87,6 +87,33 @@ if (!function_exists('mov_date_only')) {
     }
 }
 
+if (!function_exists('mov_operational_state')) {
+    function mov_operational_state($value)
+    {
+        $status = strtoupper(trim((string) $value));
+        $allowed = array('ABIERTO', 'CERRADO', 'ASENTADO');
+        if (!in_array($status, $allowed, true)) {
+            return 'ABIERTO';
+        }
+
+        return $status;
+    }
+}
+
+if (!function_exists('mov_operational_state_class')) {
+    function mov_operational_state_class($status)
+    {
+        $normalized = mov_operational_state($status);
+        $map = array(
+            'ABIERTO' => 'movement-state-open',
+            'CERRADO' => 'movement-state-closed',
+            'ASENTADO' => 'movement-state-settled',
+        );
+
+        return isset($map[$normalized]) ? $map[$normalized] : 'movement-state-open';
+    }
+}
+
 $movementTypesBase = array(
     'Compra',
     'Transferencia',
@@ -170,8 +197,12 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
     <div id="movement-filters-body">
     <div class="movement-filters-grid">
         <div class="form-field">
-            <label for="movement-filter-date">Fecha</label>
-            <input id="movement-filter-date" type="date" value="">
+            <label for="movement-filter-date-from">Fecha desde</label>
+            <input id="movement-filter-date-from" type="date" value="">
+        </div>
+        <div class="form-field">
+            <label for="movement-filter-date-to">Fecha hasta</label>
+            <input id="movement-filter-date-to" type="date" value="">
         </div>
         <div class="form-field">
             <label for="movement-filter-clasificacion">Clasificacion</label>
@@ -267,6 +298,9 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
                         $supportsPayload = mov_build_supports_payload($supports, $baseUrl, $movementId);
                         $ticketUrl = rtrim((string) $baseUrl, '/') . '/index.php?route=movimientos/ticket&id=' . $movementId;
                         $editUrl = rtrim((string) $baseUrl, '/') . '/index.php?route=movimientos/editar&id=' . $movementId;
+                        $movementStatus = mov_operational_state(isset($movement['estado_operativo']) ? $movement['estado_operativo'] : '');
+                        $movementStatusClass = mov_operational_state_class($movementStatus);
+                        $reverseReason = isset($movement['justificacion_reversa']) ? trim((string) $movement['justificacion_reversa']) : '';
                         $movementDetailPayload = array(
                             'id' => $movementId,
                             'fecha' => isset($movement['fecha']) ? (string) $movement['fecha'] : '',
@@ -274,6 +308,8 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
                             'detalle' => isset($movement['detalle']) ? (string) $movement['detalle'] : '',
                             'categoria' => isset($movement['gasto_costo']) ? (string) $movement['gasto_costo'] : '',
                             'tipo' => isset($movement['tipo']) ? (string) $movement['tipo'] : '',
+                            'estado_operativo' => $movementStatus,
+                            'justificacion_reversa' => $reverseReason,
                             'valor' => mov_money(isset($movement['valor']) ? $movement['valor'] : 0),
                             'usuario' => isset($movement['usuario']) ? (string) $movement['usuario'] : '',
                             'soportes' => count($supportsPayload),
@@ -295,7 +331,12 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
                                 </button>
                                 <span class="movement-detail-hidden-text"><?php echo mov_escape($movement['detalle']); ?></span>
                             </td>
-                            <td><?php echo mov_escape($movement['gasto_costo']); ?></td>
+                            <td>
+                                <div class="movement-category-cell">
+                                    <span><?php echo mov_escape($movement['gasto_costo']); ?></span>
+                                    <span class="movement-state-chip <?php echo mov_escape($movementStatusClass); ?>"><?php echo mov_escape($movementStatus); ?></span>
+                                </div>
+                            </td>
                             <td><?php echo mov_escape($movement['tipo']); ?></td>
                             <td><?php echo mov_money($movement['valor']); ?></td>
                             <td>
@@ -336,6 +377,38 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
                                     <a class="btn btn-secondary btn-inline btn-mini btn-icon-only" title="Editar movimiento" aria-label="Editar movimiento" href="<?php echo mov_escape($editUrl); ?>">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
+                                    <button type="button" class="btn btn-ghost btn-inline btn-mini btn-icon-only js-open-attach-support-modal" title="Adjuntar soportes" aria-label="Adjuntar soportes" data-movement-id="<?php echo $movementId; ?>" data-movement-label="#<?php echo $movementId; ?> - <?php echo mov_escape($movement['clasificacion'] !== null ? $movement['clasificacion'] : 'Sin clasificacion'); ?>">
+                                        <i class="bi bi-paperclip"></i>
+                                    </button>
+                                    <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/copiar" class="inline-form js-confirm-action" data-confirm-title="Copiar registro" data-confirm-message="Se creara una copia de este movimiento, incluyendo soportes." data-confirm-accept="Si, copiar">
+                                        <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
+                                        <input type="hidden" name="movement_id" value="<?php echo $movementId; ?>">
+                                        <button type="submit" class="btn btn-ghost btn-inline btn-mini btn-icon-only" title="Copiar movimiento" aria-label="Copiar movimiento">
+                                            <i class="bi bi-files"></i>
+                                        </button>
+                                    </form>
+                                    <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/cerrar" class="inline-form js-confirm-action" data-confirm-title="Cerrar movimiento" data-confirm-message="El movimiento quedara en estado CERRADO." data-confirm-accept="Si, cerrar">
+                                        <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
+                                        <input type="hidden" name="movement_id" value="<?php echo $movementId; ?>">
+                                        <button type="submit" class="btn btn-ghost btn-inline btn-mini btn-icon-only" title="Cerrar movimiento" aria-label="Cerrar movimiento">
+                                            <i class="bi bi-lock"></i>
+                                        </button>
+                                    </form>
+                                    <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/asentar" class="inline-form js-confirm-action" data-confirm-title="Asentar movimiento" data-confirm-message="El movimiento quedara en estado ASENTADO." data-confirm-accept="Si, asentar">
+                                        <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
+                                        <input type="hidden" name="movement_id" value="<?php echo $movementId; ?>">
+                                        <button type="submit" class="btn btn-ghost btn-inline btn-mini btn-icon-only" title="Asentar movimiento" aria-label="Asentar movimiento">
+                                            <i class="bi bi-journal-check"></i>
+                                        </button>
+                                    </form>
+                                    <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/reversar" class="inline-form js-confirm-action" data-confirm-title="Reversar estado" data-confirm-message="El movimiento se reabrira y quedara en estado ABIERTO." data-confirm-accept="Si, reversar" data-confirm-require-justification="1" data-confirm-justification-input="justificacion_reversa" data-confirm-justification-label="Justificacion de la reversa" data-confirm-justification-placeholder="Explica el motivo de la reversa." data-confirm-justification-min="10">
+                                        <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
+                                        <input type="hidden" name="movement_id" value="<?php echo $movementId; ?>">
+                                        <input type="hidden" name="justificacion_reversa" value="">
+                                        <button type="submit" class="btn btn-ghost btn-inline btn-mini btn-icon-only" title="Reversar estado" aria-label="Reversar estado" <?php echo $movementStatus === 'ABIERTO' ? 'disabled' : ''; ?>>
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </button>
+                                    </form>
                                     <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/eliminar" class="inline-form js-confirm-delete" data-confirm-title="Confirmar eliminacion" data-confirm-message="Se eliminara este movimiento y sus soportes. Esta accion no se puede deshacer." data-confirm-accept="Si, eliminar">
                                         <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
                                         <input type="hidden" name="movement_id" value="<?php echo $movementId; ?>">
@@ -363,6 +436,9 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
                     $supportsPayload = mov_build_supports_payload($supports, $baseUrl, $movementId);
                     $ticketUrl = rtrim((string) $baseUrl, '/') . '/index.php?route=movimientos/ticket&id=' . $movementId;
                     $editUrl = rtrim((string) $baseUrl, '/') . '/index.php?route=movimientos/editar&id=' . $movementId;
+                    $movementStatus = mov_operational_state(isset($movement['estado_operativo']) ? $movement['estado_operativo'] : '');
+                    $movementStatusClass = mov_operational_state_class($movementStatus);
+                    $reverseReason = isset($movement['justificacion_reversa']) ? trim((string) $movement['justificacion_reversa']) : '';
                     $movementDetailPayload = array(
                         'id' => $movementId,
                         'fecha' => isset($movement['fecha']) ? (string) $movement['fecha'] : '',
@@ -370,6 +446,8 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
                         'detalle' => isset($movement['detalle']) ? (string) $movement['detalle'] : '',
                         'categoria' => isset($movement['gasto_costo']) ? (string) $movement['gasto_costo'] : '',
                         'tipo' => isset($movement['tipo']) ? (string) $movement['tipo'] : '',
+                        'estado_operativo' => $movementStatus,
+                        'justificacion_reversa' => $reverseReason,
                         'valor' => mov_money(isset($movement['valor']) ? $movement['valor'] : 0),
                         'usuario' => isset($movement['usuario']) ? (string) $movement['usuario'] : '',
                         'soportes' => count($supportsPayload),
@@ -398,6 +476,7 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
                         <div class="mobile-movement-meta">
                             <span class="mobile-movement-tag"><?php echo mov_escape($movementDetailPayload['categoria']); ?></span>
                             <span class="mobile-movement-tag"><?php echo mov_escape($movementDetailPayload['tipo']); ?></span>
+                            <span class="movement-state-chip <?php echo mov_escape($movementStatusClass); ?>"><?php echo mov_escape($movementStatus); ?></span>
                             <?php if (!empty($supportsPayload)) : ?>
                                 <span class="mobile-movement-support-tag" title="Tiene soportes">
                                     <i class="bi bi-paperclip"></i> <?php echo (int) count($supportsPayload); ?>
@@ -411,6 +490,38 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
                             <a class="btn btn-secondary btn-inline btn-mini btn-icon-only" title="Editar movimiento" aria-label="Editar movimiento" href="<?php echo mov_escape($editUrl); ?>">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
+                            <button type="button" class="btn btn-ghost btn-inline btn-mini btn-icon-only js-open-attach-support-modal" title="Adjuntar soportes" aria-label="Adjuntar soportes" data-movement-id="<?php echo $movementId; ?>" data-movement-label="#<?php echo $movementId; ?> - <?php echo mov_escape($movement['clasificacion'] !== null ? $movement['clasificacion'] : 'Sin clasificacion'); ?>">
+                                <i class="bi bi-paperclip"></i>
+                            </button>
+                            <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/copiar" class="inline-form js-confirm-action" data-confirm-title="Copiar registro" data-confirm-message="Se creara una copia de este movimiento, incluyendo soportes." data-confirm-accept="Si, copiar">
+                                <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
+                                <input type="hidden" name="movement_id" value="<?php echo $movementId; ?>">
+                                <button type="submit" class="btn btn-ghost btn-inline btn-mini btn-icon-only" title="Copiar movimiento" aria-label="Copiar movimiento">
+                                    <i class="bi bi-files"></i>
+                                </button>
+                            </form>
+                            <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/cerrar" class="inline-form js-confirm-action" data-confirm-title="Cerrar movimiento" data-confirm-message="El movimiento quedara en estado CERRADO." data-confirm-accept="Si, cerrar">
+                                <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
+                                <input type="hidden" name="movement_id" value="<?php echo $movementId; ?>">
+                                <button type="submit" class="btn btn-ghost btn-inline btn-mini btn-icon-only" title="Cerrar movimiento" aria-label="Cerrar movimiento">
+                                    <i class="bi bi-lock"></i>
+                                </button>
+                            </form>
+                            <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/asentar" class="inline-form js-confirm-action" data-confirm-title="Asentar movimiento" data-confirm-message="El movimiento quedara en estado ASENTADO." data-confirm-accept="Si, asentar">
+                                <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
+                                <input type="hidden" name="movement_id" value="<?php echo $movementId; ?>">
+                                <button type="submit" class="btn btn-ghost btn-inline btn-mini btn-icon-only" title="Asentar movimiento" aria-label="Asentar movimiento">
+                                    <i class="bi bi-journal-check"></i>
+                                </button>
+                            </form>
+                            <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/reversar" class="inline-form js-confirm-action" data-confirm-title="Reversar estado" data-confirm-message="El movimiento se reabrira y quedara en estado ABIERTO." data-confirm-accept="Si, reversar" data-confirm-require-justification="1" data-confirm-justification-input="justificacion_reversa" data-confirm-justification-label="Justificacion de la reversa" data-confirm-justification-placeholder="Explica el motivo de la reversa." data-confirm-justification-min="10">
+                                <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
+                                <input type="hidden" name="movement_id" value="<?php echo $movementId; ?>">
+                                <input type="hidden" name="justificacion_reversa" value="">
+                                <button type="submit" class="btn btn-ghost btn-inline btn-mini btn-icon-only" title="Reversar estado" aria-label="Reversar estado" <?php echo $movementStatus === 'ABIERTO' ? 'disabled' : ''; ?>>
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                            </form>
                             <form method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/eliminar" class="inline-form js-confirm-delete" data-confirm-title="Confirmar eliminacion" data-confirm-message="Se eliminara este movimiento y sus soportes. Esta accion no se puede deshacer." data-confirm-accept="Si, eliminar">
                                 <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
                                 <input type="hidden" name="movement_id" value="<?php echo $movementId; ?>">
@@ -447,6 +558,37 @@ asort($tipoOptions, SORT_NATURAL | SORT_FLAG_CASE);
         </div>
         <div id="movement-mobile-modal-body" class="modal-body">
             <p class="muted">Selecciona un registro para ver su detalle.</p>
+        </div>
+    </div>
+</div>
+
+<div id="movement-attach-support-modal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-card confirm-modal-card" role="dialog" aria-modal="true" aria-labelledby="movement-attach-support-modal-title">
+        <div class="modal-header">
+            <h3 id="movement-attach-support-modal-title"><i class="bi bi-paperclip"></i> Adjuntar soportes</h3>
+            <button type="button" class="btn btn-secondary btn-inline btn-mini btn-icon-only js-close-attach-support-modal" title="Cerrar" aria-label="Cerrar">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p class="muted">Movimiento: <strong id="movement-attach-support-label">-</strong></p>
+            <form id="movement-attach-support-form" method="post" action="<?php echo mov_escape($baseUrl); ?>/index.php?route=movimientos/adjuntar-soportes" enctype="multipart/form-data">
+                <input type="hidden" name="<?php echo mov_escape($csrfTokenName); ?>" value="<?php echo mov_escape($csrfToken); ?>">
+                <input type="hidden" name="movement_id" id="movement-attach-support-id" value="">
+                <div class="form-field">
+                    <label for="movement-attach-support-input">Archivos de soporte</label>
+                    <input id="movement-attach-support-input" name="soportes[]" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.pdf" required>
+                    <p id="movement-attach-support-count" class="muted">Sin archivos seleccionados.</p>
+                </div>
+                <div class="notification-actions">
+                    <button type="submit" class="btn btn-primary btn-inline">
+                        <i class="bi bi-cloud-arrow-up"></i> Adjuntar
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-inline js-close-attach-support-modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
