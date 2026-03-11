@@ -155,7 +155,6 @@ foreach ($mediosPago as $medioPagoItem) {
                         <?php
                         $rowUid = isset($emailRow['uid']) ? (int) $emailRow['uid'] : 0;
                         $isSelected = $selectedUid > 0 && $selectedUid === $rowUid;
-                        $selectUrl = correo_escape($baseUrl) . '/index.php?route=correos&uid=' . $rowUid . '&analizar=1';
                         $extractFrom = isset($emailRow['from']) ? (string) $emailRow['from'] : '';
                         $extractSubject = isset($emailRow['subject']) ? (string) $emailRow['subject'] : '';
                         $extractDate = isset($emailRow['date_sql']) ? (string) $emailRow['date_sql'] : '';
@@ -164,16 +163,8 @@ foreach ($mediosPago as $medioPagoItem) {
                             $extractBody = (string) $emailRow['snippet'];
                         }
                         $extractBodyBase64 = base64_encode($extractBody);
-                        if (trim((string) $searchText) !== '') {
-                            $selectUrl .= '&q=' . rawurlencode((string) $searchText);
-                        }
-                        if ($filterDateFromValue !== '') {
-                            $selectUrl .= '&fecha_desde=' . rawurlencode($filterDateFromValue);
-                        }
-                        if ($filterDateToValue !== '') {
-                            $selectUrl .= '&fecha_hasta=' . rawurlencode($filterDateToValue);
-                        }
                         $emailFingerprint = isset($emailRow['fingerprint']) ? (string) $emailRow['fingerprint'] : '';
+                        $analyzeButtonClass = $isSelected ? 'btn btn-primary btn-inline btn-mini' : 'btn btn-ghost btn-inline btn-mini';
                         ?>
                         <tr class="<?php echo $isSelected ? 'email-row-selected' : ''; ?>">
                             <td></td>
@@ -196,9 +187,17 @@ foreach ($mediosPago as $medioPagoItem) {
                             </td>
                             <td>
                                 <div class="table-actions-stack">
-                                    <a class="btn btn-ghost btn-inline btn-mini <?php echo $isSelected ? 'btn-primary' : ''; ?>" href="<?php echo $selectUrl; ?>">
-                                        <i class="bi bi-magic"></i> Analizar
-                                    </a>
+                                    <form method="get" action="<?php echo correo_escape($baseUrl); ?>/index.php" class="inline-form js-confirm-action" data-confirm-title="Analizar correo" data-confirm-message="Se abrira la sugerencia IA para este correo." data-confirm-accept="Si, analizar">
+                                        <input type="hidden" name="route" value="correos">
+                                        <input type="hidden" name="uid" value="<?php echo $rowUid; ?>">
+                                        <input type="hidden" name="analizar" value="1">
+                                        <input type="hidden" name="q" value="<?php echo correo_escape($searchText); ?>">
+                                        <input type="hidden" name="fecha_desde" value="<?php echo correo_escape($filterDateFromValue); ?>">
+                                        <input type="hidden" name="fecha_hasta" value="<?php echo correo_escape($filterDateToValue); ?>">
+                                        <button type="submit" class="<?php echo $analyzeButtonClass; ?>">
+                                            <i class="bi bi-magic"></i> Analizar
+                                        </button>
+                                    </form>
                                     <form method="post" action="<?php echo correo_escape($baseUrl); ?>/index.php?route=correos/ocultar" class="inline-form js-confirm-action" data-confirm-title="Ocultar correo" data-confirm-message="Este correo ya no se mostrara en tu bandeja." data-confirm-accept="Si, ocultar">
                                         <input type="hidden" name="<?php echo correo_escape($csrfTokenName); ?>" value="<?php echo correo_escape($csrfToken); ?>">
                                         <input type="hidden" name="email_uid" value="<?php echo $rowUid; ?>">

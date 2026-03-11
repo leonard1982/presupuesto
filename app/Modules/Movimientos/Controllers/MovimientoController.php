@@ -132,6 +132,10 @@ class MovimientoController
             $this->setFlash('movimientos_error', 'No se encontro el movimiento solicitado.');
             Response::redirect($this->buildUrl('/movimientos'));
         }
+        if ($this->isSettledMovement($movement)) {
+            $this->setFlash('movimientos_error', 'El movimiento #' . $movementId . ' esta ASENTADO y no permite edicion.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
 
         $tokenName = $this->appConfig['csrf_token_name'];
         $csrfToken = CsrfTokenManager::generateToken($tokenName);
@@ -262,6 +266,10 @@ class MovimientoController
             $this->setFlash('movimientos_error', 'No se encontro el movimiento solicitado.');
             Response::redirect($this->buildUrl('/movimientos'));
         }
+        if ($this->isSettledMovement($existingMovement)) {
+            $this->setFlash('movimientos_error', 'El movimiento #' . $movementId . ' esta ASENTADO y no permite edicion.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
 
         $formData = $this->collectMovementFormData($_POST);
         $validation = $this->validateMovementFormData($formData);
@@ -336,6 +344,10 @@ class MovimientoController
         $movement = $this->movimientoRepository->findMovimientoById($movementId);
         if (!$movement) {
             $this->setFlash('movimientos_error', 'No se encontro el movimiento solicitado.');
+            Response::redirect($this->buildUrl('/movimientos'));
+        }
+        if ($this->isSettledMovement($movement)) {
+            $this->setFlash('movimientos_error', 'El movimiento #' . $movementId . ' esta ASENTADO y no puede eliminarse.');
             Response::redirect($this->buildUrl('/movimientos'));
         }
 
@@ -1345,6 +1357,12 @@ class MovimientoController
         }
 
         return $statusSafe;
+    }
+
+    private function isSettledMovement(array $movementRow)
+    {
+        $currentStatus = $this->normalizeOperationalStatus(isset($movementRow['estado_operativo']) ? $movementRow['estado_operativo'] : '');
+        return $currentStatus === 'ASENTADO';
     }
 
     private function isDateTimeString($dateTimeString)

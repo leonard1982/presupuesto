@@ -1251,6 +1251,7 @@
 
         var editUrl = movementData.urls && movementData.urls.editar ? escapeHtml(movementData.urls.editar) : '';
         var ticketUrl = movementData.urls && movementData.urls.ticket ? escapeHtml(movementData.urls.ticket) : '';
+        var isSettledMovement = String(movementData.estado_operativo || 'ABIERTO').toUpperCase() === 'ASENTADO';
 
         var summaryHtml = '<div class="movement-summary-grid">';
         summaryHtml += '<div><span>Fecha</span><strong>' + escapeHtml(movementData.fecha || '') + '</strong></div>';
@@ -1268,7 +1269,7 @@
         }
         summaryHtml += '<div class="movement-summary-supports"><h4><i class="bi bi-paperclip"></i> Soportes</h4>' + supportsHtml + '</div>';
         summaryHtml += '<div class="movement-summary-actions">';
-        if (editUrl !== '') {
+        if (editUrl !== '' && !isSettledMovement) {
             summaryHtml += '<a class="btn btn-secondary btn-inline btn-mini" href="' + editUrl + '"><i class="bi bi-pencil-square"></i> Editar</a>';
         }
         if (ticketUrl !== '') {
@@ -2171,6 +2172,11 @@
             return;
         }
 
+        var openMovementDropdowns = document.querySelectorAll('.supports-inline-dropdown[open], .movement-action-dropdown[open]');
+        for (var dropdownIndex = 0; dropdownIndex < openMovementDropdowns.length; dropdownIndex += 1) {
+            openMovementDropdowns[dropdownIndex].removeAttribute('open');
+        }
+
         var movementId = String(buttonElement.getAttribute('data-movement-id') || '').trim();
         if (movementId === '') {
             return;
@@ -2268,9 +2274,10 @@
 
         var editUrl = movementData.urls && movementData.urls.editar ? escapeHtml(movementData.urls.editar) : '';
         var ticketUrl = movementData.urls && movementData.urls.ticket ? escapeHtml(movementData.urls.ticket) : '';
+        var isSettledMovement = String(movementData.estado_operativo || 'ABIERTO').toUpperCase() === 'ASENTADO';
         if (editUrl !== '' || ticketUrl !== '') {
             html += '<div class="movement-mobile-detail-actions">';
-            if (editUrl !== '') {
+            if (editUrl !== '' && !isSettledMovement) {
                 html += '<a href="' + editUrl + '" class="btn btn-secondary btn-inline btn-mini"><i class="bi bi-pencil-square"></i> Editar</a>';
             }
             if (ticketUrl !== '') {
@@ -2289,10 +2296,10 @@
             return;
         }
 
-        if (!event.target.closest('.supports-inline-dropdown')) {
-            var openSupportDropdowns = document.querySelectorAll('.supports-inline-dropdown[open]');
-            for (var dropdownIndex = 0; dropdownIndex < openSupportDropdowns.length; dropdownIndex += 1) {
-                openSupportDropdowns[dropdownIndex].removeAttribute('open');
+        if (!event.target.closest('.supports-inline-dropdown') && !event.target.closest('.movement-action-dropdown')) {
+            var openMovementDropdowns = document.querySelectorAll('.supports-inline-dropdown[open], .movement-action-dropdown[open]');
+            for (var dropdownIndex = 0; dropdownIndex < openMovementDropdowns.length; dropdownIndex += 1) {
+                openMovementDropdowns[dropdownIndex].removeAttribute('open');
             }
         }
 
@@ -2525,9 +2532,9 @@
             closeConfirmActionModal();
             closePwaInstallModal();
             hideGlobalLoading();
-            var openSupportDropdowns = document.querySelectorAll('.supports-inline-dropdown[open]');
-            for (var dropdownIndex = 0; dropdownIndex < openSupportDropdowns.length; dropdownIndex += 1) {
-                openSupportDropdowns[dropdownIndex].removeAttribute('open');
+            var openMovementDropdowns = document.querySelectorAll('.supports-inline-dropdown[open], .movement-action-dropdown[open]');
+            for (var dropdownIndex = 0; dropdownIndex < openMovementDropdowns.length; dropdownIndex += 1) {
+                openMovementDropdowns[dropdownIndex].removeAttribute('open');
             }
             return;
         }
