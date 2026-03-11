@@ -14,13 +14,20 @@ if (is_file($assetFile)) {
     }
 }
 
+$configuredAssetVersion = trim((string) Environment::get('APP_ASSET_VERSION', ''));
+if ($configuredAssetVersion === '' || strtolower($configuredAssetVersion) === 'auto') {
+    $assetVersion = $defaultAssetVersion;
+} else {
+    $assetVersion = $configuredAssetVersion . '-' . $defaultAssetVersion;
+}
+
 return array(
     'environment' => Environment::get('APP_ENV', 'production'),
     'debug' => Environment::getBoolean('APP_DEBUG', false),
     'base_url' => trim(Environment::get('APP_BASE_URL', 'AUTO')),
     'timezone' => Environment::get('APP_TIMEZONE', 'America/Bogota'),
     'enable_pwa' => Environment::getBoolean('APP_ENABLE_PWA', true),
-    'asset_version' => Environment::get('APP_ASSET_VERSION', $defaultAssetVersion),
+    'asset_version' => $assetVersion,
     'session_name' => Environment::get('APP_SESSION_NAME', 'presupuesto_session'),
     'session_lifetime_seconds' => Environment::getInteger('APP_SESSION_LIFETIME_SECONDS', 43200),
     'session_lifetime_min_seconds' => Environment::getInteger('APP_SESSION_LIFETIME_MIN_SECONDS', 28800),

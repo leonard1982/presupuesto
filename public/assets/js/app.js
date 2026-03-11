@@ -2060,6 +2060,36 @@
         }
     }
 
+    function submitFormWithLoadingPaint(formElement, messageText) {
+        if (!formElement) {
+            return;
+        }
+
+        if (formElement.getAttribute('data-submit-in-progress') === '1') {
+            return;
+        }
+
+        formElement.setAttribute('data-submit-in-progress', '1');
+        showGlobalLoading(messageText);
+
+        var submitAfterPaint = function () {
+            window.setTimeout(function () {
+                if (typeof formElement.requestSubmit === 'function') {
+                    formElement.requestSubmit();
+                    return;
+                }
+                formElement.submit();
+            }, 90);
+        };
+
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(submitAfterPaint);
+            return;
+        }
+
+        submitAfterPaint();
+    }
+
     function shouldTriggerLoadingForLink(linkElement) {
         if (!linkElement) {
             return false;
@@ -2487,8 +2517,7 @@
                 closeConfirmActionModal();
                 targetForm.setAttribute('data-confirm-approved', '1');
                 var formLoadingMessage = targetForm.getAttribute('data-loading-message');
-                showGlobalLoading(formLoadingMessage);
-                targetForm.submit();
+                submitFormWithLoadingPaint(targetForm, formLoadingMessage);
             } else {
                 closeConfirmActionModal();
             }
@@ -2805,6 +2834,7 @@
 
         if (confirmForm.getAttribute('data-confirm-approved') === '1') {
             confirmForm.removeAttribute('data-confirm-approved');
+            confirmForm.removeAttribute('data-submit-in-progress');
             return;
         }
 
