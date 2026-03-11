@@ -2613,20 +2613,23 @@
         });
     }
 
-    var confirmActionForms = document.querySelectorAll('.js-confirm-delete, .js-confirm-action');
-    if (confirmActionForms && confirmActionForms.length > 0) {
-        for (var formIndex = 0; formIndex < confirmActionForms.length; formIndex += 1) {
-            confirmActionForms[formIndex].addEventListener('submit', function (event) {
-                if (this.getAttribute('data-confirm-approved') === '1') {
-                    this.removeAttribute('data-confirm-approved');
-                    return;
-                }
-
-                event.preventDefault();
-                openConfirmActionModal(this);
-            });
+    document.addEventListener('submit', function (event) {
+        var confirmForm = event.target;
+        if (!confirmForm || !confirmForm.classList) {
+            return;
         }
-    }
+        if (!confirmForm.classList.contains('js-confirm-delete') && !confirmForm.classList.contains('js-confirm-action')) {
+            return;
+        }
+
+        if (confirmForm.getAttribute('data-confirm-approved') === '1') {
+            confirmForm.removeAttribute('data-confirm-approved');
+            return;
+        }
+
+        event.preventDefault();
+        openConfirmActionModal(confirmForm);
+    });
 
     window.addEventListener('pageshow', function () {
         hideGlobalLoading();
