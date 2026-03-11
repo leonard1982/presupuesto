@@ -232,19 +232,34 @@ class CorreoController
 
         $correoUid = isset($_POST['email_uid']) ? trim((string) $_POST['email_uid']) : '';
         $correoHash = isset($_POST['email_fingerprint']) ? trim((string) $_POST['email_fingerprint']) : '';
+        $emailFrom = isset($_POST['email_from']) ? trim((string) $_POST['email_from']) : '';
+        $emailTo = isset($_POST['email_to']) ? trim((string) $_POST['email_to']) : '';
+        $emailSubject = isset($_POST['email_subject']) ? trim((string) $_POST['email_subject']) : '';
+        $emailDate = isset($_POST['email_date']) ? trim((string) $_POST['email_date']) : '';
         if ($correoUid === '' && $correoHash === '') {
             $this->setFlash('correos_error', 'Correo no valido para ocultar.');
             Response::redirect($this->buildUrl('/correos'));
         }
 
-        $hidden = $this->correoRepository->hideInboxMessage(array(
-            'usuario' => $userLogin,
-            'correo_uid' => $correoUid,
-            'correo_hash' => $correoHash,
-            'remitente' => isset($_POST['email_from']) ? trim((string) $_POST['email_from']) : '',
-            'asunto' => isset($_POST['email_subject']) ? trim((string) $_POST['email_subject']) : '',
-            'fecha_correo' => isset($_POST['email_date']) ? trim((string) $_POST['email_date']) : '',
-        ));
+        $hiddenHashes = $this->buildHiddenHashCandidates($correoHash, $emailFrom, $emailTo, $emailSubject, $emailDate);
+        if (empty($hiddenHashes)) {
+            $hiddenHashes = array('');
+        }
+
+        $hidden = false;
+        foreach ($hiddenHashes as $hashCandidate) {
+            $hiddenAttempt = $this->correoRepository->hideInboxMessage(array(
+                'usuario' => $userLogin,
+                'correo_uid' => $correoUid,
+                'correo_hash' => $hashCandidate,
+                'remitente' => $emailFrom,
+                'asunto' => $emailSubject,
+                'fecha_correo' => $emailDate,
+            ));
+            if ($hiddenAttempt) {
+                $hidden = true;
+            }
+        }
 
         if (!$hidden) {
             $this->setFlash('correos_error', 'No fue posible ocultar el correo. Revisa el log de aplicacion.');
@@ -509,7 +524,7 @@ class CorreoController
 
         $hiddenHashMap = array();
         foreach ($hiddenHashes as $hashValue) {
-            $hashSafe = trim((string) $hashValue);
+            $hashSafe = strtolower(trim((string) $hashValue));
             if ($hashSafe !== '') {
                 $hiddenHashMap[$hashSafe] = true;
             }
@@ -519,10 +534,23 @@ class CorreoController
         foreach ($emails as $email) {
             $uid = isset($email['uid']) ? trim((string) $email['uid']) : '';
             $fingerprint = isset($email['fingerprint']) ? trim((string) $email['fingerprint']) : '';
+            $emailFrom = isset($email['from']) ? trim((string) $email['from']) : '';
+            $emailTo = isset($email['to']) ? trim((string) $email['to']) : '';
+            $emailSubject = isset($email['subject']) ? trim((string) $email['subject']) : '';
+            $emailDate = isset($email['date_sql']) ? trim((string) $email['date_sql']) : '';
             if ($uid !== '' && isset($hiddenUidMap[$uid])) {
                 continue;
             }
-            if ($fingerprint !== '' && isset($hiddenHashMap[$fingerprint])) {
+
+            $hashCandidates = $this->buildHiddenHashCandidates($fingerprint, $emailFrom, $emailTo, $emailSubject, $emailDate);
+            $isHiddenByHash = false;
+            foreach ($hashCandidates as $hashCandidate) {
+                if (isset($hiddenHashMap[$hashCandidate])) {
+                    $isHiddenByHash = true;
+                    break;
+                }
+            }
+            if ($isHiddenByHash) {
                 continue;
             }
 
@@ -530,6 +558,37 @@ class CorreoController
         }
 
         return $visibleEmails;
+    }
+
+    private function buildHiddenHashCandidates($primaryFingerprint, $emailFrom, $emailTo, $emailSubject, $emailDate)
+    {
+        $hashCandidates = array();
+        $primary = strtolower(trim((string) $primaryFingerprint));
+        if ($primary !== '') {
+            $hashCandidates[] = $primary;
+        }
+
+        $from = trim((string) $emailFrom);
+        $to = trim((string) $emailTo);
+        $subject = trim((string) $emailSubject);
+        $dateRaw = trim((string) $emailDate);
+        $dateSafe = substr($dateRaw, 0, 19);
+
+        if ($dateSafe !== '' && ($from !== '' || $subject !== '')) {
+            $stableBase = strtolower(trim($dateSafe . '|' . $from . '|' . $subject));
+            if ($stableBase !== '') {
+                $hashCandidates[] = sha1($stableBase);
+            }
+        }
+
+        if ($dateSafe !== '' && ($from !== '' || $to !== '' || $subject !== '')) {
+            $legacyBase = strtolower(trim($dateSafe . '|' . $from . '|' . $to . '|' . $subject));
+            if ($legacyBase !== '') {
+                $hashCandidates[] = sha1($legacyBase);
+            }
+        }
+
+        return array_values(array_unique($hashCandidates));
     }
 
     private function normalizeSearchText($value)

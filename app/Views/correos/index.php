@@ -203,6 +203,7 @@ foreach ($mediosPago as $medioPagoItem) {
                                         <input type="hidden" name="email_uid" value="<?php echo $rowUid; ?>">
                                         <input type="hidden" name="email_fingerprint" value="<?php echo correo_escape($emailFingerprint); ?>">
                                         <input type="hidden" name="email_from" value="<?php echo correo_escape($extractFrom); ?>">
+                                        <input type="hidden" name="email_to" value="<?php echo correo_escape(isset($emailRow['to']) ? (string) $emailRow['to'] : ''); ?>">
                                         <input type="hidden" name="email_subject" value="<?php echo correo_escape($extractSubject); ?>">
                                         <input type="hidden" name="email_date" value="<?php echo correo_escape($extractDate); ?>">
                                         <input type="hidden" name="q" value="<?php echo correo_escape($searchText); ?>">

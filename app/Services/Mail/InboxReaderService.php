@@ -104,7 +104,7 @@ class InboxReaderService
 
                         $fingerprintSource = $messageId !== ''
                             ? $messageId
-                            : ($dateSql . '|' . $from . '|' . $to . '|' . $subject);
+                            : ($dateSql . '|' . $from . '|' . $subject);
                         $fingerprint = sha1(strtolower(trim($fingerprintSource)));
 
                         $messageData = array(
